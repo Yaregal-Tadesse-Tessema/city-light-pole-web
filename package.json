@@ -1,0 +1,42 @@
+{
+  "name": "city-light-pole-web",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "City Light Pole Management System - React Frontend",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "api:types": "tsx scripts/generate-api-types.ts",
+    "dev-run": "tsx scripts/dev-run.ts"
+  },
+  "dependencies": {
+    "@mantine/core": "^7.15.0",
+    "@mantine/form": "^7.15.0",
+    "@mantine/hooks": "^7.15.0",
+    "@mantine/notifications": "^7.15.0",
+    "@tabler/icons-react": "^3.23.0",
+    "@tanstack/react-query": "^5.62.11",
+    "@tanstack/react-router": "^1.95.0",
+    "axios": "^1.7.9",
+    "dayjs": "^1.11.13",
+    "dotenv": "^16.4.7",
+    "leaflet": "^1.9.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "recharts": "^2.15.0"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^8.2.0",
+    "@types/leaflet": "^1.9.21",
+    "@types/node": "^22.10.7",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "openapi-typescript": "^7.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.5"
+  }
+}
