@@ -145,7 +145,7 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
         }).addTo(mapRef.current!);
         
         // Add popup with pole code
-        marker.bindPopup(`<strong>${pole.code}</strong><br/>${pole.district}, ${pole.street}`);
+        marker.bindPopup(`<strong>${pole.code}</strong><br/>${pole.subcity || pole.district}, ${pole.street}`);
         
         allPolesMarkersRef.current.push(marker);
       }

@@ -14,11 +14,12 @@ import {
   Select,
   Stack,
   ActionIcon,
+  Text,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useAuth } from '../hooks/useAuth';
 import { notifications } from '@mantine/notifications';
-import { IconEdit } from '@tabler/icons-react';
+import { IconEdit, IconTrash } from '@tabler/icons-react';
 import axios from 'axios';
 
 const ISSUE_STATUSES = [
@@ -32,7 +33,9 @@ export default function IssuesListPage() {
   const { user } = useAuth();
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [updateModalOpened, setUpdateModalOpened] = useState(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
+  const [issueToDelete, setIssueToDelete] = useState<any>(null);
   
   const canCreate = user?.role === 'ADMIN' || user?.role === 'MAINTENANCE_ENGINEER';
   const canUpdate = user?.role === 'ADMIN' || user?.role === 'MAINTENANCE_ENGINEER';
@@ -63,10 +66,21 @@ export default function IssuesListPage() {
     },
   });
 
-  const poleOptions = polesData?.items?.map((pole: any) => ({
-    value: pole.code,
-    label: `${pole.code} - ${pole.street}, ${pole.district}`,
-  })) || [];
+  // Get poles that have unclosed issues
+  const polesWithUnclosedIssues = new Set(
+    issues
+      ?.filter((issue: any) => issue.status === 'REPORTED' || issue.status === 'IN_PROGRESS')
+      .map((issue: any) => issue.pole?.code || issue.poleCode)
+      .filter(Boolean) || []
+  );
+
+  // Filter out poles that have unclosed issues
+  const poleOptions = polesData?.items
+    ?.filter((pole: any) => !polesWithUnclosedIssues.has(pole.code))
+    .map((pole: any) => ({
+      value: pole.code,
+      label: `${pole.code} - ${pole.street}, ${pole.subcity || pole.district}`,
+    })) || [];
 
   const createForm = useForm({
     initialValues: {
@@ -78,6 +92,9 @@ export default function IssuesListPage() {
 
   const updateForm = useForm({
     initialValues: {
+      poleCode: '',
+      description: '',
+      severity: 'MEDIUM',
       status: '',
       resolutionNotes: '',
     },
@@ -114,6 +131,9 @@ export default function IssuesListPage() {
   const handleUpdateClick = (issue: any) => {
     setSelectedIssue(issue);
     updateForm.setValues({
+      poleCode: issue.pole?.code || issue.poleCode || '',
+      description: issue.description || '',
+      severity: issue.severity || 'MEDIUM',
       status: issue.status,
       resolutionNotes: issue.resolutionNotes || '',
     });
@@ -125,9 +145,14 @@ export default function IssuesListPage() {
     
     try {
       const token = localStorage.getItem('access_token');
+      // Backend currently only accepts status, severity, and resolutionNotes
       await axios.patch(
         `http://localhost:3011/api/v1/issues/${selectedIssue.id}/status`,
-        values,
+        {
+          severity: values.severity,
+          status: values.status,
+          resolutionNotes: values.resolutionNotes,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -151,6 +176,59 @@ export default function IssuesListPage() {
         message: error.response?.data?.message || 'Failed to update issue',
         color: 'red',
       });
+    }
+  };
+
+  const handleDeleteClick = (issue: any) => {
+    try {
+      setIssueToDelete(issue);
+      setDeleteModalOpened(true);
+    } catch (error) {
+      console.error('Error opening delete modal:', error);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!issueToDelete) {
+      console.error('No issue selected for deletion');
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        notifications.show({
+          title: 'Error',
+          message: 'Authentication token not found',
+          color: 'red',
+        });
+        return;
+      }
+
+      console.log('Deleting issue:', issueToDelete.id);
+      const response = await axios.delete(`http://localhost:3011/api/v1/issues/${issueToDelete.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      console.log('Delete response:', response);
+      notifications.show({
+        title: 'Success',
+        message: 'Issue deleted successfully',
+        color: 'green',
+      });
+      setDeleteModalOpened(false);
+      setIssueToDelete(null);
+      refetch();
+    } catch (error: any) {
+      console.error('Error deleting issue:', error);
+      notifications.show({
+        title: 'Error',
+        message: error.response?.data?.message || error.message || 'Failed to delete issue',
+        color: 'red',
+      });
+      // Don't close modal on error so user can try again
     }
   };
 
@@ -241,14 +319,31 @@ export default function IssuesListPage() {
                     {issue.updatedAt ? new Date(issue.updatedAt).toLocaleDateString() : '—'}
                   </Table.Td>
                   {canUpdate && (
-                    <Table.Td>
-                      <ActionIcon
-                        color="blue"
-                        variant="light"
-                        onClick={() => handleUpdateClick(issue)}
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
+                    <Table.Td onClick={(e) => e.stopPropagation()}>
+                      {issue.status === 'REPORTED' && (
+                        <Group gap="xs">
+                          <ActionIcon
+                            color="blue"
+                            variant="light"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdateClick(issue);
+                            }}
+                          >
+                            <IconEdit size={16} />
+                          </ActionIcon>
+                          <ActionIcon
+                            color="red"
+                            variant="light"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(issue);
+                            }}
+                          >
+                            <IconTrash size={16} />
+                          </ActionIcon>
+                        </Group>
+                      )}
                     </Table.Td>
                   )}
                 </Table.Tr>
@@ -259,7 +354,13 @@ export default function IssuesListPage() {
       </Paper>
 
       {/* Create Issue Modal */}
-      <Modal opened={createModalOpened} onClose={() => setCreateModalOpened(false)} title="Create Issue">
+      <Modal
+        opened={createModalOpened}
+        onClose={() => setCreateModalOpened(false)}
+        title="Create Issue"
+        size="lg"
+        centered
+      >
         <form onSubmit={createForm.onSubmit(handleCreateSubmit)}>
           <Stack>
             <Select
@@ -286,35 +387,35 @@ export default function IssuesListPage() {
         </form>
       </Modal>
 
-      {/* Update Issue Status Modal */}
+      {/* Update Issue Modal */}
       <Modal 
         opened={updateModalOpened} 
         onClose={() => {
           setUpdateModalOpened(false);
           setSelectedIssue(null);
+          updateForm.reset();
         }} 
-        title="Update Issue Status"
+        title="Edit Issue"
       >
         <form onSubmit={updateForm.onSubmit(handleUpdateSubmit)}>
           <Stack>
             {selectedIssue && (
               <Paper p="sm" withBorder bg="gray.0">
-                <Group gap="xs">
+                <Group gap="xs" mb="xs">
                   <Badge color="blue">{selectedIssue.pole?.code || selectedIssue.poleCode}</Badge>
-                  <Badge color={getSeverityColor(selectedIssue.severity)}>{selectedIssue.severity}</Badge>
                 </Group>
-                <TextInput
+                <Textarea
                   label="Description"
                   value={selectedIssue.description}
                   readOnly
-                  mt="xs"
-                  styles={{ input: { backgroundColor: 'transparent' } }}
+                  styles={{ input: { backgroundColor: 'transparent', cursor: 'not-allowed' } }}
                 />
               </Paper>
             )}
             <Select
               label="Severity"
               data={['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']}
+              required
               {...updateForm.getInputProps('severity')}
             />
             <Select
@@ -329,13 +430,56 @@ export default function IssuesListPage() {
               {...updateForm.getInputProps('resolutionNotes')}
             />
             <Group justify="flex-end">
-              <Button variant="outline" onClick={() => setUpdateModalOpened(false)}>
+              <Button variant="outline" onClick={() => {
+                setUpdateModalOpened(false);
+                setSelectedIssue(null);
+                updateForm.reset();
+              }}>
                 Cancel
               </Button>
-              <Button type="submit">Update Status</Button>
+              <Button type="submit">Update Issue</Button>
             </Group>
           </Stack>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        opened={deleteModalOpened}
+        onClose={() => {
+          setDeleteModalOpened(false);
+          setIssueToDelete(null);
+        }}
+        title="Delete Issue"
+        centered
+      >
+        <Stack>
+          <Text>
+            Are you sure you want to delete this issue?
+          </Text>
+          {issueToDelete && (
+            <Paper p="sm" withBorder bg="gray.0">
+              <Text size="sm" fw={700}>Pole Code:</Text>
+              <Text size="sm">{issueToDelete.pole?.code || issueToDelete.poleCode}</Text>
+              <Text size="sm" fw={700} mt="xs">Description:</Text>
+              <Text size="sm">{issueToDelete.description}</Text>
+            </Paper>
+          )}
+          <Group justify="flex-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteModalOpened(false);
+                setIssueToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button color="red" onClick={handleDeleteConfirm}>
+              Delete
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
     </Container>
   );

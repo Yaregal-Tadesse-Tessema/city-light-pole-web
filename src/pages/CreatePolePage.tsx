@@ -62,7 +62,7 @@ export default function CreatePolePage() {
     },
     validate: {
       code: (value) => (!value ? 'Code is required' : null),
-      district: (value) => (!value ? 'District is required' : null),
+      district: (value) => (!value ? 'Subcity is required' : null),
       street: (value) => (!value ? 'Street is required' : null),
       gpsLat: (value) => {
         if (value !== undefined) {
@@ -176,10 +176,24 @@ export default function CreatePolePage() {
             />
 
             <Group grow>
-              <TextInput
-                label="District"
-                placeholder="Downtown"
+              <Select
+                label="Subcity"
+                placeholder="Select subcity"
                 required
+                data={[
+                  'Addis Ketema',
+                  'Akaky Kaliti',
+                  'Arada',
+                  'Bole',
+                  'Gullele',
+                  'Kirkos',
+                  'Kolfe Keranio',
+                  'Lideta',
+                  'Nifas Silk-Lafto',
+                  'Yeka',
+                  'Lemi Kura',
+                ]}
+                searchable
                 {...form.getInputProps('district')}
               />
               <TextInput

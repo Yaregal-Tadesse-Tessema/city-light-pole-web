@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { IconEye, IconTrash } from '@tabler/icons-react';
 import {
   Container,
   Paper,
@@ -16,19 +17,24 @@ import {
   Stack,
   Select,
   Textarea,
+  ActionIcon,
+  Loader,
+  Center,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 
 const SCHEDULE_STATUSES = ['REQUESTED', 'STARTED', 'PAUSED', 'COMPLETED'];
-const LOG_STATUSES = ['REQUESTED', 'STARTED', 'PAUSED', 'COMPLETED'];
 
 export default function MaintenancePage() {
   const [createScheduleOpened, setCreateScheduleOpened] = useState(false);
-  const [createLogOpened, setCreateLogOpened] = useState(false);
   const [editScheduleOpened, setEditScheduleOpened] = useState(false);
+  const [issueModalOpened, setIssueModalOpened] = useState(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
+  const [scheduleToDelete, setScheduleToDelete] = useState<any>(null);
 
   const { data: schedules, isLoading: schedulesLoading, refetch: refetchSchedules } = useQuery({
     queryKey: ['maintenance', 'schedules'],
@@ -43,18 +49,6 @@ export default function MaintenancePage() {
     },
   });
 
-  const { data: logs, isLoading: logsLoading, refetch: refetchLogs } = useQuery({
-    queryKey: ['maintenance', 'logs'],
-    queryFn: async () => {
-      const token = localStorage.getItem('access_token');
-      const res = await axios.get('http://localhost:3011/api/v1/maintenance/logs', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      return res.data;
-    },
-  });
 
   const { data: issues } = useQuery({
     queryKey: ['issues', 'for-maintenance'],
@@ -67,12 +61,29 @@ export default function MaintenancePage() {
     },
   });
 
+  const { data: selectedIssue, isLoading: issueLoading } = useQuery({
+    queryKey: ['issue', selectedIssueId],
+    queryFn: async () => {
+      if (!selectedIssueId) return null;
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get(`http://localhost:3011/api/v1/issues/${selectedIssueId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+    enabled: !!selectedIssueId && issueModalOpened,
+  });
+
   const issueOptions =
-    issues?.map((issue: any) => ({
-      value: issue.id,
-      label: `${issue.pole?.code || issue.poleCode || 'N/A'} – ${issue.description}`,
-      poleCode: issue.pole?.code || issue.poleCode,
-    })) || [];
+    issues
+      ?.filter((issue: any) => issue.status !== 'CLOSED' && issue.status !== 'IN_PROGRESS') // Exclude closed and in-progress issues
+      .map((issue: any) => ({
+        value: issue.id,
+        label: `${issue.pole?.code || issue.poleCode || 'N/A'} – ${issue.description}`,
+        poleCode: issue.pole?.code || issue.poleCode,
+      })) || [];
 
   const scheduleForm = useForm({
     initialValues: {
@@ -88,24 +99,6 @@ export default function MaintenancePage() {
     },
   });
 
-  const logForm = useForm({
-    initialValues: {
-      poleCode: '',
-      scheduleId: '',
-      description: '',
-      status: 'REQUESTED',
-      scheduledDate: '',
-      completedDate: '',
-      cost: undefined as number | undefined,
-      notes: '',
-    },
-    validate: {
-      notes: (value, values) =>
-        values.status === 'PAUSED' && !value?.trim()
-          ? 'Notes are required when status is PAUSED'
-          : null,
-    },
-  });
 
   const editScheduleForm = useForm({
     initialValues: {
@@ -158,35 +151,6 @@ export default function MaintenancePage() {
     }
   };
 
-  const handleCreateLog = async (values: any) => {
-    if (values.status === 'PAUSED' && !values.notes?.trim()) {
-      logForm.setFieldError('notes', 'Notes are required when status is PAUSED');
-      return;
-    }
-    try {
-      const token = localStorage.getItem('access_token');
-      await axios.post('http://localhost:3011/api/v1/maintenance/logs', values, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      notifications.show({
-        title: 'Success',
-        message: 'Maintenance log created',
-        color: 'green',
-      });
-      setCreateLogOpened(false);
-      logForm.reset();
-      refetchLogs();
-    } catch (error: any) {
-      notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to create log',
-        color: 'red',
-      });
-    }
-  };
 
   const handleEditScheduleClick = (schedule: any) => {
     setSelectedSchedule(schedule);
@@ -209,7 +173,7 @@ export default function MaintenancePage() {
     }
     try {
       const token = localStorage.getItem('access_token');
-      const payload = {
+      const payload: any = {
         ...values,
         estimatedCost:
           values.estimatedCost === undefined || values.estimatedCost === null || values.estimatedCost === ''
@@ -217,6 +181,14 @@ export default function MaintenancePage() {
             : Number(values.estimatedCost),
         remark: values.remark?.trim() || undefined,
       };
+      
+      // Preserve issueId and poleCode from the original schedule if they exist
+      if (selectedSchedule.issueId) {
+        payload.issueId = selectedSchedule.issueId;
+      }
+      if (selectedSchedule.poleCode) {
+        payload.poleCode = selectedSchedule.poleCode;
+      }
       await axios.patch(
         `http://localhost:3011/api/v1/maintenance/schedules/${selectedSchedule.id}`,
         payload,
@@ -245,6 +217,49 @@ export default function MaintenancePage() {
     }
   };
 
+  const handleDeleteClick = (schedule: any) => {
+    setScheduleToDelete(schedule);
+    setDeleteModalOpened(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!scheduleToDelete) return;
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        notifications.show({
+          title: 'Error',
+          message: 'Authentication token not found',
+          color: 'red',
+        });
+        return;
+      }
+
+      await axios.delete(`http://localhost:3011/api/v1/maintenance/schedules/${scheduleToDelete.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      notifications.show({
+        title: 'Success',
+        message: 'Maintenance schedule deleted successfully',
+        color: 'green',
+      });
+      setDeleteModalOpened(false);
+      setScheduleToDelete(null);
+      refetchSchedules();
+    } catch (error: any) {
+      console.error('Error deleting schedule:', error);
+      notifications.show({
+        title: 'Error',
+        message: error.response?.data?.message || error.message || 'Failed to delete maintenance schedule',
+        color: 'red',
+      });
+    }
+  };
+
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" mb="xl">
@@ -258,7 +273,7 @@ export default function MaintenancePage() {
 
       <Tabs defaultValue="schedules">
         <Tabs.List>
-          <Tabs.Tab value="schedules">Schedules</Tabs.Tab>
+          <Tabs.Tab value="schedules">Maintenance History</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="schedules" pt="xl">
@@ -270,19 +285,21 @@ export default function MaintenancePage() {
                   <Table.Th>Description</Table.Th>
                   <Table.Th>Frequency</Table.Th>
                   <Table.Th>Start Date</Table.Th>
+                  <Table.Th>End Date</Table.Th>
                   <Table.Th>Status</Table.Th>
-                  <Table.Th>Est. Cost</Table.Th>
+                  <Table.Th>Cost</Table.Th>
+                  <Table.Th>Issue Detail</Table.Th>
                   <Table.Th>Actions</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {schedulesLoading ? (
                   <Table.Tr>
-                    <Table.Td colSpan={7}>Loading...</Table.Td>
+                    <Table.Td colSpan={9}>Loading...</Table.Td>
                   </Table.Tr>
                 ) : schedules?.length === 0 ? (
                   <Table.Tr>
-                    <Table.Td colSpan={7}>No schedules found</Table.Td>
+                    <Table.Td colSpan={9}>No maintenance records found</Table.Td>
                   </Table.Tr>
                 ) : (
                   schedules?.map((schedule: any) => (
@@ -294,19 +311,61 @@ export default function MaintenancePage() {
                         {schedule.startDate ? new Date(schedule.startDate).toLocaleDateString() : '—'}
                       </Table.Td>
                       <Table.Td>
+                        {schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : '—'}
+                      </Table.Td>
+                      <Table.Td>
                         <Badge>{schedule.status}</Badge>
                       </Table.Td>
-                      <Table.Td>{schedule.estimatedCost ? `$${schedule.estimatedCost}` : '—'}</Table.Td>
                       <Table.Td>
-                        {['REQUESTED', 'STARTED', 'PAUSED'].includes(schedule.status) && (
-                          <Button
-                            size="xs"
-                            variant="light"
-                            onClick={() => handleEditScheduleClick(schedule)}
-                          >
-                            {schedule.status === 'STARTED' || schedule.status === 'PAUSED' ? 'Update Status' : 'Edit'}
-                          </Button>
-                        )}
+                        {schedule.cost && schedule.cost > 0
+                          ? `$${parseFloat(schedule.cost).toFixed(2)}`
+                          : schedule.estimatedCost && schedule.estimatedCost > 0
+                          ? `$${parseFloat(schedule.estimatedCost).toFixed(2)}`
+                          : '-'}
+                      </Table.Td>
+                      <Table.Td>
+                        <ActionIcon
+                          color="blue"
+                          variant="light"
+                          onClick={() => {
+                            if (schedule.issueId) {
+                              setSelectedIssueId(schedule.issueId);
+                              setIssueModalOpened(true);
+                            } else {
+                              notifications.show({
+                                title: 'No Issue',
+                                message: 'This maintenance record has no associated issue',
+                                color: 'gray',
+                              });
+                            }
+                          }}
+                          title={schedule.issueId ? "View Issue" : "No associated issue"}
+                        >
+                          <IconEye size={16} />
+                        </ActionIcon>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap="xs">
+                          {schedule.status === 'REQUESTED' && (
+                            <ActionIcon
+                              color="red"
+                              variant="light"
+                              onClick={() => handleDeleteClick(schedule)}
+                              title="Delete Schedule"
+                            >
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          )}
+                          {['REQUESTED', 'STARTED', 'PAUSED'].includes(schedule.status) && (
+                            <Button
+                              size="xs"
+                              variant="light"
+                              onClick={() => handleEditScheduleClick(schedule)}
+                            >
+                              {schedule.status === 'STARTED' || schedule.status === 'PAUSED' ? 'Update Status' : 'Edit'}
+                            </Button>
+                          )}
+                        </Group>
                       </Table.Td>
                     </Table.Tr>
                   ))
@@ -319,7 +378,13 @@ export default function MaintenancePage() {
       </Tabs>
 
       {/* Create Schedule Modal */}
-      <Modal opened={createScheduleOpened} onClose={() => setCreateScheduleOpened(false)} title="Create Maintenance Schedule">
+      <Modal
+        opened={createScheduleOpened}
+        onClose={() => setCreateScheduleOpened(false)}
+        title="Create Maintenance Schedule"
+        size="lg"
+        centered
+      >
         <form onSubmit={scheduleForm.onSubmit(handleCreateSchedule)}>
           <Stack>
             <Select
@@ -386,7 +451,16 @@ export default function MaintenancePage() {
       </Modal>
 
       {/* Edit Schedule Modal */}
-      <Modal opened={editScheduleOpened} onClose={() => { setEditScheduleOpened(false); setSelectedSchedule(null); }} title="Edit Maintenance Schedule">
+      <Modal
+        opened={editScheduleOpened}
+        onClose={() => {
+          setEditScheduleOpened(false);
+          setSelectedSchedule(null);
+        }}
+        title="Edit Maintenance Schedule"
+        size="lg"
+        centered
+      >
         <form onSubmit={editScheduleForm.onSubmit(handleEditScheduleSubmit)}>
           <Stack>
             {selectedSchedule && (
@@ -448,64 +522,122 @@ export default function MaintenancePage() {
         </form>
       </Modal>
 
-      {/* Create Log Modal */}
-      <Modal opened={createLogOpened} onClose={() => setCreateLogOpened(false)} title="Create Maintenance Log">
-        <form onSubmit={logForm.onSubmit(handleCreateLog)}>
+      {/* View Issue Modal */}
+      <Modal
+        opened={issueModalOpened}
+        onClose={() => {
+          setIssueModalOpened(false);
+          setSelectedIssueId(null);
+        }}
+        title="Associated Issue"
+        size="lg"
+        centered
+      >
+        {issueLoading ? (
+          <Center p="xl">
+            <Loader />
+          </Center>
+        ) : selectedIssue ? (
           <Stack>
-            <TextInput
-              label="Pole Code"
-              placeholder="LP-001"
-              required
-              {...logForm.getInputProps('poleCode')}
-            />
-            <TextInput
-              label="Schedule ID (optional)"
-              placeholder="Related schedule id"
-              {...logForm.getInputProps('scheduleId')}
-            />
-            <TextInput
-              label="Description"
-              placeholder="Replace lamp"
-              required
-              {...logForm.getInputProps('description')}
-            />
-            <Select
-              label="Status"
-              data={LOG_STATUSES}
-              required
-              {...logForm.getInputProps('status')}
-            />
-            <TextInput
-              label="Scheduled Date"
-              type="date"
-              required
-              {...logForm.getInputProps('scheduledDate')}
-            />
-            <TextInput
-              label="Completed Date (optional)"
-              type="date"
-              {...logForm.getInputProps('completedDate')}
-            />
-            <NumberInput
-              label="Cost (optional)"
-              min={0}
-              step={10}
-              precision={2}
-              {...logForm.getInputProps('cost')}
-            />
-            <TextInput
-              label="Notes (optional)"
-              placeholder="Extra details"
-              {...logForm.getInputProps('notes')}
-            />
+            <Paper p="md" withBorder>
+              <Group mb="xs">
+                <Text fw={700}>Pole Code:</Text>
+                <Badge color="blue">{selectedIssue.pole?.code || selectedIssue.poleCode || 'N/A'}</Badge>
+              </Group>
+              <Group mb="xs">
+                <Text fw={700}>Severity:</Text>
+                <Badge
+                  color={
+                    selectedIssue.severity === 'LOW'
+                      ? 'green'
+                      : selectedIssue.severity === 'MEDIUM'
+                      ? 'yellow'
+                      : selectedIssue.severity === 'HIGH'
+                      ? 'orange'
+                      : 'red'
+                  }
+                >
+                  {selectedIssue.severity}
+                </Badge>
+              </Group>
+              <Text fw={700} mb="xs">Description:</Text>
+              <Text mb="xs">{selectedIssue.description}</Text>
+              {selectedIssue.resolutionNotes && (
+                <>
+                  <Text fw={700} mb="xs">Resolution Notes:</Text>
+                  <Text mb="xs">{selectedIssue.resolutionNotes}</Text>
+                </>
+              )}
+              <Group mt="xs">
+                <Text fw={700}>Reported By:</Text>
+                <Text>{selectedIssue.reportedBy?.fullName || 'N/A'}</Text>
+              </Group>
+              <Group mt="xs">
+                <Text fw={700}>Created:</Text>
+                <Text>{new Date(selectedIssue.createdAt).toLocaleDateString()}</Text>
+              </Group>
+              {selectedIssue.updatedAt && (
+                <Group mt="xs">
+                  <Text fw={700}>Updated:</Text>
+                  <Text>{new Date(selectedIssue.updatedAt).toLocaleDateString()}</Text>
+                </Group>
+              )}
+            </Paper>
             <Group justify="flex-end">
-              <Button variant="outline" onClick={() => setCreateLogOpened(false)}>
-                Cancel
+              <Button variant="outline" onClick={() => {
+                setIssueModalOpened(false);
+                setSelectedIssueId(null);
+              }}>
+                Close
               </Button>
-              <Button type="submit">Create</Button>
             </Group>
           </Stack>
-        </form>
+        ) : (
+          <Text c="dimmed" ta="center" p="xl">
+            Issue not found
+          </Text>
+        )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        opened={deleteModalOpened}
+        onClose={() => {
+          setDeleteModalOpened(false);
+          setScheduleToDelete(null);
+        }}
+        title="Delete Maintenance Schedule"
+        centered
+      >
+        <Stack>
+          <Text>
+            Are you sure you want to delete this maintenance schedule?
+          </Text>
+          {scheduleToDelete && (
+            <Paper p="sm" withBorder bg="gray.0">
+              <Text size="sm" fw={700}>Pole Code:</Text>
+              <Text size="sm">{scheduleToDelete.poleCode || '—'}</Text>
+              <Text size="sm" fw={700} mt="xs">Description:</Text>
+              <Text size="sm">{scheduleToDelete.description}</Text>
+              <Text size="sm" fw={700} mt="xs">Status:</Text>
+              <Badge>{scheduleToDelete.status}</Badge>
+            </Paper>
+          )}
+          <Group justify="flex-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteModalOpened(false);
+                setScheduleToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button color="red" onClick={handleDeleteConfirm}>
+              Delete
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
     </Container>
   );

@@ -99,17 +99,23 @@ export default function DashboardPage() {
         <Grid.Col span={{ base: 12, md: 8 }}>
           <Paper p="md" withBorder>
             <Title order={3} mb="md">
-              Faulty Poles by District
+              Faulty Poles by Subcity
             </Title>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="district" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
+            {chartData && chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="district" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <Text c="dimmed" ta="center" py="xl">
+                No faulty poles found
+              </Text>
+            )}
           </Paper>
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 4 }}>
@@ -147,7 +153,7 @@ export default function DashboardPage() {
           <Table>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>District</Table.Th>
+                <Table.Th>Subcity</Table.Th>
                 <Table.Th>Faulty Count</Table.Th>
               </Table.Tr>
             </Table.Thead>

@@ -77,7 +77,7 @@ export default function UpdatePolePage() {
     if (pole) {
       setFormData({
         code: pole.code || '',
-        district: pole.district || '',
+        district: pole.subcity || pole.district || '', // Handle both subcity and district for backward compatibility
         street: pole.street || '',
         gpsLat: pole.gpsLat !== undefined && pole.gpsLat !== null ? Number(pole.gpsLat) : 0,
         gpsLng: pole.gpsLng !== undefined && pole.gpsLng !== null ? Number(pole.gpsLng) : 0,
@@ -179,12 +179,26 @@ export default function UpdatePolePage() {
             />
 
             <Group grow>
-              <TextInput
-                label="District"
-                placeholder="Downtown"
+              <Select
+                label="Subcity"
+                placeholder="Select subcity"
                 required
+                data={[
+                  'Addis Ketema',
+                  'Akaky Kaliti',
+                  'Arada',
+                  'Bole',
+                  'Gullele',
+                  'Kirkos',
+                  'Kolfe Keranio',
+                  'Lideta',
+                  'Nifas Silk-Lafto',
+                  'Yeka',
+                  'Lemi Kura',
+                ]}
+                searchable
                 value={formData.district}
-                onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, district: value || '' })}
               />
               <TextInput
                 label="Street"

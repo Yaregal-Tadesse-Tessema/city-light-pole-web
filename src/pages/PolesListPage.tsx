@@ -142,17 +142,30 @@ export default function PolesListPage() {
       <Paper p="md" withBorder mb="md">
         <Group>
           <TextInput
-            placeholder="Search by code, street, or district"
+            placeholder="Search by code, street, or subcity"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ flex: 1 }}
           />
           <Select
-            placeholder="District"
-            data={['Downtown', 'Suburb']}
+            placeholder="Subcity"
+            data={[
+              'Addis Ketema',
+              'Akaky Kaliti',
+              'Arada',
+              'Bole',
+              'Gullele',
+              'Kirkos',
+              'Kolfe Keranio',
+              'Lideta',
+              'Nifas Silk-Lafto',
+              'Yeka',
+              'Lemi Kura',
+            ]}
             value={district}
             onChange={setDistrict}
             clearable
+            searchable
           />
           <Select
             placeholder="Status"
@@ -169,7 +182,7 @@ export default function PolesListPage() {
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Code</Table.Th>
-              <Table.Th>District</Table.Th>
+              <Table.Th>Subcity</Table.Th>
               <Table.Th>Street</Table.Th>
               <Table.Th>Status</Table.Th>
               <Table.Th>LED Display</Table.Th>
@@ -193,7 +206,7 @@ export default function PolesListPage() {
                   onClick={() => navigate(`/poles/${pole.code}`)}
                 >
                   <Table.Td>{pole.code}</Table.Td>
-                  <Table.Td>{pole.district}</Table.Td>
+                  <Table.Td>{pole.subcity || pole.district}</Table.Td>
                   <Table.Td>{pole.street}</Table.Td>
                   <Table.Td>
                     <Badge color={getStatusColor(pole.status)}>
@@ -322,7 +335,9 @@ export default function PolesListPage() {
                       : '-'}
                   </Table.Td>
                   <Table.Td>
-                    {log.endDate
+                    {log.completedDate
+                      ? new Date(log.completedDate).toLocaleDateString()
+                      : log.endDate
                       ? new Date(log.endDate).toLocaleDateString()
                       : '-'}
                   </Table.Td>

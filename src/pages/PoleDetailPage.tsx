@@ -104,7 +104,7 @@ export default function PoleDetailPage() {
             Recent Issues {pole?.counts?.openIssues > 0 && `(${pole.counts.openIssues} open)`}
           </Tabs.Tab>
           <Tabs.Tab value="maintenance">
-            Recent Maintenance {pole?.counts?.totalMaintenanceLogs > 0 && `(${pole.counts.totalMaintenanceLogs})`}
+            Recent Maintenance {pole?.counts?.totalMaintenanceSchedules > 0 && `(${pole.counts.totalMaintenanceSchedules})`}
           </Tabs.Tab>
         </Tabs.List>
 
@@ -116,8 +116,8 @@ export default function PoleDetailPage() {
                 <Badge color={getStatusColor(pole.status)}>{pole.status}</Badge>
               </Group>
               <Group>
-                <Text fw={700}>District:</Text>
-                <Text>{pole.district}</Text>
+                <Text fw={700}>Subcity:</Text>
+                <Text>{pole.subcity || pole.district}</Text>
               </Group>
               <Group>
                 <Text fw={700}>Street:</Text>
@@ -241,47 +241,51 @@ export default function PoleDetailPage() {
           <Stack>
             {pole.counts && (
               <Badge size="lg" variant="light">
-                Total Maintenance Logs: {pole.counts.totalMaintenanceLogs}
+                Total Maintenance Records: {pole.counts.totalMaintenanceSchedules || 0}
               </Badge>
             )}
             <Paper p="md" withBorder>
-              {pole.latestMaintenanceLogs && pole.latestMaintenanceLogs.length > 0 ? (
+              {pole.latestMaintenanceSchedules && pole.latestMaintenanceSchedules.length > 0 ? (
                 <Table>
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>Description</Table.Th>
                       <Table.Th>Status</Table.Th>
-                      <Table.Th>Scheduled Date</Table.Th>
-                      <Table.Th>Completed Date</Table.Th>
+                      <Table.Th>Start Date</Table.Th>
+                      <Table.Th>End Date</Table.Th>
                       <Table.Th>Performed By</Table.Th>
                       <Table.Th>Cost</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {pole.latestMaintenanceLogs.map((log: any) => (
-                      <Table.Tr key={log.id}>
-                        <Table.Td>{log.description}</Table.Td>
+                    {pole.latestMaintenanceSchedules.map((schedule: any) => (
+                      <Table.Tr key={schedule.id}>
+                        <Table.Td>{schedule.description}</Table.Td>
                         <Table.Td>
-                          <Badge>{log.status}</Badge>
+                          <Badge>{schedule.status}</Badge>
                         </Table.Td>
                         <Table.Td>
-                          {new Date(log.scheduledDate).toLocaleDateString()}
+                          {schedule.startDate ? new Date(schedule.startDate).toLocaleDateString() : '-'}
                         </Table.Td>
                         <Table.Td>
-                          {log.completedDate ? new Date(log.completedDate).toLocaleDateString() : '-'}
+                          {schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : '-'}
                         </Table.Td>
                         <Table.Td>
-                          {log.performedBy?.fullName || 'Unknown'}
+                          {schedule.performedBy?.fullName || 'Unknown'}
                         </Table.Td>
                         <Table.Td>
-                          {log.cost ? `$${log.cost.toFixed(2)}` : '-'}
+                          {schedule.cost && schedule.cost > 0
+                            ? `$${parseFloat(schedule.cost).toFixed(2)}`
+                            : schedule.estimatedCost && schedule.estimatedCost > 0
+                            ? `$${parseFloat(schedule.estimatedCost).toFixed(2)}`
+                            : '-'}
                         </Table.Td>
                       </Table.Tr>
                     ))}
                   </Table.Tbody>
                 </Table>
               ) : (
-                <Text>No maintenance logs for this pole.</Text>
+                <Text>No maintenance records for this pole.</Text>
               )}
             </Paper>
           </Stack>
