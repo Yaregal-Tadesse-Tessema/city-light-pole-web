@@ -288,7 +288,13 @@ export default function PoleDetailPage() {
         </Tabs.Panel>
       </Tabs>
 
-      <Modal opened={mapOpen} onClose={() => setMapOpen(false)} title="Pole Location">
+      <Modal
+        opened={mapOpen}
+        onClose={() => setMapOpen(false)}
+        title="Pole Location"
+        size="xl"
+        centered
+      >
         <Stack gap="sm">
           <Text size="sm" c="dimmed">
             Click on the map to view/update coordinates.
@@ -301,6 +307,8 @@ export default function PoleDetailPage() {
               pole.gpsLat = lat;
               pole.gpsLng = lng;
             }}
+            currentPoleCode={pole.code}
+            showAllPoles={true}
           />
         </Stack>
       </Modal>

@@ -79,8 +79,8 @@ export default function UpdatePolePage() {
         code: pole.code || '',
         district: pole.district || '',
         street: pole.street || '',
-        gpsLat: pole.gpsLat || 0,
-        gpsLng: pole.gpsLng || 0,
+        gpsLat: pole.gpsLat !== undefined && pole.gpsLat !== null ? Number(pole.gpsLat) : 0,
+        gpsLng: pole.gpsLng !== undefined && pole.gpsLng !== null ? Number(pole.gpsLng) : 0,
         poleType: pole.poleType || 'STANDARD',
         heightMeters: pole.heightMeters || 0,
         lampType: pole.lampType || 'LED',
@@ -124,7 +124,33 @@ export default function UpdatePolePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateMutation.mutate(formData);
+    // Prepare data for API, ensuring GPS coordinates are numbers
+    const apiData: any = {
+      code: formData.code,
+      district: formData.district,
+      street: formData.street,
+      heightMeters: formData.heightMeters,
+      powerRatingWatt: formData.powerRatingWatt,
+      poleType: formData.poleType,
+      lampType: formData.lampType,
+      hasLedDisplay: formData.hasLedDisplay,
+      status: formData.status,
+    };
+
+    // Convert GPS coordinates to numbers if they exist
+    if (formData.gpsLat !== undefined && formData.gpsLat !== null && formData.gpsLat !== '' && !isNaN(Number(formData.gpsLat))) {
+      apiData.gpsLat = Number(formData.gpsLat);
+    }
+    if (formData.gpsLng !== undefined && formData.gpsLng !== null && formData.gpsLng !== '' && !isNaN(Number(formData.gpsLng))) {
+      apiData.gpsLng = Number(formData.gpsLng);
+    }
+
+    // Add LED model only if hasLedDisplay is true
+    if (formData.hasLedDisplay && formData.ledModel) {
+      apiData.ledModel = formData.ledModel;
+    }
+
+    updateMutation.mutate(apiData);
   };
 
   if (isLoading) {
@@ -189,7 +215,14 @@ export default function UpdatePolePage() {
               </Text>
               <MapPicker
                 value={{ lat: formData.gpsLat, lng: formData.gpsLng }}
-                onChange={(lat, lng) => setFormData({ ...formData, gpsLat: lat, gpsLng: lng })}
+                onChange={(lat, lng) => {
+                  // Ensure GPS coordinates are always stored as numbers
+                  setFormData((prev) => ({
+                    ...prev,
+                    gpsLat: typeof lat === 'number' ? lat : Number(lat),
+                    gpsLng: typeof lng === 'number' ? lng : Number(lng),
+                  }));
+                }}
               />
             </Stack>
 

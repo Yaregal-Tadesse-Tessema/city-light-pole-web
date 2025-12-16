@@ -50,6 +50,24 @@ export default function IssuesListPage() {
     },
   });
 
+  const { data: polesData } = useQuery({
+    queryKey: ['poles', 'dropdown'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/poles?page=1&limit=100', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const poleOptions = polesData?.items?.map((pole: any) => ({
+    value: pole.code,
+    label: `${pole.code} - ${pole.street}, ${pole.district}`,
+  })) || [];
+
   const createForm = useForm({
     initialValues: {
       poleCode: '',
@@ -244,9 +262,11 @@ export default function IssuesListPage() {
       <Modal opened={createModalOpened} onClose={() => setCreateModalOpened(false)} title="Create Issue">
         <form onSubmit={createForm.onSubmit(handleCreateSubmit)}>
           <Stack>
-            <TextInput
+            <Select
               label="Pole Code"
-              placeholder="LP-001"
+              placeholder="Select a pole"
+              data={poleOptions}
+              searchable
               required
               {...createForm.getInputProps('poleCode')}
             />

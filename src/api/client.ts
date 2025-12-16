@@ -3,16 +3,18 @@ import axios from 'axios';
 // Backend API base URL - Direct connection to backend
 // Use environment variable if set, otherwise use direct localhost URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3011/api/v1';
+// Ensure baseURL does NOT have trailing slash for proper path joining
+const normalizedBaseURL = API_BASE_URL.replace(/\/$/, '');
 
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: normalizedBaseURL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
 // Debug: Log the baseURL to verify it's set correctly
-console.log('API Base URL:', API_BASE_URL);
+console.log('API Base URL:', normalizedBaseURL);
 
 // Request interceptor to add auth token and log URLs
 apiClient.interceptors.request.use(
@@ -22,11 +24,11 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     // Log the full URL being called for debugging
-    // Axios automatically combines baseURL + url, adding / if needed
+    // Axios combines baseURL + url correctly
     const fullUrl = config.url 
       ? (config.url.startsWith('http') 
           ? config.url 
-          : `${config.baseURL || ''}${config.url.startsWith('/') ? config.url : '/' + config.url}`)
+          : `${config.baseURL || ''}${config.url}`)
       : config.url;
     console.log(`API Call: ${config.method?.toUpperCase()} ${fullUrl}`);
     return config;

@@ -215,8 +215,13 @@ export default function CreatePolePage() {
               <MapPicker
                 value={{ lat: form.values.gpsLat, lng: form.values.gpsLng }}
                 onChange={(lat, lng) => {
-                  form.setFieldValue('gpsLat', lat);
-                  form.setFieldValue('gpsLng', lng);
+                  // Use setValues to update only GPS fields without affecting other fields
+                  // Ensure GPS coordinates are always numbers
+                  form.setValues({
+                    ...form.values,
+                    gpsLat: typeof lat === 'number' ? lat : Number(lat),
+                    gpsLng: typeof lng === 'number' ? lng : Number(lng),
+                  });
                 }}
               />
             </Stack>

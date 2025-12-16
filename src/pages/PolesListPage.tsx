@@ -14,12 +14,15 @@ import {
   ActionIcon,
   Modal,
   Text,
+  Stack,
+  Loader,
 } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconEdit, IconTrash } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconHistory } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
+import apiClient from '../api/client';
 import axios from 'axios';
 
 export default function PolesListPage() {
@@ -32,6 +35,8 @@ export default function PolesListPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [poleToDelete, setPoleToDelete] = useState<string | null>(null);
+  const [historyModalOpened, { open: openHistoryModal, close: closeHistoryModal }] = useDisclosure(false);
+  const [selectedPoleCode, setSelectedPoleCode] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['poles', page, search, district, status],
@@ -54,14 +59,24 @@ export default function PolesListPage() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (code: string) => {
+  const { data: maintenanceHistory, isLoading: historyLoading } = useQuery({
+    queryKey: ['maintenance-history', selectedPoleCode],
+    queryFn: async () => {
+      if (!selectedPoleCode) return [];
       const token = localStorage.getItem('access_token');
-      await axios.delete(`http://localhost:3011/api/v1/poles/${code}`, {
+      const res = await axios.get(`http://localhost:3011/api/v1/poles/${selectedPoleCode}/maintenance-history`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+      return res.data;
+    },
+    enabled: !!selectedPoleCode && historyModalOpened,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (code: string) => {
+      await apiClient.delete(`poles/${code}`);
     },
     onSuccess: () => {
       notifications.show({
@@ -91,6 +106,11 @@ export default function PolesListPage() {
     if (poleToDelete) {
       deleteMutation.mutate(poleToDelete);
     }
+  };
+
+  const handleShowHistory = (code: string) => {
+    setSelectedPoleCode(code);
+    openHistoryModal();
   };
 
   const isAdmin = user?.role === 'ADMIN';
@@ -196,6 +216,14 @@ export default function PolesListPage() {
                       >
                         View
                       </Button>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        leftSection={<IconHistory size={14} />}
+                        onClick={() => handleShowHistory(pole.code)}
+                      >
+                        Show History
+                      </Button>
                       {isAdmin && (
                         <>
                           <ActionIcon
@@ -247,6 +275,66 @@ export default function PolesListPage() {
             Delete
           </Button>
         </Group>
+      </Modal>
+
+      <Modal
+        opened={historyModalOpened}
+        onClose={() => {
+          closeHistoryModal();
+          setSelectedPoleCode(null);
+        }}
+        title={`Maintenance History - ${selectedPoleCode}`}
+        size="xl"
+        centered
+      >
+        {historyLoading ? (
+          <Group justify="center" p="xl">
+            <Loader />
+          </Group>
+        ) : maintenanceHistory && maintenanceHistory.length > 0 ? (
+          <Table>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Description</Table.Th>
+                <Table.Th>Status</Table.Th>
+                <Table.Th>Cost</Table.Th>
+                <Table.Th>Start Date</Table.Th>
+                <Table.Th>End Date</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {maintenanceHistory.map((log: any) => (
+                <Table.Tr key={log.id}>
+                  <Table.Td>{log.description}</Table.Td>
+                  <Table.Td>
+                    <Badge>{log.status}</Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    {log.estimatedCost && parseFloat(log.estimatedCost) > 0
+                      ? `$${parseFloat(log.estimatedCost).toFixed(2)}`
+                      : log.cost && parseFloat(log.cost) > 0
+                      ? `$${parseFloat(log.cost).toFixed(2)}`
+                      : '-'}
+                  </Table.Td>
+                  <Table.Td>
+                    {log.startDate
+                      ? new Date(log.startDate).toLocaleDateString()
+                      : '-'}
+                  </Table.Td>
+                  <Table.Td>
+                    {log.endDate
+                      ? new Date(log.endDate).toLocaleDateString()
+                      : '-'}
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        ) : (
+          <Text c="dimmed" ta="center" p="xl">
+            No maintenance history found for this pole.
+          </Text>
+        )}
       </Modal>
     </Container>
   );
