@@ -50,7 +50,7 @@ export default function PolesListPage() {
       if (status) params.append('status', status);
 
       const token = localStorage.getItem('access_token');
-      const res = await axios.get(`http://localhost:3011/api/v1/poles?${params}`, {
+      const res = await axios.get(`http://localhost:3011/api/v1/poles?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -144,7 +144,10 @@ export default function PolesListPage() {
           <TextInput
             placeholder="Search by code, street, or subcity"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1); // Reset to first page when search changes
+            }}
             style={{ flex: 1 }}
           />
           <Select
@@ -163,7 +166,10 @@ export default function PolesListPage() {
               'Lemi Kura',
             ]}
             value={district}
-            onChange={setDistrict}
+            onChange={(value) => {
+              setDistrict(value);
+              setPage(1); // Reset to first page when filter changes
+            }}
             clearable
             searchable
           />
@@ -171,7 +177,10 @@ export default function PolesListPage() {
             placeholder="Status"
             data={['ACTIVE', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE', 'OPERATIONAL']}
             value={status}
-            onChange={setStatus}
+            onChange={(value) => {
+              setStatus(value);
+              setPage(1); // Reset to first page when filter changes
+            }}
             clearable
           />
         </Group>

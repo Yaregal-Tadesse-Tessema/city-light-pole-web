@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { AppShell, Group, Text, Button, NavLink } from '@mantine/core';
 import { useAuth } from '../hooks/useAuth';
@@ -8,13 +9,22 @@ import {
   IconTools,
   IconUsers,
   IconLogout,
+  IconChevronDown,
+  IconChevronRight,
 } from '@tabler/icons-react';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [lightPoleMenuOpened, setLightPoleMenuOpened] = useState(true);
 
   const isAdmin = user?.role === 'ADMIN';
+  
+  // Check if any light pole related route is active
+  const isLightPoleRouteActive = 
+    location.pathname.startsWith('/poles') || 
+    location.pathname.startsWith('/issues') || 
+    location.pathname.startsWith('/maintenance');
 
   return (
     <AppShell
@@ -44,26 +54,41 @@ export default function Layout() {
           active={location.pathname === '/dashboard'}
         />
         <NavLink
-          component={Link}
-          to="/poles"
-          label="Light Poles"
+          label="Light Pole"
           leftSection={<IconBulb size={16} />}
-          active={location.pathname.startsWith('/poles')}
-        />
-        <NavLink
-          component={Link}
-          to="/issues"
-          label="Issues"
-          leftSection={<IconAlertTriangle size={16} />}
-          active={location.pathname === '/issues'}
-        />
-        <NavLink
-          component={Link}
-          to="/maintenance"
-          label="Maintenance"
-          leftSection={<IconTools size={16} />}
-          active={location.pathname === '/maintenance'}
-        />
+          rightSection={
+            lightPoleMenuOpened ? (
+              <IconChevronDown size={16} />
+            ) : (
+              <IconChevronRight size={16} />
+            )
+          }
+          active={isLightPoleRouteActive}
+          opened={lightPoleMenuOpened}
+          onChange={() => setLightPoleMenuOpened(!lightPoleMenuOpened)}
+        >
+          <NavLink
+            component={Link}
+            to="/poles"
+            label="Light Poles"
+            leftSection={<IconBulb size={16} />}
+            active={location.pathname.startsWith('/poles')}
+          />
+          <NavLink
+            component={Link}
+            to="/issues"
+            label="Issues"
+            leftSection={<IconAlertTriangle size={16} />}
+            active={location.pathname === '/issues'}
+          />
+          <NavLink
+            component={Link}
+            to="/maintenance"
+            label="Maintenance"
+            leftSection={<IconTools size={16} />}
+            active={location.pathname === '/maintenance'}
+          />
+        </NavLink>
         {isAdmin && (
           <NavLink
             component={Link}
