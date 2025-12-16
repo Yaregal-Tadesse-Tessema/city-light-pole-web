@@ -223,6 +223,8 @@ export default function UpdatePolePage() {
                     gpsLng: typeof lng === 'number' ? lng : Number(lng),
                   }));
                 }}
+                currentPoleCode={formData.code}
+                showAllPoles={true}
               />
             </Stack>
 
