@@ -28,7 +28,7 @@ const ISSUE_STATUSES = [
   { value: 'CLOSED', label: 'Closed' },
 ];
 
-export default function ParkIssuesListPage() {
+export default function ParkingLotIssuesListPage() {
   const { user } = useAuth();
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [updateModalOpened, setUpdateModalOpened] = useState(false);
@@ -40,19 +40,18 @@ export default function ParkIssuesListPage() {
   const canUpdate = user?.role === 'ADMIN' || user?.role === 'MAINTENANCE_ENGINEER';
 
   const { data: issues, isLoading, refetch } = useQuery({
-    queryKey: ['park-issues'],
+    queryKey: ['parking-lot-issues'],
     queryFn: async () => {
       try {
         const token = localStorage.getItem('access_token');
-        const res = await axios.get('http://localhost:3011/api/v1/park-issues', {
+        const res = await axios.get('http://localhost:3011/api/v1/parking-lot-issues', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         return res.data;
       } catch (error: any) {
-        // Return empty array for any error (404, network, etc.)
-        console.warn('Failed to fetch park issues:', error.response?.status || error.message);
+        console.warn('Failed to fetch parking lot issues:', error.response?.status || error.message);
         return [];
       }
     },
@@ -60,19 +59,19 @@ export default function ParkIssuesListPage() {
     refetchOnWindowFocus: false,
   });
 
-  const { data: parksData } = useQuery({
-    queryKey: ['parks', 'dropdown'],
+  const { data: parkingLotsData } = useQuery({
+    queryKey: ['parking-lots', 'dropdown'],
     queryFn: async () => {
       try {
         const token = localStorage.getItem('access_token');
-        const res = await axios.get('http://localhost:3011/api/v1/parks?page=1&limit=100', {
+        const res = await axios.get('http://localhost:3011/api/v1/parking-lots?page=1&limit=100', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         return res.data;
       } catch (error: any) {
-        console.warn('Failed to fetch parks for dropdown:', error.response?.status || error.message);
+        console.warn('Failed to fetch parking lots for dropdown:', error.response?.status || error.message);
         return { items: [] };
       }
     },
@@ -80,25 +79,23 @@ export default function ParkIssuesListPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Get parks that have unclosed issues
-  const parksWithUnclosedIssues = new Set(
+  const parkingLotsWithUnclosedIssues = new Set(
     (issues || [])
       .filter((issue: any) => issue?.status === 'REPORTED' || issue?.status === 'IN_PROGRESS')
-      .map((issue: any) => issue?.park?.code || issue?.parkCode)
+      .map((issue: any) => issue?.parkingLot?.code || issue?.parkingLotCode)
       .filter(Boolean)
   );
 
-  // Filter out parks that have unclosed issues
-  const parkOptions = (parksData?.items || [])
-    .filter((park: any) => !parksWithUnclosedIssues.has(park?.code))
-    .map((park: any) => ({
-      value: park.code,
-      label: `${park.code} - ${park.street}, ${park.district}`,
+  const parkingLotOptions = (parkingLotsData?.items || [])
+    .filter((lot: any) => !parkingLotsWithUnclosedIssues.has(lot?.code))
+    .map((lot: any) => ({
+      value: lot.code,
+      label: `${lot.code} - ${lot.street}, ${lot.district}`,
     }));
 
   const createForm = useForm({
     initialValues: {
-      parkCode: '',
+      parkingLotCode: '',
       description: '',
       severity: 'MEDIUM',
     },
@@ -106,7 +103,7 @@ export default function ParkIssuesListPage() {
 
   const updateForm = useForm({
     initialValues: {
-      parkCode: '',
+      parkingLotCode: '',
       description: '',
       severity: 'MEDIUM',
       status: '',
@@ -116,27 +113,44 @@ export default function ParkIssuesListPage() {
 
   const handleCreateSubmit = async (values: any) => {
     try {
+      if (!values.parkingLotCode) {
+        notifications.show({ title: 'Error', message: 'Please select a parking lot', color: 'red' });
+        return;
+      }
+      if (!values.description?.trim()) {
+        notifications.show({ title: 'Error', message: 'Please enter a description', color: 'red' });
+        return;
+      }
       const token = localStorage.getItem('access_token');
-      const response = await axios.post('http://localhost:3011/api/v1/park-issues', values, {
+      const payload = {
+        parkingLotCode: values.parkingLotCode,
+        description: values.description.trim(),
+        severity: values.severity || 'MEDIUM',
+      };
+      await axios.post('http://localhost:3011/api/v1/parking-lot-issues', payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      console.log('Park issue created successfully:', response.data);
       notifications.show({
         title: 'Success',
-        message: 'Park issue created successfully',
+        message: 'Parking lot issue created successfully',
         color: 'green',
       });
       setCreateModalOpened(false);
       createForm.reset();
       refetch();
     } catch (error: any) {
-      console.error('Error creating park issue:', error);
+      const msg =
+        typeof error.response?.data?.message === 'string'
+          ? error.response?.data?.message
+          : Array.isArray(error.response?.data?.message)
+            ? error.response?.data?.message.join(', ')
+            : undefined;
       notifications.show({
         title: 'Error',
-        message: error.response?.data?.message || 'Failed to create park issue',
+        message: msg || `Failed to create parking lot issue${error.response?.status ? ` (HTTP ${error.response.status})` : ''}`,
         color: 'red',
       });
     }
@@ -145,7 +159,7 @@ export default function ParkIssuesListPage() {
   const handleUpdateClick = (issue: any) => {
     setSelectedIssue(issue);
     updateForm.setValues({
-      parkCode: issue.park?.code || issue.parkCode || '',
+      parkingLotCode: issue.parkingLot?.code || issue.parkingLotCode || '',
       description: issue.description || '',
       severity: issue.severity || 'MEDIUM',
       status: issue.status,
@@ -159,9 +173,8 @@ export default function ParkIssuesListPage() {
     
     try {
       const token = localStorage.getItem('access_token');
-      // Backend currently only accepts status, severity, and resolutionNotes
       await axios.patch(
-        `http://localhost:3011/api/v1/park-issues/${selectedIssue.id}/status`,
+        `http://localhost:3011/api/v1/parking-lot-issues/${selectedIssue.id}/status`,
         {
           severity: values.severity,
           status: values.status,
@@ -176,7 +189,7 @@ export default function ParkIssuesListPage() {
       );
       notifications.show({
         title: 'Success',
-        message: 'Park issue updated successfully',
+        message: 'Parking lot issue updated successfully',
         color: 'green',
       });
       setUpdateModalOpened(false);
@@ -184,65 +197,43 @@ export default function ParkIssuesListPage() {
       updateForm.reset();
       refetch();
     } catch (error: any) {
-      console.error('Error updating park issue:', error);
       notifications.show({
         title: 'Error',
-        message: error.response?.data?.message || 'Failed to update park issue',
+        message: error.response?.data?.message || 'Failed to update parking lot issue',
         color: 'red',
       });
     }
   };
 
   const handleDeleteClick = (issue: any) => {
-    try {
-      setIssueToDelete(issue);
-      setDeleteModalOpened(true);
-    } catch (error) {
-      console.error('Error opening delete modal:', error);
-    }
+    setIssueToDelete(issue);
+    setDeleteModalOpened(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!issueToDelete) {
-      console.error('No issue selected for deletion');
-      return;
-    }
+    if (!issueToDelete) return;
     
     try {
       const token = localStorage.getItem('access_token');
-      if (!token) {
-        notifications.show({
-          title: 'Error',
-          message: 'Authentication token not found',
-          color: 'red',
-        });
-        return;
-      }
-
-      console.log('Deleting park issue:', issueToDelete.id);
-      const response = await axios.delete(`http://localhost:3011/api/v1/park-issues/${issueToDelete.id}`, {
+      await axios.delete(`http://localhost:3011/api/v1/parking-lot-issues/${issueToDelete.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      
-      console.log('Delete response:', response);
       notifications.show({
         title: 'Success',
-        message: 'Park issue deleted successfully',
+        message: 'Parking lot issue deleted successfully',
         color: 'green',
       });
       setDeleteModalOpened(false);
       setIssueToDelete(null);
       refetch();
     } catch (error: any) {
-      console.error('Error deleting park issue:', error);
       notifications.show({
         title: 'Error',
-        message: error.response?.data?.message || error.message || 'Failed to delete park issue',
+        message: error.response?.data?.message || 'Failed to delete parking lot issue',
         color: 'red',
       });
-      // Don't close modal on error so user can try again
     }
   };
 
@@ -279,13 +270,13 @@ export default function ParkIssuesListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title size="h2">Park Issues</Title>
+        <Title size="h2">Parking Lot Issues</Title>
         {canCreate && (
           <Button 
             onClick={() => setCreateModalOpened(true)}
             size="md"
           >
-            Create Park Issue
+            Create Parking Lot Issue
           </Button>
         )}
       </Group>
@@ -294,113 +285,114 @@ export default function ParkIssuesListPage() {
         <Table.ScrollContainer minWidth={1200}>
           <Table highlightOnHover>
             <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Park Code</Table.Th>
-              <Table.Th>Park Name</Table.Th>
-              <Table.Th>Park Type</Table.Th>
-              <Table.Th>Area (ha)</Table.Th>
-              <Table.Th>District</Table.Th>
-              <Table.Th>Street</Table.Th>
-              <Table.Th>Description</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Severity</Table.Th>
-              <Table.Th>Reported By</Table.Th>
-              <Table.Th>Created</Table.Th>
-              <Table.Th>Resolution Notes</Table.Th>
-              <Table.Th>Updated</Table.Th>
-              {canUpdate && <Table.Th>Actions</Table.Th>}
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {isLoading ? (
               <Table.Tr>
-                <Table.Td colSpan={canUpdate ? 14 : 13}>Loading...</Table.Td>
+                <Table.Th>Parking Lot Code</Table.Th>
+                <Table.Th>Lot Name</Table.Th>
+                <Table.Th>District</Table.Th>
+                <Table.Th>Street</Table.Th>
+                <Table.Th>Capacity</Table.Th>
+                <Table.Th>Paid Parking</Table.Th>
+                <Table.Th>Description</Table.Th>
+                <Table.Th>Status</Table.Th>
+                <Table.Th>Severity</Table.Th>
+                <Table.Th>Reported By</Table.Th>
+                <Table.Th>Created</Table.Th>
+                <Table.Th>Resolution Notes</Table.Th>
+                <Table.Th>Updated</Table.Th>
+                {canUpdate && <Table.Th>Actions</Table.Th>}
               </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {isLoading ? (
+                <Table.Tr>
+                  <Table.Td colSpan={canUpdate ? 14 : 13}>Loading...</Table.Td>
+                </Table.Tr>
               ) : !issues || issues.length === 0 ? (
-              <Table.Tr>
-                <Table.Td colSpan={canUpdate ? 14 : 13}>No park issues found</Table.Td>
-              </Table.Tr>
+                <Table.Tr>
+                  <Table.Td colSpan={canUpdate ? 14 : 13}>No parking lot issues found</Table.Td>
+                </Table.Tr>
               ) : (
                 (issues || []).map((issue: any) => (
-                <Table.Tr key={issue.id}>
-                  <Table.Td>{issue.park?.code || issue.parkCode || 'N/A'}</Table.Td>
-                  <Table.Td>{issue.park?.name || '—'}</Table.Td>
-                  <Table.Td>{issue.park?.parkType || '—'}</Table.Td>
-                  <Table.Td>{issue.park?.areaHectares ?? '—'}</Table.Td>
-                  <Table.Td>{issue.park?.district || '—'}</Table.Td>
-                  <Table.Td>{issue.park?.street || '—'}</Table.Td>
-                  <Table.Td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {issue.description}
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={getStatusColor(issue.status)}>{issue.status}</Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={getSeverityColor(issue.severity)}>{issue.severity}</Badge>
-                  </Table.Td>
-                  <Table.Td>{issue.reportedBy?.fullName || 'N/A'}</Table.Td>
-                  <Table.Td>
-                    {new Date(issue.createdAt).toLocaleDateString()}
-                  </Table.Td>
-                  <Table.Td style={{ maxWidth: 240, whiteSpace: 'pre-wrap' }}>
-                    {issue.resolutionNotes || '—'}
-                  </Table.Td>
-                  <Table.Td>
-                    {issue.updatedAt ? new Date(issue.updatedAt).toLocaleDateString() : '—'}
-                  </Table.Td>
-                  {canUpdate && (
-                    <Table.Td onClick={(e) => e.stopPropagation()}>
-                      {issue.status === 'REPORTED' && (
-                        <Group gap="xs">
-                          <ActionIcon
-                            color="blue"
-                            variant="light"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUpdateClick(issue);
-                            }}
-                          >
-                            <IconEdit size={16} />
-                          </ActionIcon>
-                          <ActionIcon
-                            color="red"
-                            variant="light"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(issue);
-                            }}
-                          >
-                            <IconTrash size={16} />
-                          </ActionIcon>
-                        </Group>
-                      )}
+                  <Table.Tr key={issue.id}>
+                    <Table.Td>{issue.parkingLot?.code || issue.parkingLotCode || 'N/A'}</Table.Td>
+                    <Table.Td>{issue.parkingLot?.name || '—'}</Table.Td>
+                    <Table.Td>{issue.parkingLot?.district || '—'}</Table.Td>
+                    <Table.Td>{issue.parkingLot?.street || '—'}</Table.Td>
+                    <Table.Td>{issue.parkingLot?.capacity ?? '—'}</Table.Td>
+                    <Table.Td>{issue.parkingLot?.hasPaidParking ? 'Yes' : 'No'}</Table.Td>
+                    <Table.Td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {issue.description}
                     </Table.Td>
-                  )}
-                </Table.Tr>
-              ))
-          )}
+                    <Table.Td>
+                      <Badge color={getStatusColor(issue.status)}>{issue.status}</Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color={getSeverityColor(issue.severity)}>{issue.severity}</Badge>
+                    </Table.Td>
+                    <Table.Td>{issue.reportedBy?.fullName || 'N/A'}</Table.Td>
+                    <Table.Td>
+                      {new Date(issue.createdAt).toLocaleDateString()}
+                    </Table.Td>
+                    <Table.Td style={{ maxWidth: 240, whiteSpace: 'pre-wrap' }}>
+                      {issue.resolutionNotes || '—'}
+                    </Table.Td>
+                    <Table.Td>
+                      {issue.updatedAt ? new Date(issue.updatedAt).toLocaleDateString() : '—'}
+                    </Table.Td>
+                    {canUpdate && (
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
+                        {issue.status === 'REPORTED' && (
+                          <Group gap="xs">
+                            <ActionIcon
+                              color="blue"
+                              variant="light"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUpdateClick(issue);
+                              }}
+                            >
+                              <IconEdit size={16} />
+                            </ActionIcon>
+                            <ActionIcon
+                              color="red"
+                              variant="light"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(issue);
+                              }}
+                            >
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </Group>
+                        )}
+                      </Table.Td>
+                    )}
+                  </Table.Tr>
+                ))
+              )}
             </Table.Tbody>
           </Table>
         </Table.ScrollContainer>
       </Paper>
 
-      {/* Create Issue Modal */}
       <Modal
         opened={createModalOpened}
         onClose={() => setCreateModalOpened(false)}
-        title="Create Park Issue"
+        title="Create Parking Lot Issue"
         size="lg"
         centered
       >
         <form onSubmit={createForm.onSubmit(handleCreateSubmit)}>
           <Stack>
             <Select
-              label="Park Code"
-              placeholder="Select a park"
-              data={parkOptions}
+              label="Parking Lot Code"
+              placeholder="Select a parking lot"
+              data={parkingLotOptions}
               searchable
               required
-              {...createForm.getInputProps('parkCode')}
+              value={createForm.values.parkingLotCode}
+              onChange={(value) => createForm.setFieldValue('parkingLotCode', value || '')}
+              error={createForm.errors.parkingLotCode}
             />
             <Textarea
               label="Description"
@@ -411,14 +403,15 @@ export default function ParkIssuesListPage() {
             <Select
               label="Severity"
               data={['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']}
-              {...createForm.getInputProps('severity')}
+              value={createForm.values.severity}
+              onChange={(value) => createForm.setFieldValue('severity', value || 'MEDIUM')}
+              error={createForm.errors.severity}
             />
             <Button type="submit">Create</Button>
           </Stack>
         </form>
       </Modal>
 
-      {/* Update Issue Modal */}
       <Modal 
         opened={updateModalOpened} 
         onClose={() => {
@@ -426,14 +419,16 @@ export default function ParkIssuesListPage() {
           setSelectedIssue(null);
           updateForm.reset();
         }} 
-        title="Edit Park Issue"
+        title="Edit Parking Lot Issue"
+        size="lg"
+        centered
       >
         <form onSubmit={updateForm.onSubmit(handleUpdateSubmit)}>
           <Stack>
             {selectedIssue && (
               <Paper p="sm" withBorder bg="gray.0">
                 <Group gap="xs" mb="xs">
-                  <Badge color="blue">{selectedIssue.park?.code || selectedIssue.parkCode}</Badge>
+                  <Badge color="blue">{selectedIssue.parkingLot?.code || selectedIssue.parkingLotCode}</Badge>
                 </Group>
                 <Textarea
                   label="Description"
@@ -474,24 +469,24 @@ export default function ParkIssuesListPage() {
         </form>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
       <Modal
         opened={deleteModalOpened}
         onClose={() => {
           setDeleteModalOpened(false);
           setIssueToDelete(null);
         }}
-        title="Delete Park Issue"
+        title="Delete Parking Lot Issue"
+        size="md"
         centered
       >
         <Stack>
           <Text>
-            Are you sure you want to delete this park issue?
+            Are you sure you want to delete this parking lot issue?
           </Text>
           {issueToDelete && (
             <Paper p="sm" withBorder bg="gray.0">
-              <Text size="sm" fw={700}>Park Code:</Text>
-              <Text size="sm">{issueToDelete.park?.code || issueToDelete.parkCode}</Text>
+              <Text size="sm" fw={700}>Parking Lot Code:</Text>
+              <Text size="sm">{issueToDelete.parkingLot?.code || issueToDelete.parkingLotCode}</Text>
               <Text size="sm" fw={700} mt="xs">Description:</Text>
               <Text size="sm">{issueToDelete.description}</Text>
             </Paper>
@@ -515,5 +510,4 @@ export default function ParkIssuesListPage() {
     </Container>
   );
 }
-
 

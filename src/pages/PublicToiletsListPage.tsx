@@ -25,7 +25,7 @@ import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import axios from 'axios';
 
-export default function ParksListPage() {
+export default function PublicToiletsListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -34,12 +34,12 @@ export default function ParksListPage() {
   const [district, setDistrict] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
-  const [parkToDelete, setParkToDelete] = useState<string | null>(null);
+  const [toiletToDelete, setToiletToDelete] = useState<string | null>(null);
   const [historyModalOpened, { open: openHistoryModal, close: closeHistoryModal }] = useDisclosure(false);
-  const [selectedParkCode, setSelectedParkCode] = useState<string | null>(null);
+  const [selectedToiletCode, setSelectedToiletCode] = useState<string | null>(null);
 
   const { data, isLoading, error: queryError } = useQuery({
-    queryKey: ['parks', page, search, district, status],
+    queryKey: ['public-toilets', page, search, district, status],
     queryFn: async () => {
       try {
         const params = new URLSearchParams({
@@ -51,14 +51,14 @@ export default function ParksListPage() {
         if (status) params.append('status', status);
 
         const token = localStorage.getItem('access_token');
-        const res = await axios.get(`http://localhost:3011/api/v1/parks?${params.toString()}`, {
+        const res = await axios.get(`http://localhost:3011/api/v1/public-toilets?${params.toString()}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         return res.data;
       } catch (error: any) {
-        console.error('Failed to fetch parks:', error.response?.status || error.message);
+        console.error('Failed to fetch public toilets:', error.response?.status || error.message);
         return { items: [], total: 0, limit: 10 };
       }
     },
@@ -66,60 +66,59 @@ export default function ParksListPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Ensure data is always defined
   const displayData = data || { items: [], total: 0, limit: 10 };
 
   const { data: maintenanceHistory, isLoading: historyLoading } = useQuery({
-    queryKey: ['park-maintenance-history', selectedParkCode],
+    queryKey: ['toilet-maintenance-history', selectedToiletCode],
     queryFn: async () => {
-      if (!selectedParkCode) return [];
+      if (!selectedToiletCode) return [];
       const token = localStorage.getItem('access_token');
-      const res = await axios.get(`http://localhost:3011/api/v1/parks/${selectedParkCode}/maintenance-history`, {
+      const res = await axios.get(`http://localhost:3011/api/v1/public-toilets/${selectedToiletCode}/maintenance-history`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       return res.data;
     },
-    enabled: !!selectedParkCode && historyModalOpened,
+    enabled: !!selectedToiletCode && historyModalOpened,
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (code: string) => {
-      await apiClient.delete(`parks/${code}`);
+      await apiClient.delete(`public-toilets/${code}`);
     },
     onSuccess: () => {
       notifications.show({
         title: 'Success',
-        message: 'Park deleted successfully',
+        message: 'Public toilet deleted successfully',
         color: 'green',
       });
-      queryClient.invalidateQueries({ queryKey: ['parks'] });
+      queryClient.invalidateQueries({ queryKey: ['public-toilets'] });
       closeDeleteModal();
-      setParkToDelete(null);
+      setToiletToDelete(null);
     },
     onError: (error: any) => {
       notifications.show({
         title: 'Error',
-        message: error.response?.data?.message || 'Failed to delete park',
+        message: error.response?.data?.message || 'Failed to delete public toilet',
         color: 'red',
       });
     },
   });
 
   const handleDeleteClick = (code: string) => {
-    setParkToDelete(code);
+    setToiletToDelete(code);
     openDeleteModal();
   };
 
   const handleDeleteConfirm = () => {
-    if (parkToDelete) {
-      deleteMutation.mutate(parkToDelete);
+    if (toiletToDelete) {
+      deleteMutation.mutate(toiletToDelete);
     }
   };
 
   const handleShowHistory = (code: string) => {
-    setSelectedParkCode(code);
+    setSelectedToiletCode(code);
     openHistoryModal();
   };
 
@@ -143,13 +142,13 @@ export default function ParksListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title size={{ base: 'h2', sm: 'h1' }}>Public Parks</Title>
+        <Title size={{ base: 'h2', sm: 'h1' }}>Public Toilets</Title>
         {isAdmin && (
           <Button 
-            onClick={() => navigate('/parks/new')}
+            onClick={() => navigate('/public-toilets/new')}
             size="md"
           >
-            Register Public Park
+            Register Public Toilet
           </Button>
         )}
       </Group>
@@ -157,7 +156,7 @@ export default function ParksListPage() {
       <Paper p={{ base: 'xs', sm: 'md' }} withBorder mb="md">
         <Stack gap="md">
           <TextInput
-            placeholder="Search by code, name, street, or subcity"
+            placeholder="Search by code, street, or subcity"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -208,10 +207,8 @@ export default function ParksListPage() {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Code</Table.Th>
-                <Table.Th>Name</Table.Th>
                 <Table.Th>Subcity</Table.Th>
                 <Table.Th>Street</Table.Th>
-                <Table.Th>Area (ha)</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Actions</Table.Th>
               </Table.Tr>
@@ -219,27 +216,25 @@ export default function ParksListPage() {
             <Table.Tbody>
               {isLoading ? (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>Loading...</Table.Td>
+                  <Table.Td colSpan={5}>Loading...</Table.Td>
                 </Table.Tr>
               ) : !displayData.items || displayData.items.length === 0 ? (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>No parks found</Table.Td>
+                  <Table.Td colSpan={5}>No public toilets found</Table.Td>
                 </Table.Tr>
               ) : (
-                displayData.items.map((park: any) => (
+                displayData.items.map((toilet: any) => (
                   <Table.Tr 
-                    key={park.code}
+                    key={toilet.code}
                     style={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/parks/${park.code}`)}
+                    onClick={() => navigate(`/public-toilets/${toilet.code}`)}
                   >
-                    <Table.Td>{park.code}</Table.Td>
-                    <Table.Td>{park.name}</Table.Td>
-                    <Table.Td>{park.district}</Table.Td>
-                    <Table.Td>{park.street}</Table.Td>
-                    <Table.Td>{park.areaHectares}</Table.Td>
+                    <Table.Td>{toilet.code}</Table.Td>
+                    <Table.Td>{toilet.district}</Table.Td>
+                    <Table.Td>{toilet.street}</Table.Td>
                     <Table.Td>
-                      <Badge color={getStatusColor(park.status)}>
-                        {park.status}
+                      <Badge color={getStatusColor(toilet.status)}>
+                        {toilet.status}
                       </Badge>
                     </Table.Td>
                     <Table.Td onClick={(e) => e.stopPropagation()}>
@@ -247,7 +242,7 @@ export default function ParksListPage() {
                         <Button
                           size="xs"
                           variant="light"
-                          onClick={() => navigate(`/parks/${park.code}`)}
+                          onClick={() => navigate(`/public-toilets/${toilet.code}`)}
                         >
                           View
                         </Button>
@@ -255,7 +250,7 @@ export default function ParksListPage() {
                           size="xs"
                           variant="light"
                           leftSection={<IconHistory size={14} />}
-                          onClick={() => handleShowHistory(park.code)}
+                          onClick={() => handleShowHistory(toilet.code)}
                         >
                           Show History
                         </Button>
@@ -264,14 +259,14 @@ export default function ParksListPage() {
                             <ActionIcon
                               color="blue"
                               variant="light"
-                              onClick={() => navigate(`/parks/${park.code}/edit`)}
+                              onClick={() => navigate(`/public-toilets/${toilet.code}/edit`)}
                             >
                               <IconEdit size={16} />
                             </ActionIcon>
                             <ActionIcon
                               color="red"
                               variant="light"
-                              onClick={() => handleDeleteClick(park.code)}
+                              onClick={() => handleDeleteClick(toilet.code)}
                             >
                               <IconTrash size={16} />
                             </ActionIcon>
@@ -299,10 +294,10 @@ export default function ParksListPage() {
       <Modal
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
-        title="Delete Public Park"
+        title="Delete Public Toilet"
         centered
       >
-        <Text>Are you sure you want to delete this public park? This action cannot be undone.</Text>
+        <Text>Are you sure you want to delete this public toilet? This action cannot be undone.</Text>
         <Group justify="flex-end" mt="xl">
           <Button variant="outline" onClick={closeDeleteModal}>
             Cancel
@@ -317,9 +312,9 @@ export default function ParksListPage() {
         opened={historyModalOpened}
         onClose={() => {
           closeHistoryModal();
-          setSelectedParkCode(null);
+          setSelectedToiletCode(null);
         }}
-        title={`Maintenance History - ${selectedParkCode}`}
+        title={`Maintenance History - ${selectedToiletCode}`}
         size="xl"
         centered
       >
@@ -370,12 +365,11 @@ export default function ParksListPage() {
           </Table>
         ) : (
           <Text c="dimmed" ta="center" p="xl">
-            No maintenance history found for this park.
+            No maintenance history found for this public toilet.
           </Text>
         )}
       </Modal>
     </Container>
   );
 }
-
 

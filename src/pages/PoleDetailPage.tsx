@@ -81,20 +81,27 @@ export default function PoleDetailPage() {
   if (!pole) return <Container>Pole not found</Container>;
 
   return (
-    <Container size="xl" py="xl">
-      <Group justify="space-between" mb="xl">
-        <Title>Pole Details: {pole.code}</Title>
-        <Group>
+    <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
+      <Stack gap="md" mb={{ base: 'md', sm: 'xl' }}>
+        <Title size={{ base: 'h2', sm: 'h1' }}>Pole Details: {pole.code}</Title>
+        <Group wrap="wrap">
           {isAdmin && (
-            <Button onClick={() => navigate(`/poles/${code}/edit`)}>
+            <Button 
+              onClick={() => navigate(`/poles/${code}/edit`)}
+              size="md"
+            >
               Edit
             </Button>
           )}
-          <Button variant="light" onClick={() => navigate('/poles')}>
+          <Button 
+            variant="light" 
+            onClick={() => navigate('/poles')}
+            size="md"
+          >
             Back to List
           </Button>
         </Group>
-      </Group>
+      </Stack>
 
       <Tabs defaultValue="details">
         <Tabs.List>

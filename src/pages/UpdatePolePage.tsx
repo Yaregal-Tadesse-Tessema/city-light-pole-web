@@ -164,10 +164,10 @@ export default function UpdatePolePage() {
   }
 
   return (
-    <Container size="md" py="xl">
-      <Title mb="xl">Update Light Pole</Title>
+    <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
+      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Update Light Pole</Title>
 
-      <Paper withBorder p="xl">
+      <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
         <form onSubmit={handleSubmit}>
           <Stack>
             <TextInput

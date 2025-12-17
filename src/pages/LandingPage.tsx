@@ -135,20 +135,33 @@ export default function LandingPage() {
           padding: '16px 0',
         }}
       >
-        <Container size="lg">
-          <Group justify="space-between" align="center">
-            <Group gap="md">
+        <Container size="lg" px={{ base: 'xs', sm: 'md' }}>
+          <Group justify="space-between" align="center" wrap="wrap" gap="xs">
+            <Group gap={{ base: 'xs', sm: 'md' }}>
               <Image
                 src="/esaa-logo.jpeg"
                 alt="ESAA Logo"
-                w={60}
-                h={60}
+                w={{ base: 40, sm: 60 }}
+                h={{ base: 40, sm: 60 }}
                 fit="contain"
                 style={{ borderRadius: '50%' }}
               />
-              <Title order={3} size="h4" c="white">
+              <Title 
+                order={3} 
+                size={{ base: 'h5', sm: 'h4' }} 
+                c="white"
+                visibleFrom="xs"
+              >
                 Coredor Assets Management System
               </Title>
+              <Text 
+                size="xs" 
+                c="white"
+                hiddenFrom="xs"
+                fw={600}
+              >
+                Coredor Assets
+              </Text>
             </Group>
             <Button
               size="md"
@@ -166,13 +179,18 @@ export default function LandingPage() {
       <Box
         style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          padding: '40px 0',
           color: 'white',
         }}
+        p={{ base: 24, sm: 40 }}
       >
-        <Container size="lg">
-          <Stack align="center" gap="md">
-            <Text size="lg" ta="center" c="white" maw={800}>
+        <Container size="lg" px={{ base: 'xs', sm: 'md' }}>
+          <Stack align="center" gap={{ base: 'sm', sm: 'md' }}>
+            <Text 
+              size={{ base: 'sm', sm: 'lg' }} 
+              ta="center" 
+              c="white" 
+              maw={800}
+            >
               Comprehensive management platform for city assets including light poles, public parks, parking lots, museums, public toilets, sport stadiums, and river side projects
             </Text>
             <Button
@@ -189,35 +207,35 @@ export default function LandingPage() {
       </Box>
 
       {/* Asset Types Section */}
-      <Container size="xl" py={40}>
-        <Stack align="center" gap="md" mb={30}>
-          <Title order={2} size={28} ta="center">
+      <Container size="xl" py={{ base: 24, sm: 40 }} px={{ base: 'xs', sm: 'md' }}>
+        <Stack align="center" gap="md" mb={{ base: 20, sm: 30 }}>
+          <Title order={2} size={{ base: 20, sm: 28 }} ta="center">
             Managed Asset Types
           </Title>
         </Stack>
 
-        <Grid gutter="md">
+        <Grid gutter={{ base: 'xs', sm: 'md' }}>
           {assetTypes.map((asset, index) => (
-            <Grid.Col key={index} span={{ base: 12, sm: 6, md: 3 }}>
+            <Grid.Col key={index} span={{ base: 12, sm: 6, md: 4, lg: 3 }}>
               <Paper p={0} withBorder h="100%" style={{ height: '100%', overflow: 'hidden', cursor: 'pointer' }}>
                 <Stack gap={0}>
                   <Image
                     src={asset.image}
                     alt={asset.title}
-                    height={150}
+                    height={{ base: 120, sm: 150 }}
                     fit="cover"
                     style={{ width: '100%' }}
                   />
-                  <Stack p="md" gap="xs">
+                  <Stack p={{ base: 'xs', sm: 'md' }} gap="xs">
                     <Group gap="xs">
-                      <ThemeIcon size={40} radius="md" variant="light" color="blue">
-                        <asset.icon size={20} />
+                      <ThemeIcon size={{ base: 32, sm: 40 }} radius="md" variant="light" color="blue">
+                        <asset.icon size={{ base: 16, sm: 20 }} />
                       </ThemeIcon>
-                      <Title order={5} size="h6" style={{ flex: 1, fontSize: '14px' }}>
+                      <Title order={5} size={{ base: 'xs', sm: 'sm' }} style={{ flex: 1 }}>
                         {asset.title}
                       </Title>
                     </Group>
-                    <Text c="dimmed" size="xs" lineClamp={2}>
+                    <Text c="dimmed" size={{ base: '10px', sm: 'xs' }} lineClamp={2}>
                       {asset.description}
                     </Text>
                   </Stack>
@@ -229,25 +247,25 @@ export default function LandingPage() {
       </Container>
 
       {/* Features Section - Compact */}
-      <Container size="lg" py={40}>
-        <Stack align="center" gap="md" mb={30}>
-          <Title order={2} size={28} ta="center">
+      <Container size="lg" py={{ base: 24, sm: 40 }} px={{ base: 'xs', sm: 'md' }}>
+        <Stack align="center" gap="md" mb={{ base: 20, sm: 30 }}>
+          <Title order={2} size={{ base: 20, sm: 28 }} ta="center">
             Key Features
           </Title>
         </Stack>
 
-        <Grid gutter="md">
+        <Grid gutter={{ base: 'xs', sm: 'md' }}>
           {features.map((feature, index) => (
             <Grid.Col key={index} span={{ base: 12, sm: 6, md: 4 }}>
-              <Paper p="md" withBorder h="100%" style={{ height: '100%' }}>
+              <Paper p={{ base: 'xs', sm: 'md' }} withBorder h="100%" style={{ height: '100%' }}>
                 <Stack gap="sm">
-                  <ThemeIcon size={50} radius="md" variant="light" color="blue">
-                    <feature.icon size={24} />
+                  <ThemeIcon size={{ base: 40, sm: 50 }} radius="md" variant="light" color="blue">
+                    <feature.icon size={{ base: 20, sm: 24 }} />
                   </ThemeIcon>
                   <Title order={5} size="h6">
                     {feature.title}
                   </Title>
-                  <Text c="dimmed" size="xs">
+                  <Text c="dimmed" size={{ base: '10px', sm: 'xs' }}>
                     {feature.description}
                   </Text>
                 </Stack>
@@ -261,13 +279,13 @@ export default function LandingPage() {
       <Box
         style={{
           background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-          padding: '40px 0',
           color: 'white',
         }}
+        p={{ base: 24, sm: 40 }}
       >
-        <Container size="lg">
-          <Stack align="center" gap="md">
-            <Title order={3} size={24} ta="center" c="white">
+        <Container size="lg" px={{ base: 'xs', sm: 'md' }}>
+          <Stack align="center" gap={{ base: 'sm', sm: 'md' }}>
+            <Title order={3} size={{ base: 18, sm: 24 }} ta="center" c="white">
               Ready to Get Started?
             </Title>
             <Button
@@ -283,19 +301,21 @@ export default function LandingPage() {
       </Box>
 
       {/* Footer */}
-      <Box bg="gray.1" py="xl">
-        <Container size="lg">
-          <Group justify="space-between">
-            <Stack gap="xs">
-              <Text fw={600}>ESAA</Text>
-              <Text size="sm" c="dimmed">
-                Addis Ababa City Administration Electric Service Administration Authority
+      <Box bg="gray.1" py={{ base: 'md', sm: 'xl' }}>
+        <Container size="lg" px={{ base: 'xs', sm: 'md' }}>
+          <Stack gap="md">
+            <Group justify="space-between" wrap="wrap">
+              <Stack gap="xs">
+                <Text fw={600} size={{ base: 'sm', sm: 'md' }}>ESAA</Text>
+                <Text size={{ base: 'xs', sm: 'sm' }} c="dimmed">
+                  Addis Ababa City Administration Electric Service Administration Authority
+                </Text>
+              </Stack>
+              <Text size={{ base: 'xs', sm: 'sm' }} c="dimmed">
+                © {new Date().getFullYear()} All rights reserved
               </Text>
-            </Stack>
-            <Text size="sm" c="dimmed">
-              © {new Date().getFullYear()} All rights reserved
-            </Text>
-          </Group>
+            </Group>
+          </Stack>
         </Container>
       </Box>
     </Box>

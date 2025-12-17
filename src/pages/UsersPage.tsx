@@ -49,44 +49,46 @@ export default function UsersPage() {
   };
 
   return (
-    <Container size="xl" py="xl">
-      <Title mb="xl">Users</Title>
+    <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
+      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Users</Title>
 
       <Paper withBorder>
-        <Table>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Name</Table.Th>
-              <Table.Th>Email</Table.Th>
-              <Table.Th>Role</Table.Th>
-              <Table.Th>Status</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {isLoading ? (
+        <Table.ScrollContainer minWidth={600}>
+          <Table>
+            <Table.Thead>
               <Table.Tr>
-                <Table.Td colSpan={4}>Loading...</Table.Td>
+                <Table.Th>Name</Table.Th>
+                <Table.Th>Email</Table.Th>
+                <Table.Th>Role</Table.Th>
+                <Table.Th>Status</Table.Th>
               </Table.Tr>
-            ) : users?.length === 0 ? (
-              <Table.Tr>
-                <Table.Td colSpan={4}>No users found</Table.Td>
-              </Table.Tr>
-            ) : (
-              users?.map((u: any) => (
-                <Table.Tr key={u.id}>
-                  <Table.Td>{u.fullName}</Table.Td>
-                  <Table.Td>{u.email}</Table.Td>
-                  <Table.Td>
-                    <Badge color={getRoleColor(u.role)}>{u.role}</Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={getStatusColor(u.status)}>{u.status}</Badge>
-                  </Table.Td>
+            </Table.Thead>
+            <Table.Tbody>
+              {isLoading ? (
+                <Table.Tr>
+                  <Table.Td colSpan={4}>Loading...</Table.Td>
                 </Table.Tr>
-              ))
-            )}
-          </Table.Tbody>
-        </Table>
+              ) : users?.length === 0 ? (
+                <Table.Tr>
+                  <Table.Td colSpan={4}>No users found</Table.Td>
+                </Table.Tr>
+              ) : (
+                users?.map((u: any) => (
+                  <Table.Tr key={u.id}>
+                    <Table.Td>{u.fullName}</Table.Td>
+                    <Table.Td>{u.email}</Table.Td>
+                    <Table.Td>
+                      <Badge color={getRoleColor(u.role)}>{u.role}</Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color={getStatusColor(u.status)}>{u.status}</Badge>
+                    </Table.Td>
+                  </Table.Tr>
+                ))
+              )}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
       </Paper>
     </Container>
   );

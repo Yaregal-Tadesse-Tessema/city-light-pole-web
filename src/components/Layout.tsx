@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { AppShell, Group, Text, Button, NavLink, Image, Stack } from '@mantine/core';
+import { AppShell, Group, Text, Button, NavLink, Image, Stack, Burger, Avatar, ScrollArea, Box } from '@mantine/core';
+import { useDisclosure, useMediaQuery } from '@mantine/hooks';
 import { useAuth } from '../hooks/useAuth';
 import {
   IconDashboard,
@@ -22,12 +23,14 @@ import {
 export default function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [opened, { toggle, close }] = useDisclosure(true);
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [lightPoleMenuOpened, setLightPoleMenuOpened] = useState(true);
   const [publicParksMenuOpened, setPublicParksMenuOpened] = useState(true);
   const [parkingLotsMenuOpened, setParkingLotsMenuOpened] = useState(false);
   const [museumsMenuOpened, setMuseumsMenuOpened] = useState(false);
   const [publicToiletsMenuOpened, setPublicToiletsMenuOpened] = useState(false);
-  const [sportStadiumsMenuOpened, setSportStadiumsMenuOpened] = useState(false);
+  const [footballFieldsMenuOpened, setFootballFieldsMenuOpened] = useState(false);
   const [riverSideProjectsMenuOpened, setRiverSideProjectsMenuOpened] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN';
@@ -59,10 +62,10 @@ export default function Layout() {
     location.pathname.startsWith('/public-toilets') ||
     (location.pathname === '/maintenance' && location.search.includes('type=toilet'));
 
-  // Check if sport stadiums routes are active
-  const isSportStadiumsRouteActive = 
-    location.pathname.startsWith('/sport-stadiums') ||
-    (location.pathname === '/maintenance' && location.search.includes('type=stadium'));
+  // Check if football fields routes are active
+  const isFootballFieldsRouteActive = 
+    location.pathname.startsWith('/football-fields') ||
+    (location.pathname === '/maintenance' && location.search.includes('type=football'));
 
   // Check if river side projects routes are active
   const isRiverSideProjectsRouteActive = 
@@ -72,26 +75,71 @@ export default function Layout() {
   return (
     <AppShell
       navbar={{
-        width: 250,
+        width: { base: 250, sm: 250 },
         breakpoint: 'sm',
+        collapsed: { mobile: !opened },
       }}
-      padding="md"
+      padding={{ base: 'xs', sm: 'md' }}
     >
-      <AppShell.Navbar p="md">
-        <Stack gap="xs" mb="lg" align="center">
+      <AppShell.Header>
+        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
+          <Group gap="md" wrap="nowrap">
+            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+            <Image
+              src="/esaa-logo.jpeg"
+              alt="ESAA Logo"
+              w={{ base: 40, sm: 60 }}
+              h={{ base: 40, sm: 60 }}
+              fit="contain"
+              style={{ borderRadius: '50%', flexShrink: 0 }}
+              visibleFrom="sm"
+            />
+          </Group>
+          <Group gap="xs" visibleFrom="sm" wrap="nowrap">
+            <Avatar
+              src={user?.profilePicture || undefined}
+              alt={user?.fullName || 'User'}
+              size="sm"
+              radius="xl"
+              color="blue"
+              style={{ flexShrink: 0 }}
+            >
+              {user?.fullName
+                ? user.fullName
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2)
+                : 'U'}
+            </Avatar>
+            <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+              {user?.fullName}
+            </Text>
+            <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+              ({user?.role})
+            </Text>
+          </Group>
+        </Group>
+      </AppShell.Header>
+      <AppShell.Navbar
+        p={{ base: 'xs', sm: 'md' }}
+        style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+      >
+        <Stack gap="xs" mb="lg" align="center" visibleFrom="sm" style={{ flexShrink: 0 }}>
           <Image
             src="/esaa-logo.jpeg"
             alt="ESAA Logo"
-            w={120}
-            h={120}
+            w={{ base: 80, sm: 120 }}
+            h={{ base: 80, sm: 120 }}
             fit="contain"
             fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-family='Arial' font-size='14' fill='%23999'%3ELogo%3C/text%3E%3C/svg%3E"
           />
           <Text size="sm" fw={600} ta="center" c="dimmed">
-            Coredor Assets Management
+            Coredor Assets Management System
           </Text>
         </Stack>
-        <Group mb="md">
+        <Group mb="md" visibleFrom="sm" style={{ flexShrink: 0 }}>
           <Text size="sm" c="dimmed">
             {user?.fullName}
           </Text>
@@ -99,12 +147,27 @@ export default function Layout() {
             ({user?.role})
           </Text>
         </Group>
-        <NavLink
-          component={Link}
-          to="/dashboard"
+        <Stack gap="xs" mb="md" hiddenFrom="sm" style={{ flexShrink: 0 }}>
+          <Text size="xs" fw={600} c="dimmed">
+            {user?.fullName}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {user?.role}
+          </Text>
+        </Stack>
+        <ScrollArea style={{ flex: 1 }} offsetScrollbars>
+          <Stack gap="xs">
+          <NavLink
+            component={Link}
+            to="/dashboard"
           label="Dashboard"
           leftSection={<IconDashboard size={16} />}
           active={location.pathname === '/dashboard'}
+          onClick={() => {
+            if (isMobile) {
+              close();
+            }
+          }}
         />
         <NavLink
           label="Light Pole"
@@ -126,6 +189,11 @@ export default function Layout() {
             label="Light Poles"
             leftSection={<IconBulb size={16} />}
             active={location.pathname.startsWith('/poles')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
@@ -133,13 +201,26 @@ export default function Layout() {
             label="Issues"
             leftSection={<IconAlertTriangle size={16} />}
             active={location.pathname === '/issues'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
-            to="/maintenance"
+            to="/maintenance?type=pole"
             label="Maintenance"
             leftSection={<IconTools size={16} />}
-            active={location.pathname === '/maintenance'}
+            active={
+              location.pathname === '/maintenance' &&
+              (!location.search.includes('type=') || location.search.includes('type=pole'))
+            }
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
         </NavLink>
         <NavLink
@@ -162,6 +243,11 @@ export default function Layout() {
             label="Public Parks"
             leftSection={<IconTrees size={16} />}
             active={location.pathname.startsWith('/parks') && !location.pathname.startsWith('/park-issues')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
@@ -169,13 +255,23 @@ export default function Layout() {
             label="Park Issues"
             leftSection={<IconAlertTriangle size={16} />}
             active={location.pathname === '/park-issues'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
             to="/maintenance?type=park"
             label="Maintenance"
             leftSection={<IconTools size={16} />}
-            active={location.pathname === '/maintenance'}
+            active={location.pathname === '/maintenance' && location.search.includes('type=park')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
         </NavLink>
         <NavLink
@@ -198,6 +294,11 @@ export default function Layout() {
             label="Parking Lots"
             leftSection={<IconParking size={16} />}
             active={location.pathname.startsWith('/parking-lots') && !location.pathname.startsWith('/parking-lot-issues')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
@@ -205,6 +306,11 @@ export default function Layout() {
             label="Parking Lot Issues"
             leftSection={<IconAlertTriangle size={16} />}
             active={location.pathname === '/parking-lot-issues'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
@@ -212,6 +318,11 @@ export default function Layout() {
             label="Maintenance"
             leftSection={<IconTools size={16} />}
             active={location.pathname === '/maintenance' && location.search.includes('type=parking')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
         </NavLink>
         <NavLink
@@ -234,6 +345,11 @@ export default function Layout() {
             label="Museums"
             leftSection={<IconBuildingStore size={16} />}
             active={location.pathname.startsWith('/museums') && !location.pathname.startsWith('/museum-issues')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
@@ -241,6 +357,11 @@ export default function Layout() {
             label="Museum Issues"
             leftSection={<IconAlertTriangle size={16} />}
             active={location.pathname === '/museum-issues'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
@@ -248,6 +369,11 @@ export default function Layout() {
             label="Maintenance"
             leftSection={<IconTools size={16} />}
             active={location.pathname === '/maintenance' && location.search.includes('type=museum')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
         </NavLink>
         <NavLink
@@ -270,6 +396,11 @@ export default function Layout() {
             label="Public Toilets"
             leftSection={<IconBath size={16} />}
             active={location.pathname.startsWith('/public-toilets') && !location.pathname.startsWith('/toilet-issues')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
@@ -277,6 +408,11 @@ export default function Layout() {
             label="Toilet Issues"
             leftSection={<IconAlertTriangle size={16} />}
             active={location.pathname === '/toilet-issues'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
@@ -284,42 +420,62 @@ export default function Layout() {
             label="Maintenance"
             leftSection={<IconTools size={16} />}
             active={location.pathname === '/maintenance' && location.search.includes('type=toilet')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
         </NavLink>
         <NavLink
-          label="Sport Stadiums"
+          label="Football Fields"
           leftSection={<IconTrophy size={16} />}
           rightSection={
-            sportStadiumsMenuOpened ? (
+            footballFieldsMenuOpened ? (
               <IconChevronDown size={16} />
             ) : (
               <IconChevronRight size={16} />
             )
           }
-          active={isSportStadiumsRouteActive}
-          opened={sportStadiumsMenuOpened}
-          onChange={() => setSportStadiumsMenuOpened(!sportStadiumsMenuOpened)}
+          active={isFootballFieldsRouteActive}
+          opened={footballFieldsMenuOpened}
+          onChange={() => setFootballFieldsMenuOpened(!footballFieldsMenuOpened)}
         >
           <NavLink
             component={Link}
-            to="/sport-stadiums"
-            label="Sport Stadiums"
+            to="/football-fields"
+            label="Football Fields"
             leftSection={<IconTrophy size={16} />}
-            active={location.pathname.startsWith('/sport-stadiums') && !location.pathname.startsWith('/stadium-issues')}
+            active={location.pathname.startsWith('/football-fields') && !location.pathname.startsWith('/football-field-issues')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
-            to="/stadium-issues"
-            label="Stadium Issues"
+            to="/football-field-issues"
+            label="Football Field Issues"
             leftSection={<IconAlertTriangle size={16} />}
-            active={location.pathname === '/stadium-issues'}
+            active={location.pathname === '/football-field-issues'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
-            to="/maintenance?type=stadium"
+            to="/maintenance?type=football"
             label="Maintenance"
             leftSection={<IconTools size={16} />}
-            active={location.pathname === '/maintenance' && location.search.includes('type=stadium')}
+            active={location.pathname === '/maintenance' && location.search.includes('type=football')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
         </NavLink>
         <NavLink
@@ -342,6 +498,11 @@ export default function Layout() {
             label="River Side Projects"
             leftSection={<IconDroplet size={16} />}
             active={location.pathname.startsWith('/river-side-projects') && !location.pathname.startsWith('/river-issues')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
@@ -349,6 +510,11 @@ export default function Layout() {
             label="River Project Issues"
             leftSection={<IconAlertTriangle size={16} />}
             active={location.pathname === '/river-issues'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
           <NavLink
             component={Link}
@@ -356,6 +522,11 @@ export default function Layout() {
             label="Maintenance"
             leftSection={<IconTools size={16} />}
             active={location.pathname === '/maintenance' && location.search.includes('type=river')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
         </NavLink>
         {isAdmin && (
@@ -365,18 +536,27 @@ export default function Layout() {
             label="Users"
             leftSection={<IconUsers size={16} />}
             active={location.pathname === '/users'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
           />
         )}
-        <Button
-          mt="md"
-          variant="light"
-          color="red"
-          leftSection={<IconLogout size={16} />}
-          onClick={logout}
-          fullWidth
-        >
-          Logout
-        </Button>
+          </Stack>
+        </ScrollArea>
+        <Box mt="md" style={{ marginTop: 'auto' }}>
+          <Button
+            variant="light"
+            color="red"
+            leftSection={<IconLogout size={16} />}
+            onClick={logout}
+            fullWidth
+            style={{ flexShrink: 0 }}
+          >
+            Logout
+          </Button>
+        </Box>
       </AppShell.Navbar>
       <AppShell.Main>
         <Outlet />

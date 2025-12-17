@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { IconEye, IconTrash } from '@tabler/icons-react';
@@ -27,105 +27,212 @@ import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 
 const SCHEDULE_STATUSES = ['REQUESTED', 'STARTED', 'PAUSED', 'COMPLETED'];
+const ASSET_TYPES = [
+  { value: 'pole', label: 'Light Poles' },
+  { value: 'park', label: 'Public Parks' },
+  { value: 'parking', label: 'Car Parking Lots' },
+  { value: 'museum', label: 'Museums' },
+  { value: 'toilet', label: 'Public Toilets' },
+  { value: 'football', label: 'Football Fields' },
+  { value: 'river', label: 'River Side Projects' },
+];
+
+function getScheduleType(schedule: any): string {
+  if (schedule?.poleCode) return 'pole';
+  if (schedule?.parkCode) return 'park';
+  if (schedule?.parkingLotCode) return 'parking';
+  if (schedule?.museumCode) return 'museum';
+  if (schedule?.publicToiletCode) return 'toilet';
+  if (schedule?.footballFieldCode) return 'football';
+  if (schedule?.riverSideProjectCode) return 'river';
+  return 'pole';
+}
+
+function getScheduleAssetCode(schedule: any): string {
+  return (
+    schedule?.poleCode ||
+    schedule?.parkCode ||
+    schedule?.parkingLotCode ||
+    schedule?.museumCode ||
+    schedule?.publicToiletCode ||
+    schedule?.footballFieldCode ||
+    schedule?.riverSideProjectCode ||
+    '—'
+  );
+}
+
+function getScheduleAsset(schedule: any) {
+  const type = getScheduleType(schedule);
+  if (type === 'pole') return schedule?.pole || null;
+  if (type === 'park') return schedule?.park || null;
+  if (type === 'parking') return schedule?.parkingLot || null;
+  if (type === 'museum') return schedule?.museum || null;
+  if (type === 'toilet') return schedule?.publicToilet || null;
+  if (type === 'football') return schedule?.footballField || null;
+  if (type === 'river') return schedule?.riverSideProject || null;
+  return null;
+}
+
+function getAssetNameByType(type: string, asset: any): string {
+  if (!asset) return '—';
+  if (type === 'pole') return 'Light Pole';
+  return asset?.name || '—';
+}
+
+function getAssetDistrictByType(type: string, asset: any): string {
+  if (!asset) return '—';
+  if (type === 'pole') return asset?.subcity || '—';
+  return asset?.district || '—';
+}
+
+function getAssetStreet(asset: any): string {
+  return asset?.street || '—';
+}
+
+function getAssetInfoLabel(type: string): string {
+  if (type === 'pole') return 'Pole Details';
+  if (type === 'park') return 'Park Details';
+  if (type === 'parking') return 'Parking Details';
+  if (type === 'museum') return 'Museum Type';
+  if (type === 'toilet') return 'Toilet Details';
+  if (type === 'football') return 'Field Details';
+  if (type === 'river') return 'Project Type';
+  return 'Asset Info';
+}
+
+function getAssetInfo(type: string, asset: any): string {
+  if (!asset) return '—';
+  if (type === 'pole') return `${asset?.poleType || '—'} • ${asset?.lampType || '—'} • ${asset?.heightMeters ?? '—'}m`;
+  if (type === 'park') return `${asset?.parkType || '—'} • ${asset?.areaHectares ?? '—'} ha`;
+  if (type === 'parking')
+    return `${asset?.parkingType || '—'} • cap ${asset?.capacity ?? '—'} • ${asset?.hasPaidParking ? 'paid' : 'free'}`;
+  if (type === 'museum') return asset?.museumType || '—';
+  if (type === 'toilet') return `${asset?.toiletType || '—'} • ${asset?.hasPaidAccess ? 'paid' : 'free'}`;
+  if (type === 'football') return `${asset?.fieldType || '—'} • cap ${asset?.capacity ?? '—'}`;
+  if (type === 'river') return asset?.projectType || '—';
+  return '—';
+}
 
 export default function MaintenancePage() {
   const [searchParams] = useSearchParams();
-  const filterType = searchParams.get('type'); // 'park' or 'pole' or null (all)
+  const filterType = (searchParams.get('type') || 'pole').toLowerCase(); // default: light poles
   const [createScheduleOpened, setCreateScheduleOpened] = useState(false);
   const [editScheduleOpened, setEditScheduleOpened] = useState(false);
   const [issueModalOpened, setIssueModalOpened] = useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
+  const [selectedIssueType, setSelectedIssueType] = useState<string | null>(null);
   const [scheduleToDelete, setScheduleToDelete] = useState<any>(null);
 
   const { data: schedules, isLoading: schedulesLoading, refetch: refetchSchedules } = useQuery({
     queryKey: ['maintenance', 'schedules', filterType],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
-      const res = await axios.get('http://localhost:3011/api/v1/maintenance/schedules', {
+      const maintenanceEndpoints: Record<string, string> = {
+        pole: 'http://localhost:3011/api/v1/maintenance/schedules?type=pole',
+        park: 'http://localhost:3011/api/v1/parks/maintenance',
+        parking: 'http://localhost:3011/api/v1/parking-lots/maintenance',
+        museum: 'http://localhost:3011/api/v1/museums/maintenance',
+        toilet: 'http://localhost:3011/api/v1/public-toilets/maintenance',
+        football: 'http://localhost:3011/api/v1/football-fields/maintenance',
+        river: 'http://localhost:3011/api/v1/river-side-projects/maintenance',
+      };
+      const url = maintenanceEndpoints[filterType] || maintenanceEndpoints.pole;
+      const res = await axios.get(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      // Filter by type if specified
-      if (filterType === 'park') {
-        return res.data.filter((schedule: any) => schedule.parkCode);
-      } else if (filterType === 'pole') {
-        return res.data.filter((schedule: any) => schedule.poleCode);
+      return Array.isArray(res.data) ? res.data : [];
+    },
+  });
+
+  const { data: issuesForType } = useQuery({
+    queryKey: ['issues', 'for-maintenance', filterType],
+    queryFn: async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const baseHeaders = { Authorization: `Bearer ${token}` };
+        const endpoints: Record<string, string> = {
+          pole: 'http://localhost:3011/api/v1/issues',
+          park: 'http://localhost:3011/api/v1/park-issues',
+          parking: 'http://localhost:3011/api/v1/parking-lot-issues',
+          museum: 'http://localhost:3011/api/v1/museum-issues',
+          toilet: 'http://localhost:3011/api/v1/toilet-issues',
+          football: 'http://localhost:3011/api/v1/football-field-issues',
+          river: 'http://localhost:3011/api/v1/river-issues',
+        };
+        const url = endpoints[filterType] || endpoints.pole;
+        const res = await axios.get(url, { headers: baseHeaders });
+        return Array.isArray(res.data) ? res.data : [];
+      } catch (error: any) {
+        console.warn('Failed to fetch issues:', error.response?.status || error.message);
+        return [];
       }
-      return res.data;
     },
-  });
-
-
-  const { data: poleIssues } = useQuery({
-    queryKey: ['issues', 'for-maintenance'],
-    queryFn: async () => {
-      const token = localStorage.getItem('access_token');
-      const res = await axios.get('http://localhost:3011/api/v1/issues', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
-  });
-
-  const { data: parkIssues } = useQuery({
-    queryKey: ['park-issues', 'for-maintenance'],
-    queryFn: async () => {
-      const token = localStorage.getItem('access_token');
-      const res = await axios.get('http://localhost:3011/api/v1/parks/issues', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   const { data: selectedIssue, isLoading: issueLoading } = useQuery({
-    queryKey: ['issue', selectedIssueId],
+    queryKey: ['issue', selectedIssueId, selectedIssueType],
     queryFn: async () => {
       if (!selectedIssueId) return null;
       const token = localStorage.getItem('access_token');
-      // Try pole issues first, then park issues
+      const type = (selectedIssueType || filterType || 'pole').toLowerCase();
+      const endpoints: Record<string, string> = {
+        pole: `http://localhost:3011/api/v1/issues/${selectedIssueId}`,
+        park: `http://localhost:3011/api/v1/park-issues/${selectedIssueId}`,
+        parking: `http://localhost:3011/api/v1/parking-lot-issues/${selectedIssueId}`,
+        museum: `http://localhost:3011/api/v1/museum-issues/${selectedIssueId}`,
+        toilet: `http://localhost:3011/api/v1/toilet-issues/${selectedIssueId}`,
+        football: `http://localhost:3011/api/v1/football-field-issues/${selectedIssueId}`,
+        river: `http://localhost:3011/api/v1/river-issues/${selectedIssueId}`,
+      };
       try {
-        const res = await axios.get(`http://localhost:3011/api/v1/issues/${selectedIssueId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const res = await axios.get(endpoints[type] || endpoints.pole, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        return { ...res.data, type: 'pole' };
+        return { ...res.data, type };
       } catch {
-        try {
-          const res = await axios.get(`http://localhost:3011/api/v1/parks/issues/${selectedIssueId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-          return { ...res.data, type: 'park' };
-        } catch {
-          return null;
-        }
+        return null;
       }
     },
     enabled: !!selectedIssueId && issueModalOpened,
   });
 
-  // Combine pole and park issues
-  const allIssues = [
-    ...(poleIssues || []).map((issue: any) => ({ ...issue, type: 'pole' })),
-    ...(parkIssues || []).map((issue: any) => ({ ...issue, type: 'park' })),
-  ];
-
-  const issueOptions =
-    allIssues
-      ?.filter((issue: any) => issue.status !== 'CLOSED' && issue.status !== 'IN_PROGRESS') // Exclude closed and in-progress issues
-      .map((issue: any) => ({
+  const issueOptions = useMemo(() => {
+    const issues = (issuesForType || []).filter(
+      (issue: any) => issue?.status !== 'CLOSED' && issue?.status !== 'IN_PROGRESS',
+    );
+    const type = filterType;
+    return issues.map((issue: any) => {
+      const code =
+        issue?.pole?.code ||
+        issue?.poleCode ||
+        issue?.park?.code ||
+        issue?.parkCode ||
+        issue?.parkingLot?.code ||
+        issue?.parkingLotCode ||
+        issue?.museum?.code ||
+        issue?.museumCode ||
+        issue?.publicToilet?.code ||
+        issue?.publicToiletCode ||
+        issue?.footballField?.code ||
+        issue?.footballFieldCode ||
+        issue?.riverSideProject?.code ||
+        issue?.riverSideProjectCode ||
+        'N/A';
+      const typeLabel = ASSET_TYPES.find((t) => t.value === type)?.label || 'Asset';
+      return {
         value: issue.id,
-        label: `${issue.type === 'park' ? 'Park' : 'Pole'} ${issue.park?.code || issue.pole?.code || issue.parkCode || issue.poleCode || 'N/A'} – ${issue.description}`,
-        poleCode: issue.pole?.code || issue.poleCode,
-        parkCode: issue.park?.code || issue.parkCode,
-        issueType: issue.type,
-      })) || [];
+        label: `${typeLabel.replace(/s$/, '')} ${code} – ${issue.description}`,
+        issueType: type,
+        code,
+      };
+    });
+  }, [issuesForType, filterType]);
 
   const { data: polesData } = useQuery({
     queryKey: ['poles', 'for-maintenance'],
@@ -149,6 +256,61 @@ export default function MaintenancePage() {
     },
   });
 
+  const { data: parkingLotsData } = useQuery({
+    queryKey: ['parking-lots', 'for-maintenance'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/parking-lots?page=1&limit=100', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: museumsData } = useQuery({
+    queryKey: ['museums', 'for-maintenance'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/museums?page=1&limit=100', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: toiletsData } = useQuery({
+    queryKey: ['public-toilets', 'for-maintenance'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/public-toilets?page=1&limit=100', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: footballFieldsData } = useQuery({
+    queryKey: ['football-fields', 'for-maintenance'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/football-fields?page=1&limit=100', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: riverSideProjectsData } = useQuery({
+    queryKey: ['river-side-projects', 'for-maintenance'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/river-side-projects?page=1&limit=100', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data;
+    },
+  });
+
   const poleOptions = polesData?.items?.map((pole: any) => ({
     value: pole.code,
     label: `${pole.code} - ${pole.street}, ${pole.subcity || pole.district}`,
@@ -159,10 +321,55 @@ export default function MaintenancePage() {
     label: `${park.code} - ${park.street}, ${park.district}`,
   })) || [];
 
+  const parkingLotOptions =
+    parkingLotsData?.items?.map((lot: any) => ({
+      value: lot.code,
+      label: `${lot.code} - ${lot.street}, ${lot.district}`,
+    })) || [];
+
+  const museumOptions =
+    museumsData?.items?.map((m: any) => ({
+      value: m.code,
+      label: `${m.code} - ${m.street}, ${m.district}`,
+    })) || [];
+
+  const toiletOptions =
+    toiletsData?.items?.map((t: any) => ({
+      value: t.code,
+      label: `${t.code} - ${t.street}, ${t.district}`,
+    })) || [];
+
+  const footballFieldOptions =
+    footballFieldsData?.items?.map((f: any) => ({
+      value: f.code,
+      label: `${f.code} - ${f.street}, ${f.district}`,
+    })) || [];
+
+  const riverSideProjectOptions =
+    riverSideProjectsData?.items?.map((p: any) => ({
+      value: p.code,
+      label: `${p.code} - ${p.street}, ${p.district}`,
+    })) || [];
+
+  const assetOptionsByType: Record<string, any[]> = {
+    pole: poleOptions,
+    park: parkOptions,
+    parking: parkingLotOptions,
+    museum: museumOptions,
+    toilet: toiletOptions,
+    football: footballFieldOptions,
+    river: riverSideProjectOptions,
+  };
+
   const scheduleForm = useForm({
     initialValues: {
       poleCode: '',
       parkCode: '',
+      parkingLotCode: '',
+      museumCode: '',
+      publicToiletCode: '',
+      footballFieldCode: '',
+      riverSideProjectCode: '',
       issueId: '',
       frequency: 'MONTHLY', // kept as default and hidden from UI
       description: '',
@@ -172,6 +379,7 @@ export default function MaintenancePage() {
       estimatedCost: undefined as number | undefined,
       remark: '',
       maintenanceType: 'issue', // 'issue' or 'direct'
+      assetType: filterType,
     },
   });
 
@@ -209,6 +417,16 @@ export default function MaintenancePage() {
         remark: values.remark?.trim() || undefined,
       };
 
+      const clearAssetCodes = () => {
+        delete payload.poleCode;
+        delete payload.parkCode;
+        delete payload.parkingLotCode;
+        delete payload.museumCode;
+        delete payload.publicToiletCode;
+        delete payload.footballFieldCode;
+        delete payload.riverSideProjectCode;
+      };
+
       // Add issueId if maintenance type is 'issue'
       if (values.maintenanceType === 'issue') {
         if (!values.issueId) {
@@ -220,30 +438,78 @@ export default function MaintenancePage() {
           return;
         }
         payload.issueId = values.issueId;
-        // Also set poleCode or parkCode based on issue type
-        if (values.parkCode) {
-          payload.parkCode = values.parkCode;
-        }
-        if (values.poleCode) {
-          payload.poleCode = values.poleCode;
-        }
+        clearAssetCodes();
+        // Set correct code field based on current filter type
+        if (filterType === 'park') payload.parkCode = values.parkCode;
+        else if (filterType === 'pole') payload.poleCode = values.poleCode;
+        else if (filterType === 'parking') payload.parkingLotCode = values.parkingLotCode;
+        else if (filterType === 'museum') payload.museumCode = values.museumCode;
+        else if (filterType === 'toilet') payload.publicToiletCode = values.publicToiletCode;
+        else if (filterType === 'football') payload.footballFieldCode = values.footballFieldCode;
+        else if (filterType === 'river') payload.riverSideProjectCode = values.riverSideProjectCode;
       } else {
-        // Direct maintenance - require either poleCode or parkCode
-        if (values.poleCode) {
-          payload.poleCode = values.poleCode;
-        } else if (values.parkCode) {
-          payload.parkCode = values.parkCode;
-        } else {
+        // Direct maintenance - require a code based on assetType
+        clearAssetCodes();
+        const t = (values.assetType || filterType || 'pole').toLowerCase();
+        if (t === 'pole' && values.poleCode) payload.poleCode = values.poleCode;
+        else if (t === 'park' && values.parkCode) payload.parkCode = values.parkCode;
+        else if (t === 'parking' && values.parkingLotCode) payload.parkingLotCode = values.parkingLotCode;
+        else if (t === 'museum' && values.museumCode) payload.museumCode = values.museumCode;
+        else if (t === 'toilet' && values.publicToiletCode) payload.publicToiletCode = values.publicToiletCode;
+        else if (t === 'football' && values.footballFieldCode) payload.footballFieldCode = values.footballFieldCode;
+        else if (t === 'river' && values.riverSideProjectCode) payload.riverSideProjectCode = values.riverSideProjectCode;
+        else {
           notifications.show({
             title: 'Error',
-            message: 'Please select either a pole or park for direct maintenance',
+            message: 'Please select an asset for direct maintenance',
             color: 'red',
           });
           return;
         }
       }
 
-      await axios.post('http://localhost:3011/api/v1/maintenance/schedules', payload, {
+      const maintenanceEndpoints: Record<string, string> = {
+        pole: 'http://localhost:3011/api/v1/maintenance/schedules',
+        park: 'http://localhost:3011/api/v1/parks/maintenance',
+        parking: 'http://localhost:3011/api/v1/parking-lots/maintenance',
+        museum: 'http://localhost:3011/api/v1/museums/maintenance',
+        toilet: 'http://localhost:3011/api/v1/public-toilets/maintenance',
+        football: 'http://localhost:3011/api/v1/football-fields/maintenance',
+        river: 'http://localhost:3011/api/v1/river-side-projects/maintenance',
+      };
+      const assetType = (values.assetType || filterType || 'pole').toLowerCase();
+      const endpoint = maintenanceEndpoints[assetType] || maintenanceEndpoints.pole;
+      
+      // Transform payload for new endpoints (remove old multi-asset fields, use single asset field)
+      const newPayload: any = {
+        description: payload.description,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+        frequency: payload.frequency,
+        status: payload.status,
+        estimatedCost: payload.estimatedCost,
+        remark: payload.remark,
+        issueId: payload.issueId,
+        district: payload.district,
+      };
+      
+      if (assetType === 'park' && payload.parkCode) {
+        newPayload.parkCode = payload.parkCode;
+      } else if (assetType === 'parking' && payload.parkingLotCode) {
+        newPayload.parkingLotCode = payload.parkingLotCode;
+      } else if (assetType === 'museum' && payload.museumCode) {
+        newPayload.museumCode = payload.museumCode;
+      } else if (assetType === 'toilet' && payload.publicToiletCode) {
+        newPayload.publicToiletCode = payload.publicToiletCode;
+      } else if (assetType === 'football' && payload.footballFieldCode) {
+        newPayload.footballFieldCode = payload.footballFieldCode;
+      } else if (assetType === 'river' && payload.riverSideProjectCode) {
+        newPayload.riverSideProjectCode = payload.riverSideProjectCode;
+      } else if (assetType === 'pole' && payload.poleCode) {
+        newPayload.poleCode = payload.poleCode;
+      }
+      
+      await axios.post(endpoint, newPayload, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -297,18 +563,20 @@ export default function MaintenancePage() {
         remark: values.remark?.trim() || undefined,
       };
       
-      // Preserve issueId, poleCode, and parkCode from the original schedule if they exist
-      if (selectedSchedule.issueId) {
-        payload.issueId = selectedSchedule.issueId;
-      }
-      if (selectedSchedule.poleCode) {
-        payload.poleCode = selectedSchedule.poleCode;
-      }
-      if (selectedSchedule.parkCode) {
-        payload.parkCode = selectedSchedule.parkCode;
-      }
+      const scheduleType = getScheduleType(selectedSchedule);
+      const maintenanceEndpoints: Record<string, string> = {
+        pole: 'http://localhost:3011/api/v1/maintenance/schedules',
+        park: 'http://localhost:3011/api/v1/parks/maintenance',
+        parking: 'http://localhost:3011/api/v1/parking-lots/maintenance',
+        museum: 'http://localhost:3011/api/v1/museums/maintenance',
+        toilet: 'http://localhost:3011/api/v1/public-toilets/maintenance',
+        football: 'http://localhost:3011/api/v1/football-fields/maintenance',
+        river: 'http://localhost:3011/api/v1/river-side-projects/maintenance',
+      };
+      const endpoint = maintenanceEndpoints[scheduleType] || maintenanceEndpoints.pole;
+      
       await axios.patch(
-        `http://localhost:3011/api/v1/maintenance/schedules/${selectedSchedule.id}`,
+        `${endpoint}/${selectedSchedule.id}`,
         payload,
         {
           headers: {
@@ -354,7 +622,19 @@ export default function MaintenancePage() {
         return;
       }
 
-      await axios.delete(`http://localhost:3011/api/v1/maintenance/schedules/${scheduleToDelete.id}`, {
+      const scheduleType = getScheduleType(scheduleToDelete);
+      const maintenanceEndpoints: Record<string, string> = {
+        pole: 'http://localhost:3011/api/v1/maintenance/schedules',
+        park: 'http://localhost:3011/api/v1/parks/maintenance',
+        parking: 'http://localhost:3011/api/v1/parking-lots/maintenance',
+        museum: 'http://localhost:3011/api/v1/museums/maintenance',
+        toilet: 'http://localhost:3011/api/v1/public-toilets/maintenance',
+        football: 'http://localhost:3011/api/v1/football-fields/maintenance',
+        river: 'http://localhost:3011/api/v1/river-side-projects/maintenance',
+      };
+      const endpoint = maintenanceEndpoints[scheduleType] || maintenanceEndpoints.pole;
+      
+      await axios.delete(`${endpoint}/${scheduleToDelete.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -379,15 +659,24 @@ export default function MaintenancePage() {
   };
 
   return (
-    <Container size="xl" py="xl">
-      <Group justify="space-between" mb="xl">
-        <Title>
+    <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
+      <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
+        <Title size="h2">
           Maintenance
           {filterType === 'park' && ' - Parks'}
-          {filterType === 'pole' && ' - Poles'}
+          {filterType === 'pole' && ' - Light Poles'}
+          {filterType === 'parking' && ' - Parking Lots'}
+          {filterType === 'museum' && ' - Museums'}
+          {filterType === 'toilet' && ' - Public Toilets'}
+          {filterType === 'football' && ' - Football Fields'}
+          {filterType === 'river' && ' - River Side Projects'}
         </Title>
         <Group>
-          <Button variant="light" onClick={() => setCreateScheduleOpened(true)}>
+          <Button 
+            variant="light" 
+            onClick={() => setCreateScheduleOpened(true)}
+            size="md"
+          >
             Create Schedule
           </Button>
         </Group>
@@ -398,13 +687,18 @@ export default function MaintenancePage() {
           <Tabs.Tab value="schedules">Maintenance History</Tabs.Tab>
         </Tabs.List>
 
-        <Tabs.Panel value="schedules" pt="xl">
+        <Tabs.Panel value="schedules" pt={{ base: 'md', sm: 'xl' }}>
           <Paper withBorder>
-            <Table>
-              <Table.Thead>
+            <Table.ScrollContainer minWidth={1200}>
+              <Table>
+                <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Pole/Park Code</Table.Th>
-                  <Table.Th>Description</Table.Th>
+                  <Table.Th>Asset Code</Table.Th>
+                  <Table.Th>Asset Name</Table.Th>
+                  <Table.Th>District</Table.Th>
+                  <Table.Th>Street</Table.Th>
+                  <Table.Th>{getAssetInfoLabel(filterType)}</Table.Th>
+                  <Table.Th>Maintenance</Table.Th>
                   <Table.Th>Frequency</Table.Th>
                   <Table.Th>Start Date</Table.Th>
                   <Table.Th>End Date</Table.Th>
@@ -417,16 +711,24 @@ export default function MaintenancePage() {
               <Table.Tbody>
                 {schedulesLoading ? (
                   <Table.Tr>
-                    <Table.Td colSpan={9}>Loading...</Table.Td>
+                    <Table.Td colSpan={13}>Loading...</Table.Td>
                   </Table.Tr>
                 ) : schedules?.length === 0 ? (
                   <Table.Tr>
-                    <Table.Td colSpan={9}>No maintenance records found</Table.Td>
+                    <Table.Td colSpan={13}>No maintenance records found</Table.Td>
                   </Table.Tr>
                 ) : (
                   schedules?.map((schedule: any) => (
+                    (() => {
+                      const type = getScheduleType(schedule);
+                      const asset = getScheduleAsset(schedule);
+                      return (
                     <Table.Tr key={schedule.id}>
-                      <Table.Td>{schedule.poleCode || schedule.parkCode || '—'}</Table.Td>
+                      <Table.Td>{getScheduleAssetCode(schedule)}</Table.Td>
+                      <Table.Td>{getAssetNameByType(type, asset)}</Table.Td>
+                      <Table.Td>{getAssetDistrictByType(type, asset)}</Table.Td>
+                      <Table.Td>{getAssetStreet(asset)}</Table.Td>
+                      <Table.Td>{getAssetInfo(type, asset)}</Table.Td>
                       <Table.Td>{schedule.description}</Table.Td>
                       <Table.Td>{schedule.frequency}</Table.Td>
                       <Table.Td>
@@ -452,6 +754,7 @@ export default function MaintenancePage() {
                           onClick={() => {
                             if (schedule.issueId) {
                               setSelectedIssueId(schedule.issueId);
+                              setSelectedIssueType(getScheduleType(schedule));
                               setIssueModalOpened(true);
                             } else {
                               notifications.show({
@@ -490,10 +793,13 @@ export default function MaintenancePage() {
                         </Group>
                       </Table.Td>
                     </Table.Tr>
+                      );
+                    })()
                   ))
                 )}
-              </Table.Tbody>
-            </Table>
+                </Table.Tbody>
+              </Table>
+            </Table.ScrollContainer>
           </Paper>
         </Tabs.Panel>
 
@@ -527,6 +833,11 @@ export default function MaintenancePage() {
                 } else {
                   scheduleForm.setFieldValue('poleCode', '');
                   scheduleForm.setFieldValue('parkCode', '');
+                  scheduleForm.setFieldValue('parkingLotCode', '');
+                  scheduleForm.setFieldValue('museumCode', '');
+                  scheduleForm.setFieldValue('publicToiletCode', '');
+                  scheduleForm.setFieldValue('footballFieldCode', '');
+                  scheduleForm.setFieldValue('riverSideProjectCode', '');
                 }
               }}
             />
@@ -540,59 +851,78 @@ export default function MaintenancePage() {
                 required
                 value={scheduleForm.values.issueId}
                 onChange={(value) => {
-                  const selected = issueOptions.find((opt: any) => opt.value === value);
                   scheduleForm.setFieldValue('issueId', value || '');
-                  if (selected?.issueType === 'park') {
-                    scheduleForm.setFieldValue('parkCode', selected?.parkCode || '');
-                    scheduleForm.setFieldValue('poleCode', '');
-                  } else {
-                    scheduleForm.setFieldValue('poleCode', selected?.poleCode || '');
-                    scheduleForm.setFieldValue('parkCode', '');
-                  }
+                  // set asset code field based on current page type
+                  const selected = issueOptions.find((opt: any) => opt.value === value);
+                  const code = selected?.code || '';
+                  scheduleForm.setFieldValue('poleCode', '');
+                  scheduleForm.setFieldValue('parkCode', '');
+                  scheduleForm.setFieldValue('parkingLotCode', '');
+                  scheduleForm.setFieldValue('museumCode', '');
+                  scheduleForm.setFieldValue('publicToiletCode', '');
+                  scheduleForm.setFieldValue('footballFieldCode', '');
+                  scheduleForm.setFieldValue('riverSideProjectCode', '');
+                  if (filterType === 'pole') scheduleForm.setFieldValue('poleCode', code);
+                  else if (filterType === 'park') scheduleForm.setFieldValue('parkCode', code);
+                  else if (filterType === 'parking') scheduleForm.setFieldValue('parkingLotCode', code);
+                  else if (filterType === 'museum') scheduleForm.setFieldValue('museumCode', code);
+                  else if (filterType === 'toilet') scheduleForm.setFieldValue('publicToiletCode', code);
+                  else if (filterType === 'football') scheduleForm.setFieldValue('footballFieldCode', code);
+                  else if (filterType === 'river') scheduleForm.setFieldValue('riverSideProjectCode', code);
                 }}
               />
             ) : (
               <>
                 <Select
                   label="Select Type"
-                  data={[
-                    { value: 'pole', label: 'Light Pole' },
-                    { value: 'park', label: 'Public Park' },
-                  ]}
-                  value={scheduleForm.values.poleCode ? 'pole' : scheduleForm.values.parkCode ? 'park' : ''}
+                  data={ASSET_TYPES}
+                  value={scheduleForm.values.assetType}
                   onChange={(value) => {
-                    // Clear both when switching
+                    scheduleForm.setFieldValue('assetType', value || filterType);
                     scheduleForm.setFieldValue('poleCode', '');
                     scheduleForm.setFieldValue('parkCode', '');
+                    scheduleForm.setFieldValue('parkingLotCode', '');
+                    scheduleForm.setFieldValue('museumCode', '');
+                    scheduleForm.setFieldValue('publicToiletCode', '');
+                    scheduleForm.setFieldValue('footballFieldCode', '');
+                    scheduleForm.setFieldValue('riverSideProjectCode', '');
                   }}
                   required
                 />
-                {scheduleForm.values.poleCode || scheduleForm.values.parkCode ? (
-                  <Select
-                    label={scheduleForm.values.poleCode ? 'Pole Code' : 'Park Code'}
-                    placeholder={`Select a ${scheduleForm.values.poleCode ? 'pole' : 'park'}`}
-                    data={scheduleForm.values.poleCode ? poleOptions : parkOptions}
-                    searchable
-                    required
-                    value={scheduleForm.values.poleCode || scheduleForm.values.parkCode || ''}
-                    onChange={(value) => {
-                      if (scheduleForm.values.poleCode) {
-                        scheduleForm.setFieldValue('poleCode', value || '');
-                        scheduleForm.setFieldValue('parkCode', '');
-                      } else {
-                        scheduleForm.setFieldValue('parkCode', value || '');
-                        scheduleForm.setFieldValue('poleCode', '');
-                      }
-                    }}
-                  />
-                ) : (
-                  <Select
-                    label="Asset Type"
-                    placeholder="Select Light Pole or Public Park above first"
-                    data={[]}
-                    disabled
-                  />
-                )}
+                <Select
+                  label="Asset Code"
+                  placeholder="Select asset"
+                  data={assetOptionsByType[scheduleForm.values.assetType] || []}
+                  searchable
+                  required
+                  value={
+                    scheduleForm.values.poleCode ||
+                    scheduleForm.values.parkCode ||
+                    scheduleForm.values.parkingLotCode ||
+                    scheduleForm.values.museumCode ||
+                    scheduleForm.values.publicToiletCode ||
+                    scheduleForm.values.footballFieldCode ||
+                    scheduleForm.values.riverSideProjectCode ||
+                    ''
+                  }
+                  onChange={(value) => {
+                    const t = (scheduleForm.values.assetType || filterType).toLowerCase();
+                    scheduleForm.setFieldValue('poleCode', '');
+                    scheduleForm.setFieldValue('parkCode', '');
+                    scheduleForm.setFieldValue('parkingLotCode', '');
+                    scheduleForm.setFieldValue('museumCode', '');
+                    scheduleForm.setFieldValue('publicToiletCode', '');
+                    scheduleForm.setFieldValue('footballFieldCode', '');
+                    scheduleForm.setFieldValue('riverSideProjectCode', '');
+                    if (t === 'pole') scheduleForm.setFieldValue('poleCode', value || '');
+                    else if (t === 'park') scheduleForm.setFieldValue('parkCode', value || '');
+                    else if (t === 'parking') scheduleForm.setFieldValue('parkingLotCode', value || '');
+                    else if (t === 'museum') scheduleForm.setFieldValue('museumCode', value || '');
+                    else if (t === 'toilet') scheduleForm.setFieldValue('publicToiletCode', value || '');
+                    else if (t === 'football') scheduleForm.setFieldValue('footballFieldCode', value || '');
+                    else if (t === 'river') scheduleForm.setFieldValue('riverSideProjectCode', value || '');
+                  }}
+                />
               </>
             )}
             <TextInput
@@ -723,6 +1053,7 @@ export default function MaintenancePage() {
         onClose={() => {
           setIssueModalOpened(false);
           setSelectedIssueId(null);
+          setSelectedIssueType(null);
         }}
         title="Associated Issue"
         size="lg"
@@ -736,8 +1067,24 @@ export default function MaintenancePage() {
           <Stack>
             <Paper p="md" withBorder>
               <Group mb="xs">
-                <Text fw={700}>{selectedIssue.type === 'park' ? 'Park' : 'Pole'} Code:</Text>
-                <Badge color="blue">{selectedIssue.park?.code || selectedIssue.pole?.code || selectedIssue.parkCode || selectedIssue.poleCode || 'N/A'}</Badge>
+                <Text fw={700}>Asset Code:</Text>
+                <Badge color="blue">
+                  {selectedIssue.pole?.code ||
+                    selectedIssue.poleCode ||
+                    selectedIssue.park?.code ||
+                    selectedIssue.parkCode ||
+                    selectedIssue.parkingLot?.code ||
+                    selectedIssue.parkingLotCode ||
+                    selectedIssue.museum?.code ||
+                    selectedIssue.museumCode ||
+                    selectedIssue.publicToilet?.code ||
+                    selectedIssue.publicToiletCode ||
+                    selectedIssue.footballField?.code ||
+                    selectedIssue.footballFieldCode ||
+                    selectedIssue.riverSideProject?.code ||
+                    selectedIssue.riverSideProjectCode ||
+                    'N/A'}
+                </Badge>
               </Group>
               <Group mb="xs">
                 <Text fw={700}>Severity:</Text>
@@ -810,8 +1157,8 @@ export default function MaintenancePage() {
           </Text>
           {scheduleToDelete && (
             <Paper p="sm" withBorder bg="gray.0">
-              <Text size="sm" fw={700}>Pole/Park Code:</Text>
-              <Text size="sm">{scheduleToDelete.poleCode || scheduleToDelete.parkCode || '—'}</Text>
+              <Text size="sm" fw={700}>Asset Code:</Text>
+              <Text size="sm">{getScheduleAssetCode(scheduleToDelete)}</Text>
               <Text size="sm" fw={700} mt="xs">Description:</Text>
               <Text size="sm">{scheduleToDelete.description}</Text>
               <Text size="sm" fw={700} mt="xs">Status:</Text>

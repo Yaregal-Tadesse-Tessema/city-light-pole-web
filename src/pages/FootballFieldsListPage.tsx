@@ -25,7 +25,7 @@ import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import axios from 'axios';
 
-export default function ParksListPage() {
+export default function FootballFieldsListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -34,12 +34,12 @@ export default function ParksListPage() {
   const [district, setDistrict] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
-  const [parkToDelete, setParkToDelete] = useState<string | null>(null);
+  const [fieldToDelete, setFieldToDelete] = useState<string | null>(null);
   const [historyModalOpened, { open: openHistoryModal, close: closeHistoryModal }] = useDisclosure(false);
-  const [selectedParkCode, setSelectedParkCode] = useState<string | null>(null);
+  const [selectedFieldCode, setSelectedFieldCode] = useState<string | null>(null);
 
   const { data, isLoading, error: queryError } = useQuery({
-    queryKey: ['parks', page, search, district, status],
+    queryKey: ['football-fields', page, search, district, status],
     queryFn: async () => {
       try {
         const params = new URLSearchParams({
@@ -51,14 +51,14 @@ export default function ParksListPage() {
         if (status) params.append('status', status);
 
         const token = localStorage.getItem('access_token');
-        const res = await axios.get(`http://localhost:3011/api/v1/parks?${params.toString()}`, {
+        const res = await axios.get(`http://localhost:3011/api/v1/football-fields?${params.toString()}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         return res.data;
       } catch (error: any) {
-        console.error('Failed to fetch parks:', error.response?.status || error.message);
+        console.error('Failed to fetch football fields:', error.response?.status || error.message);
         return { items: [], total: 0, limit: 10 };
       }
     },
@@ -66,60 +66,59 @@ export default function ParksListPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Ensure data is always defined
   const displayData = data || { items: [], total: 0, limit: 10 };
 
   const { data: maintenanceHistory, isLoading: historyLoading } = useQuery({
-    queryKey: ['park-maintenance-history', selectedParkCode],
+    queryKey: ['football-field-maintenance-history', selectedFieldCode],
     queryFn: async () => {
-      if (!selectedParkCode) return [];
+      if (!selectedFieldCode) return [];
       const token = localStorage.getItem('access_token');
-      const res = await axios.get(`http://localhost:3011/api/v1/parks/${selectedParkCode}/maintenance-history`, {
+      const res = await axios.get(`http://localhost:3011/api/v1/football-fields/${selectedFieldCode}/maintenance-history`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       return res.data;
     },
-    enabled: !!selectedParkCode && historyModalOpened,
+    enabled: !!selectedFieldCode && historyModalOpened,
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (code: string) => {
-      await apiClient.delete(`parks/${code}`);
+      await apiClient.delete(`football-fields/${code}`);
     },
     onSuccess: () => {
       notifications.show({
         title: 'Success',
-        message: 'Park deleted successfully',
+        message: 'Football field deleted successfully',
         color: 'green',
       });
-      queryClient.invalidateQueries({ queryKey: ['parks'] });
+      queryClient.invalidateQueries({ queryKey: ['football-fields'] });
       closeDeleteModal();
-      setParkToDelete(null);
+      setFieldToDelete(null);
     },
     onError: (error: any) => {
       notifications.show({
         title: 'Error',
-        message: error.response?.data?.message || 'Failed to delete park',
+        message: error.response?.data?.message || 'Failed to delete football field',
         color: 'red',
       });
     },
   });
 
   const handleDeleteClick = (code: string) => {
-    setParkToDelete(code);
+    setFieldToDelete(code);
     openDeleteModal();
   };
 
   const handleDeleteConfirm = () => {
-    if (parkToDelete) {
-      deleteMutation.mutate(parkToDelete);
+    if (fieldToDelete) {
+      deleteMutation.mutate(fieldToDelete);
     }
   };
 
   const handleShowHistory = (code: string) => {
-    setSelectedParkCode(code);
+    setSelectedFieldCode(code);
     openHistoryModal();
   };
 
@@ -143,13 +142,13 @@ export default function ParksListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title size={{ base: 'h2', sm: 'h1' }}>Public Parks</Title>
+        <Title size={{ base: 'h2', sm: 'h1' }}>Football Fields</Title>
         {isAdmin && (
           <Button 
-            onClick={() => navigate('/parks/new')}
+            onClick={() => navigate('/football-fields/new')}
             size="md"
           >
-            Register Public Park
+            Register Football Field
           </Button>
         )}
       </Group>
@@ -211,7 +210,6 @@ export default function ParksListPage() {
                 <Table.Th>Name</Table.Th>
                 <Table.Th>Subcity</Table.Th>
                 <Table.Th>Street</Table.Th>
-                <Table.Th>Area (ha)</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Actions</Table.Th>
               </Table.Tr>
@@ -219,27 +217,26 @@ export default function ParksListPage() {
             <Table.Tbody>
               {isLoading ? (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>Loading...</Table.Td>
+                  <Table.Td colSpan={6}>Loading...</Table.Td>
                 </Table.Tr>
               ) : !displayData.items || displayData.items.length === 0 ? (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>No parks found</Table.Td>
+                  <Table.Td colSpan={6}>No football fields found</Table.Td>
                 </Table.Tr>
               ) : (
-                displayData.items.map((park: any) => (
+                displayData.items.map((field: any) => (
                   <Table.Tr 
-                    key={park.code}
+                    key={field.code}
                     style={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/parks/${park.code}`)}
+                    onClick={() => navigate(`/football-fields/${field.code}`)}
                   >
-                    <Table.Td>{park.code}</Table.Td>
-                    <Table.Td>{park.name}</Table.Td>
-                    <Table.Td>{park.district}</Table.Td>
-                    <Table.Td>{park.street}</Table.Td>
-                    <Table.Td>{park.areaHectares}</Table.Td>
+                    <Table.Td>{field.code}</Table.Td>
+                    <Table.Td>{field.name}</Table.Td>
+                    <Table.Td>{field.district}</Table.Td>
+                    <Table.Td>{field.street}</Table.Td>
                     <Table.Td>
-                      <Badge color={getStatusColor(park.status)}>
-                        {park.status}
+                      <Badge color={getStatusColor(field.status)}>
+                        {field.status}
                       </Badge>
                     </Table.Td>
                     <Table.Td onClick={(e) => e.stopPropagation()}>
@@ -247,7 +244,7 @@ export default function ParksListPage() {
                         <Button
                           size="xs"
                           variant="light"
-                          onClick={() => navigate(`/parks/${park.code}`)}
+                          onClick={() => navigate(`/football-fields/${field.code}`)}
                         >
                           View
                         </Button>
@@ -255,7 +252,7 @@ export default function ParksListPage() {
                           size="xs"
                           variant="light"
                           leftSection={<IconHistory size={14} />}
-                          onClick={() => handleShowHistory(park.code)}
+                          onClick={() => handleShowHistory(field.code)}
                         >
                           Show History
                         </Button>
@@ -264,14 +261,14 @@ export default function ParksListPage() {
                             <ActionIcon
                               color="blue"
                               variant="light"
-                              onClick={() => navigate(`/parks/${park.code}/edit`)}
+                              onClick={() => navigate(`/football-fields/${field.code}/edit`)}
                             >
                               <IconEdit size={16} />
                             </ActionIcon>
                             <ActionIcon
                               color="red"
                               variant="light"
-                              onClick={() => handleDeleteClick(park.code)}
+                              onClick={() => handleDeleteClick(field.code)}
                             >
                               <IconTrash size={16} />
                             </ActionIcon>
@@ -299,10 +296,10 @@ export default function ParksListPage() {
       <Modal
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
-        title="Delete Public Park"
+        title="Delete Football Field"
         centered
       >
-        <Text>Are you sure you want to delete this public park? This action cannot be undone.</Text>
+        <Text>Are you sure you want to delete this football field? This action cannot be undone.</Text>
         <Group justify="flex-end" mt="xl">
           <Button variant="outline" onClick={closeDeleteModal}>
             Cancel
@@ -317,9 +314,9 @@ export default function ParksListPage() {
         opened={historyModalOpened}
         onClose={() => {
           closeHistoryModal();
-          setSelectedParkCode(null);
+          setSelectedFieldCode(null);
         }}
-        title={`Maintenance History - ${selectedParkCode}`}
+        title={`Maintenance History - ${selectedFieldCode}`}
         size="xl"
         centered
       >
@@ -370,12 +367,11 @@ export default function ParksListPage() {
           </Table>
         ) : (
           <Text c="dimmed" ta="center" p="xl">
-            No maintenance history found for this park.
+            No maintenance history found for this football field.
           </Text>
         )}
       </Modal>
     </Container>
   );
 }
-
 

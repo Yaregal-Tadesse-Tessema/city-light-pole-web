@@ -19,24 +19,23 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
-import { ErrorBoundary } from '../components/ErrorBoundary';
 import { MapPicker } from '../components/MapPicker';
 
-const PARK_TYPES = [
-  { value: 'COMMUNITY', label: 'Community' },
-  { value: 'RECREATIONAL', label: 'Recreational' },
-  { value: 'SPORTS', label: 'Sports' },
-  { value: 'URBAN', label: 'Urban' },
+const PARKING_TYPES = [
+  { value: 'SURFACE', label: 'Surface' },
+  { value: 'MULTI_LEVEL', label: 'Multi-Level' },
+  { value: 'UNDERGROUND', label: 'Underground' },
+  { value: 'STREET', label: 'Street' },
 ];
 
-const PARK_STATUSES = [
+const PARKING_STATUSES = [
   { value: 'ACTIVE', label: 'Active' },
   { value: 'FAULT_DAMAGED', label: 'Fault/Damaged' },
   { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
   { value: 'OPERATIONAL', label: 'Operational' },
 ];
 
-export default function CreateParkPage() {
+export default function CreateParkingLotPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -49,10 +48,10 @@ export default function CreateParkPage() {
       street: '',
       gpsLat: undefined as number | undefined,
       gpsLng: undefined as number | undefined,
-      parkType: 'COMMUNITY',
-      areaHectares: undefined as number | undefined,
-      hasPaidEntrance: false,
-      entranceFee: undefined as number | undefined,
+      parkingType: 'SURFACE',
+      capacity: undefined as number | undefined,
+      hasPaidParking: false,
+      hourlyRate: undefined as number | undefined,
       description: '',
       status: 'ACTIVE',
     },
@@ -61,31 +60,19 @@ export default function CreateParkPage() {
       name: (value) => (!value ? 'Name is required' : null),
       district: (value) => (!value ? 'Subcity is required' : null),
       street: (value) => (!value ? 'Street is required' : null),
-      gpsLat: (value) => {
-        if (value !== undefined && value !== null) {
-          if (value < -90 || value > 90) return 'Latitude must be between -90 and 90';
-        }
-        return null;
-      },
-      gpsLng: (value) => {
-        if (value !== undefined && value !== null) {
-          if (value < -180 || value > 180) return 'Longitude must be between -180 and 180';
-        }
-        return null;
-      },
-      areaHectares: (value) => {
+      capacity: (value) => {
         if (value === undefined || value === null || value === '') {
-          return 'Area is required';
+          return 'Capacity is required';
         }
-        if (value <= 0) return 'Area must be greater than 0';
+        if (value <= 0) return 'Capacity must be greater than 0';
         return null;
       },
-      entranceFee: (value, values) => {
-        if (values.hasPaidEntrance && (value === undefined || value === null || value === '')) {
-          return 'Entrance fee is required when paid entrance is enabled';
+      hourlyRate: (value, values) => {
+        if (values.hasPaidParking && (value === undefined || value === null || value === '')) {
+          return 'Hourly rate is required when paid parking is enabled';
         }
-        if (values.hasPaidEntrance && value !== undefined && value !== null && value <= 0) {
-          return 'Entrance fee must be greater than 0';
+        if (values.hasPaidParking && value !== undefined && value !== null && value <= 0) {
+          return 'Hourly rate must be greater than 0';
         }
         return null;
       },
@@ -99,15 +86,14 @@ export default function CreateParkPage() {
         name: data.name,
         district: data.district,
         street: data.street,
-        areaHectares: Number(data.areaHectares),
-        parkType: data.parkType,
-        hasPaidEntrance: data.hasPaidEntrance || false,
+        capacity: Number(data.capacity),
+        parkingType: data.parkingType,
+        hasPaidParking: data.hasPaidParking || false,
         status: data.status,
       };
 
-      // Add entrance fee only if hasPaidEntrance is true
-      if (data.hasPaidEntrance && data.entranceFee !== undefined && data.entranceFee !== null) {
-        apiData.entranceFee = Number(data.entranceFee);
+      if (data.hasPaidParking && data.hourlyRate !== undefined && data.hourlyRate !== null) {
+        apiData.hourlyRate = Number(data.hourlyRate);
       }
 
       if (data.description) {
@@ -122,7 +108,7 @@ export default function CreateParkPage() {
       }
 
       const token = localStorage.getItem('access_token');
-      const response = await axios.post('http://localhost:3011/api/v1/parks', apiData, {
+      const response = await axios.post('http://localhost:3011/api/v1/parking-lots', apiData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -133,14 +119,14 @@ export default function CreateParkPage() {
     onSuccess: (data) => {
       notifications.show({
         title: 'Success',
-        message: 'Public park registered successfully',
+        message: 'Parking lot registered successfully',
         color: 'green',
       });
-      queryClient.invalidateQueries({ queryKey: ['parks'] });
-      navigate(`/parks/${data.code}`);
+      queryClient.invalidateQueries({ queryKey: ['parking-lots'] });
+      navigate(`/parking-lots/${data.code}`);
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Failed to register park';
+      const errorMessage = error.response?.data?.message || 'Failed to register parking lot';
       setApiError(errorMessage);
       
       if (errorMessage.includes('code') && errorMessage.includes('already exists')) {
@@ -161,12 +147,11 @@ export default function CreateParkPage() {
   });
 
   return (
-    <ErrorBoundary>
-      <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-        <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Create New Public Park</Title>
+    <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
+      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Create New Parking Lot</Title>
 
-        <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
-          <form onSubmit={handleSubmit}>
+      <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
+        <form onSubmit={handleSubmit}>
           <Stack>
             {apiError && (
               <Alert color="red" title="Error" onClose={() => setApiError(null)} withCloseButton>
@@ -177,13 +162,13 @@ export default function CreateParkPage() {
             <Group grow>
               <TextInput
                 label="Code"
-                placeholder="PK-001"
+                placeholder="PL-001"
                 required
                 {...form.getInputProps('code')}
               />
               <TextInput
                 label="Name"
-                placeholder="Central Park"
+                placeholder="Central Parking"
                 required
                 {...form.getInputProps('name')}
               />
@@ -240,88 +225,84 @@ export default function CreateParkPage() {
               <Text size="sm" c="dimmed">
                 Click on the map to set coordinates (centered on Addis Ababa).
               </Text>
-              <ErrorBoundary>
-                <MapPicker
-                  value={{ lat: form.values.gpsLat ?? null, lng: form.values.gpsLng ?? null }}
-                  onChange={(lat, lng) => {
-                    form.setValues({
-                      ...form.values,
-                      gpsLat: typeof lat === 'number' ? lat : Number(lat),
-                      gpsLng: typeof lng === 'number' ? lng : Number(lng),
-                    });
-                  }}
-                />
-              </ErrorBoundary>
+              <MapPicker
+                value={{ lat: form.values.gpsLat, lng: form.values.gpsLng }}
+                onChange={(lat, lng) => {
+                  form.setValues({
+                    ...form.values,
+                    gpsLat: typeof lat === 'number' ? lat : Number(lat),
+                    gpsLng: typeof lng === 'number' ? lng : Number(lng),
+                  });
+                }}
+              />
             </Stack>
 
             <Group grow>
               <Select
-                label="Park Type"
-                data={PARK_TYPES}
-                {...form.getInputProps('parkType')}
+                label="Parking Type"
+                data={PARKING_TYPES}
+                {...form.getInputProps('parkingType')}
               />
               <NumberInput
-                label="Area (Hectares)"
-                placeholder="5.5"
+                label="Capacity (vehicles)"
+                placeholder="50"
                 required
-                min={0.01}
-                precision={2}
-                value={form.values.areaHectares ?? undefined}
+                min={1}
+                value={form.values.capacity ?? undefined}
                 onChange={(value) => {
                   const numValue = value === '' || value === null || value === undefined ? undefined : Number(value);
-                  form.setFieldValue('areaHectares', numValue);
+                  form.setFieldValue('capacity', numValue);
                 }}
-                error={form.errors.areaHectares}
+                error={form.errors.capacity}
               />
             </Group>
 
             <Switch
-              label="Has Paid Entrance"
-              {...form.getInputProps('hasPaidEntrance', { type: 'checkbox' })}
+              label="Has Paid Parking"
+              {...form.getInputProps('hasPaidParking', { type: 'checkbox' })}
             />
 
-            {form.values.hasPaidEntrance && (
+            {form.values.hasPaidParking && (
               <NumberInput
-                label="Entrance Fee (ETB)"
-                placeholder="50.00"
+                label="Hourly Rate (ETB)"
+                placeholder="20.00"
                 required
                 min={0.01}
                 precision={2}
-                value={form.values.entranceFee ?? undefined}
+                value={form.values.hourlyRate ?? undefined}
                 onChange={(value) => {
                   const numValue = value === '' || value === null || value === undefined ? undefined : Number(value);
-                  form.setFieldValue('entranceFee', numValue);
+                  form.setFieldValue('hourlyRate', numValue);
                 }}
-                error={form.errors.entranceFee}
+                error={form.errors.hourlyRate}
               />
             )}
 
             <Textarea
               label="Description (Optional)"
-              placeholder="Beautiful community park with playground and walking trails"
+              placeholder="Public parking facility with security"
               rows={4}
               {...form.getInputProps('description')}
             />
 
             <Select
               label="Status"
-              data={PARK_STATUSES}
+              data={PARKING_STATUSES}
               {...form.getInputProps('status')}
             />
 
             <Group justify="flex-end" mt="xl">
-              <Button variant="outline" onClick={() => navigate('/parks')}>
+              <Button variant="outline" onClick={() => navigate('/parking-lots')}>
                 Cancel
               </Button>
               <Button type="submit" loading={createMutation.isPending}>
-                Register Public Park
+                Register Parking Lot
               </Button>
             </Group>
           </Stack>
         </form>
       </Paper>
     </Container>
-    </ErrorBoundary>
   );
 }
 

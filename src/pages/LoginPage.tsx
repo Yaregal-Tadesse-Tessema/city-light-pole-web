@@ -45,15 +45,15 @@ export default function LoginPage() {
   };
 
   return (
-    <Container size={420} my={40}>
-      <Title ta="center" mb="md">
+    <Container size={{ base: '100%', xs: 420 }} my={{ base: 20, sm: 40 }} px={{ base: 'xs', sm: 'md' }}>
+      <Title ta="center" mb="md" size={{ base: 'h2', sm: 'h1' }}>
         Coredor Assets Management System
       </Title>
-      <Text c="dimmed" size="sm" ta="center" mt={5} mb="xl">
+      <Text c="dimmed" size={{ base: 'xs', sm: 'sm' }} ta="center" mt={5} mb={{ base: 'md', sm: 'xl' }}>
         Sign in to your account
       </Text>
 
-      <Paper withBorder shadow="md" p={30} mt={30} radius="md">
+      <Paper withBorder shadow="md" p={{ base: 20, sm: 30 }} mt={{ base: 20, sm: 30 }} radius="md">
         <form onSubmit={handleSubmit}>
           <Stack>
             <TextInput

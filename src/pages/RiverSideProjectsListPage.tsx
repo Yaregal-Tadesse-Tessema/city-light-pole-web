@@ -25,7 +25,7 @@ import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import axios from 'axios';
 
-export default function ParksListPage() {
+export default function RiverSideProjectsListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -34,99 +34,89 @@ export default function ParksListPage() {
   const [district, setDistrict] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
-  const [parkToDelete, setParkToDelete] = useState<string | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [historyModalOpened, { open: openHistoryModal, close: closeHistoryModal }] = useDisclosure(false);
-  const [selectedParkCode, setSelectedParkCode] = useState<string | null>(null);
+  const [selectedProjectCode, setSelectedProjectCode] = useState<string | null>(null);
 
-  const { data, isLoading, error: queryError } = useQuery({
-    queryKey: ['parks', page, search, district, status],
+  const { data, isLoading } = useQuery({
+    queryKey: ['river-side-projects', page, search, district, status],
     queryFn: async () => {
       try {
-        const params = new URLSearchParams({
-          page: page.toString(),
-          limit: '10',
-        });
+        const params = new URLSearchParams({ page: page.toString(), limit: '10' });
         if (search) params.append('search', search);
         if (district) params.append('district', district);
         if (status) params.append('status', status);
 
         const token = localStorage.getItem('access_token');
-        const res = await axios.get(`http://localhost:3011/api/v1/parks?${params.toString()}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const res = await axios.get(`http://localhost:3011/api/v1/river-side-projects?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
         return res.data;
       } catch (error: any) {
-        console.error('Failed to fetch parks:', error.response?.status || error.message);
+        console.error('Failed to fetch river side projects:', error.response?.status || error.message);
         return { items: [], total: 0, limit: 10 };
       }
     },
     retry: false,
-    refetchOnWindowFocus: false,
   });
 
-  // Ensure data is always defined
-  const displayData = data || { items: [], total: 0, limit: 10 };
-
   const { data: maintenanceHistory, isLoading: historyLoading } = useQuery({
-    queryKey: ['park-maintenance-history', selectedParkCode],
+    queryKey: ['river-maintenance-history', selectedProjectCode],
     queryFn: async () => {
-      if (!selectedParkCode) return [];
-      const token = localStorage.getItem('access_token');
-      const res = await axios.get(`http://localhost:3011/api/v1/parks/${selectedParkCode}/maintenance-history`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      return res.data;
+      if (!selectedProjectCode) return [];
+      try {
+        const token = localStorage.getItem('access_token');
+        const res = await axios.get(
+          `http://localhost:3011/api/v1/river-side-projects/${selectedProjectCode}/maintenance-history`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        return res.data;
+      } catch (error: any) {
+        console.warn('Failed to fetch river maintenance history:', error.response?.status || error.message);
+        return [];
+      }
     },
-    enabled: !!selectedParkCode && historyModalOpened,
+    enabled: !!selectedProjectCode && historyModalOpened,
+    retry: false,
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (code: string) => {
-      await apiClient.delete(`parks/${code}`);
+      await apiClient.delete(`river-side-projects/${code}`);
     },
     onSuccess: () => {
-      notifications.show({
-        title: 'Success',
-        message: 'Park deleted successfully',
-        color: 'green',
-      });
-      queryClient.invalidateQueries({ queryKey: ['parks'] });
+      notifications.show({ title: 'Success', message: 'River side project deleted successfully', color: 'green' });
+      queryClient.invalidateQueries({ queryKey: ['river-side-projects'] });
       closeDeleteModal();
-      setParkToDelete(null);
+      setProjectToDelete(null);
     },
     onError: (error: any) => {
       notifications.show({
         title: 'Error',
-        message: error.response?.data?.message || 'Failed to delete park',
+        message: error.response?.data?.message || 'Failed to delete river side project',
         color: 'red',
       });
     },
   });
 
   const handleDeleteClick = (code: string) => {
-    setParkToDelete(code);
+    setProjectToDelete(code);
     openDeleteModal();
   };
 
   const handleDeleteConfirm = () => {
-    if (parkToDelete) {
-      deleteMutation.mutate(parkToDelete);
-    }
+    if (projectToDelete) deleteMutation.mutate(projectToDelete);
   };
 
   const handleShowHistory = (code: string) => {
-    setSelectedParkCode(code);
+    setSelectedProjectCode(code);
     openHistoryModal();
   };
 
   const isAdmin = user?.role === 'ADMIN';
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (s: string) => {
+    switch (s) {
       case 'ACTIVE':
         return 'green';
       case 'FAULT_DAMAGED':
@@ -143,13 +133,10 @@ export default function ParksListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title size={{ base: 'h2', sm: 'h1' }}>Public Parks</Title>
+        <Title size={{ base: 'h2', sm: 'h1' }}>River Side Projects</Title>
         {isAdmin && (
-          <Button 
-            onClick={() => navigate('/parks/new')}
-            size="md"
-          >
-            Register Public Park
+          <Button onClick={() => navigate('/river-side-projects/new')} size="md">
+            Register River Project
           </Button>
         )}
       </Group>
@@ -203,7 +190,7 @@ export default function ParksListPage() {
       </Paper>
 
       <Paper withBorder>
-        <Table.ScrollContainer minWidth={600}>
+        <Table.ScrollContainer minWidth={700}>
           <Table highlightOnHover>
             <Table.Thead>
               <Table.Tr>
@@ -211,7 +198,6 @@ export default function ParksListPage() {
                 <Table.Th>Name</Table.Th>
                 <Table.Th>Subcity</Table.Th>
                 <Table.Th>Street</Table.Th>
-                <Table.Th>Area (ha)</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Actions</Table.Th>
               </Table.Tr>
@@ -219,60 +205,40 @@ export default function ParksListPage() {
             <Table.Tbody>
               {isLoading ? (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>Loading...</Table.Td>
+                  <Table.Td colSpan={6}>Loading...</Table.Td>
                 </Table.Tr>
-              ) : !displayData.items || displayData.items.length === 0 ? (
+              ) : (data?.items || []).length === 0 ? (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>No parks found</Table.Td>
+                  <Table.Td colSpan={6}>No river side projects found</Table.Td>
                 </Table.Tr>
               ) : (
-                displayData.items.map((park: any) => (
-                  <Table.Tr 
-                    key={park.code}
+                (data?.items || []).map((project: any) => (
+                  <Table.Tr
+                    key={project.code}
                     style={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/parks/${park.code}`)}
+                    onClick={() => navigate(`/river-side-projects/${project.code}`)}
                   >
-                    <Table.Td>{park.code}</Table.Td>
-                    <Table.Td>{park.name}</Table.Td>
-                    <Table.Td>{park.district}</Table.Td>
-                    <Table.Td>{park.street}</Table.Td>
-                    <Table.Td>{park.areaHectares}</Table.Td>
+                    <Table.Td>{project.code}</Table.Td>
+                    <Table.Td>{project.name}</Table.Td>
+                    <Table.Td>{project.district}</Table.Td>
+                    <Table.Td>{project.street}</Table.Td>
                     <Table.Td>
-                      <Badge color={getStatusColor(park.status)}>
-                        {park.status}
-                      </Badge>
+                      <Badge color={getStatusColor(project.status)}>{project.status}</Badge>
                     </Table.Td>
                     <Table.Td onClick={(e) => e.stopPropagation()}>
                       <Group gap="xs">
-                        <Button
-                          size="xs"
-                          variant="light"
-                          onClick={() => navigate(`/parks/${park.code}`)}
-                        >
+                        <Button size="xs" variant="light" onClick={() => navigate(`/river-side-projects/${project.code}`)}>
                           View
                         </Button>
-                        <Button
-                          size="xs"
-                          variant="light"
-                          leftSection={<IconHistory size={14} />}
-                          onClick={() => handleShowHistory(park.code)}
-                        >
+                        <Button size="xs" variant="light" leftSection={<IconHistory size={14} />} onClick={() => handleShowHistory(project.code)}>
                           Show History
                         </Button>
                         {isAdmin && (
                           <>
-                            <ActionIcon
-                              color="blue"
-                              variant="light"
-                              onClick={() => navigate(`/parks/${park.code}/edit`)}
-                            >
+                            <ActionIcon color="blue" variant="light" onClick={() => navigate(`/river-side-projects/${project.code}/edit`)}>
                               <IconEdit size={16} />
                             </ActionIcon>
-                            <ActionIcon
-                              color="red"
-                              variant="light"
-                              onClick={() => handleDeleteClick(park.code)}
-                            >
+                            <ActionIcon color="red" variant="light" onClick={() => handleDeleteClick(project.code)}>
                               <IconTrash size={16} />
                             </ActionIcon>
                           </>
@@ -287,22 +253,12 @@ export default function ParksListPage() {
         </Table.ScrollContainer>
       </Paper>
 
-      {displayData.total && displayData.total > 0 && Math.ceil(displayData.total / (displayData.limit || 10)) > 1 && (
-        <Pagination
-          value={page}
-          onChange={setPage}
-          total={Math.ceil(displayData.total / (displayData.limit || 10))}
-          mt="md"
-        />
+      {data && Math.ceil((data.total || 0) / (data.limit || 10)) > 1 && (
+        <Pagination value={page} onChange={setPage} total={Math.ceil((data.total || 0) / (data.limit || 10))} mt="md" />
       )}
 
-      <Modal
-        opened={deleteModalOpened}
-        onClose={closeDeleteModal}
-        title="Delete Public Park"
-        centered
-      >
-        <Text>Are you sure you want to delete this public park? This action cannot be undone.</Text>
+      <Modal opened={deleteModalOpened} onClose={closeDeleteModal} title="Delete River Side Project" centered>
+        <Text>Are you sure you want to delete this river side project? This action cannot be undone.</Text>
         <Group justify="flex-end" mt="xl">
           <Button variant="outline" onClick={closeDeleteModal}>
             Cancel
@@ -317,9 +273,9 @@ export default function ParksListPage() {
         opened={historyModalOpened}
         onClose={() => {
           closeHistoryModal();
-          setSelectedParkCode(null);
+          setSelectedProjectCode(null);
         }}
-        title={`Maintenance History - ${selectedParkCode}`}
+        title={`Maintenance History - ${selectedProjectCode}`}
         size="xl"
         centered
       >
@@ -352,11 +308,7 @@ export default function ParksListPage() {
                       ? `$${parseFloat(log.cost).toFixed(2)}`
                       : '-'}
                   </Table.Td>
-                  <Table.Td>
-                    {log.startDate
-                      ? new Date(log.startDate).toLocaleDateString()
-                      : '-'}
-                  </Table.Td>
+                  <Table.Td>{log.startDate ? new Date(log.startDate).toLocaleDateString() : '-'}</Table.Td>
                   <Table.Td>
                     {log.completedDate
                       ? new Date(log.completedDate).toLocaleDateString()
@@ -370,7 +322,7 @@ export default function ParksListPage() {
           </Table>
         ) : (
           <Text c="dimmed" ta="center" p="xl">
-            No maintenance history found for this park.
+            No maintenance history found for this river side project.
           </Text>
         )}
       </Modal>

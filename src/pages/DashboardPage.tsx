@@ -49,8 +49,8 @@ export default function DashboardPage() {
   })) || [];
 
   return (
-    <Container size="xl" py="xl">
-      <Title mb="xl">Dashboard</Title>
+    <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
+      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Dashboard</Title>
 
       <Grid>
         <Grid.Col span={{ base: 12, md: 3 }}>
@@ -105,8 +105,14 @@ export default function DashboardPage() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="district" />
-                  <YAxis />
+                  <XAxis 
+                    dataKey="district" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    fontSize={12}
+                  />
+                  <YAxis fontSize={12} />
                   <Tooltip />
                   <Bar dataKey="count" fill="#8884d8" />
                 </BarChart>
@@ -146,12 +152,13 @@ export default function DashboardPage() {
       </Grid>
 
       {faultyByDistrict && faultyByDistrict.length > 0 && (
-        <Paper p="md" withBorder mt="xl">
-          <Title order={3} mb="md">
+        <Paper p={{ base: 'xs', sm: 'md' }} withBorder mt={{ base: 'md', sm: 'xl' }}>
+          <Title order={3} mb="md" size={{ base: 'h4', sm: 'h3' }}>
             Faulty Poles by District
           </Title>
-          <Table>
-            <Table.Thead>
+          <Table.ScrollContainer minWidth={200}>
+            <Table>
+              <Table.Thead>
               <Table.Tr>
                 <Table.Th>Subcity</Table.Th>
                 <Table.Th>Faulty Count</Table.Th>
@@ -166,8 +173,9 @@ export default function DashboardPage() {
                   </Table.Td>
                 </Table.Tr>
               ))}
-            </Table.Tbody>
-          </Table>
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
         </Paper>
       )}
     </Container>

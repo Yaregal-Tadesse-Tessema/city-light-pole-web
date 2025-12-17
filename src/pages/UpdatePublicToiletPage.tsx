@@ -19,47 +19,43 @@ import {
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
-import { ErrorBoundary } from '../components/ErrorBoundary';
 import { MapPicker } from '../components/MapPicker';
 
-const PARK_TYPES = [
-  { value: 'COMMUNITY', label: 'Community' },
-  { value: 'RECREATIONAL', label: 'Recreational' },
-  { value: 'SPORTS', label: 'Sports' },
-  { value: 'URBAN', label: 'Urban' },
+const TOILET_TYPES = [
+  { value: 'STANDARD', label: 'Standard' },
+  { value: 'ACCESSIBLE', label: 'Accessible' },
+  { value: 'PORTABLE', label: 'Portable' },
 ];
 
-const PARK_STATUSES = [
+const TOILET_STATUSES = [
   { value: 'ACTIVE', label: 'Active' },
   { value: 'FAULT_DAMAGED', label: 'Fault/Damaged' },
   { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
   { value: 'OPERATIONAL', label: 'Operational' },
 ];
 
-export default function UpdateParkPage() {
+export default function UpdatePublicToiletPage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     code: '',
-    name: '',
     district: '',
     street: '',
     gpsLat: 0,
     gpsLng: 0,
-    parkType: 'COMMUNITY',
-    areaHectares: 0,
-    hasPaidEntrance: false,
-    entranceFee: 0,
+    toiletType: 'STANDARD',
+    hasPaidAccess: false,
+    accessFee: 0,
     description: '',
     status: 'ACTIVE',
   });
 
-  const { data: park, isLoading } = useQuery({
-    queryKey: ['park', code],
+  const { data: toilet, isLoading } = useQuery({
+    queryKey: ['public-toilet', code],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
-      const response = await axios.get(`http://localhost:3011/api/v1/parks/${code}`, {
+      const response = await axios.get(`http://localhost:3011/api/v1/public-toilets/${code}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -70,28 +66,26 @@ export default function UpdateParkPage() {
   });
 
   useEffect(() => {
-    if (park) {
+    if (toilet) {
       setFormData({
-        code: park.code || '',
-        name: park.name || '',
-        district: park.district || '',
-        street: park.street || '',
-        gpsLat: park.gpsLat !== undefined && park.gpsLat !== null ? Number(park.gpsLat) : 0,
-        gpsLng: park.gpsLng !== undefined && park.gpsLng !== null ? Number(park.gpsLng) : 0,
-        parkType: park.parkType || 'COMMUNITY',
-        areaHectares: park.areaHectares || 0,
-        hasPaidEntrance: park.hasPaidEntrance || false,
-        entranceFee: park.entranceFee !== undefined && park.entranceFee !== null ? Number(park.entranceFee) : 0,
-        description: park.description || '',
-        status: park.status || 'ACTIVE',
+        code: toilet.code || '',
+        district: toilet.district || '',
+        street: toilet.street || '',
+        gpsLat: toilet.gpsLat !== undefined && toilet.gpsLat !== null ? Number(toilet.gpsLat) : 0,
+        gpsLng: toilet.gpsLng !== undefined && toilet.gpsLng !== null ? Number(toilet.gpsLng) : 0,
+        toiletType: toilet.toiletType || 'STANDARD',
+        hasPaidAccess: toilet.hasPaidAccess || false,
+        accessFee: toilet.accessFee !== undefined && toilet.accessFee !== null ? Number(toilet.accessFee) : 0,
+        description: toilet.description || '',
+        status: toilet.status || 'ACTIVE',
       });
     }
-  }, [park]);
+  }, [toilet]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
       const token = localStorage.getItem('access_token');
-      const response = await axios.patch(`http://localhost:3011/api/v1/parks/${code}`, data, {
+      const response = await axios.patch(`http://localhost:3011/api/v1/public-toilets/${code}`, data, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -102,17 +96,17 @@ export default function UpdateParkPage() {
     onSuccess: () => {
       notifications.show({
         title: 'Success',
-        message: 'Public park updated successfully',
+        message: 'Public toilet updated successfully',
         color: 'green',
       });
-      queryClient.invalidateQueries({ queryKey: ['parks'] });
-      queryClient.invalidateQueries({ queryKey: ['park', code] });
-      navigate('/parks');
+      queryClient.invalidateQueries({ queryKey: ['public-toilets'] });
+      queryClient.invalidateQueries({ queryKey: ['public-toilet', code] });
+      navigate('/public-toilets');
     },
     onError: (error: any) => {
       notifications.show({
         title: 'Error',
-        message: error.response?.data?.message || 'Failed to update park',
+        message: error.response?.data?.message || 'Failed to update public toilet',
         color: 'red',
       });
     },
@@ -122,20 +116,17 @@ export default function UpdateParkPage() {
     e.preventDefault();
     const apiData: any = {
       code: formData.code,
-      name: formData.name,
       district: formData.district,
       street: formData.street,
-      areaHectares: Number(formData.areaHectares) || 0,
-      parkType: formData.parkType,
-      hasPaidEntrance: formData.hasPaidEntrance || false,
+      toiletType: formData.toiletType,
+      hasPaidAccess: formData.hasPaidAccess || false,
       status: formData.status,
     };
 
-    // Add entrance fee only if hasPaidEntrance is true
-    if (formData.hasPaidEntrance && formData.entranceFee !== undefined && formData.entranceFee !== null && formData.entranceFee > 0) {
-      apiData.entranceFee = Number(formData.entranceFee);
+    if (formData.hasPaidAccess && formData.accessFee !== undefined && formData.accessFee !== null && formData.accessFee > 0) {
+      apiData.accessFee = Number(formData.accessFee);
     } else {
-      apiData.entranceFee = null;
+      apiData.accessFee = null;
     }
 
     if (formData.description) {
@@ -163,29 +154,19 @@ export default function UpdateParkPage() {
   }
 
   return (
-    <ErrorBoundary>
-      <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-        <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Update Public Park</Title>
+    <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
+      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Update Public Toilet</Title>
 
-        <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
-          <form onSubmit={handleSubmit}>
-            <Stack>
-            <Group grow>
-              <TextInput
-                label="Code"
-                placeholder="PK-001"
-                required
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              />
-              <TextInput
-                label="Name"
-                placeholder="Central Park"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </Group>
+      <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
+        <form onSubmit={handleSubmit}>
+          <Stack>
+            <TextInput
+              label="Code"
+              placeholder="PT-001"
+              required
+              value={formData.code}
+              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+            />
 
             <Group grow>
               <Select
@@ -236,61 +217,48 @@ export default function UpdateParkPage() {
               <Text size="sm" c="dimmed">
                 Click on the map to set coordinates (centered on Addis Ababa).
               </Text>
-              <ErrorBoundary>
-                <MapPicker
-                  value={{ lat: formData.gpsLat ?? null, lng: formData.gpsLng ?? null }}
-                  onChange={(lat, lng) => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      gpsLat: typeof lat === 'number' ? lat : Number(lat),
-                      gpsLng: typeof lng === 'number' ? lng : Number(lng),
-                    }));
-                  }}
-                  currentPoleCode={formData.code}
-                  showAllPoles={true}
-                />
-              </ErrorBoundary>
+              <MapPicker
+                value={{ lat: formData.gpsLat, lng: formData.gpsLng }}
+                onChange={(lat, lng) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    gpsLat: typeof lat === 'number' ? lat : Number(lat),
+                    gpsLng: typeof lng === 'number' ? lng : Number(lng),
+                  }));
+                }}
+                currentPoleCode={formData.code}
+                showAllPoles={true}
+              />
             </Stack>
 
-            <Group grow>
-              <Select
-                label="Park Type"
-                data={PARK_TYPES}
-                value={formData.parkType}
-                onChange={(value) => setFormData({ ...formData, parkType: value || 'COMMUNITY' })}
-              />
-              <NumberInput
-                label="Area (Hectares)"
-                placeholder="5.5"
-                required
-                min={0}
-                precision={2}
-                value={formData.areaHectares}
-                onChange={(value) => setFormData({ ...formData, areaHectares: Number(value) || 0 })}
-              />
-            </Group>
-
-            <Switch
-              label="Has Paid Entrance"
-              checked={formData.hasPaidEntrance}
-              onChange={(e) => setFormData({ ...formData, hasPaidEntrance: e.currentTarget.checked })}
+            <Select
+              label="Toilet Type"
+              data={TOILET_TYPES}
+              value={formData.toiletType}
+              onChange={(value) => setFormData({ ...formData, toiletType: value || 'STANDARD' })}
             />
 
-            {formData.hasPaidEntrance && (
+            <Switch
+              label="Has Paid Access"
+              checked={formData.hasPaidAccess}
+              onChange={(e) => setFormData({ ...formData, hasPaidAccess: e.currentTarget.checked })}
+            />
+
+            {formData.hasPaidAccess && (
               <NumberInput
-                label="Entrance Fee (ETB)"
-                placeholder="50.00"
+                label="Access Fee (ETB)"
+                placeholder="5.00"
                 required
                 min={0.01}
                 precision={2}
-                value={formData.entranceFee}
-                onChange={(value) => setFormData({ ...formData, entranceFee: Number(value) || 0 })}
+                value={formData.accessFee}
+                onChange={(value) => setFormData({ ...formData, accessFee: Number(value) || 0 })}
               />
             )}
 
             <Textarea
               label="Description (Optional)"
-              placeholder="Beautiful community park with playground and walking trails"
+              placeholder="Public toilet facility"
               rows={4}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -298,24 +266,23 @@ export default function UpdateParkPage() {
 
             <Select
               label="Status"
-              data={PARK_STATUSES}
+              data={TOILET_STATUSES}
               value={formData.status}
               onChange={(value) => setFormData({ ...formData, status: value || 'ACTIVE' })}
             />
 
             <Group justify="flex-end" mt="xl">
-              <Button variant="outline" onClick={() => navigate('/parks')}>
+              <Button variant="outline" onClick={() => navigate('/public-toilets')}>
                 Cancel
               </Button>
               <Button type="submit" loading={updateMutation.isPending}>
-                Update Park
+                Update Public Toilet
               </Button>
             </Group>
-            </Stack>
-          </form>
-        </Paper>
-      </Container>
-    </ErrorBoundary>
+          </Stack>
+        </form>
+      </Paper>
+    </Container>
   );
 }
 

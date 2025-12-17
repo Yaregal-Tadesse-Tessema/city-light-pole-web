@@ -10,9 +10,9 @@ import {
   Button,
   Stack,
   Title,
-  Switch,
   Group,
   Alert,
+  Textarea,
   Text,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
@@ -20,27 +20,21 @@ import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 import { MapPicker } from '../components/MapPicker';
 
-const POLE_TYPES = [
-  { value: 'STANDARD', label: 'Standard' },
-  { value: 'DECORATIVE', label: 'Decorative' },
-  { value: 'HIGH_MAST', label: 'High Mast' },
+const PROJECT_TYPES = [
+  { value: 'RIVERBANK_PROTECTION', label: 'Riverbank Protection' },
+  { value: 'WALKWAY', label: 'Walkway' },
+  { value: 'DRAINAGE', label: 'Drainage' },
+  { value: 'LANDSCAPING', label: 'Landscaping' },
 ];
 
-const LAMP_TYPES = [
-  { value: 'LED', label: 'LED' },
-  { value: 'FLUORESCENT', label: 'Fluorescent' },
-  { value: 'SODIUM', label: 'Sodium' },
-  { value: 'HALOGEN', label: 'Halogen' },
-];
-
-const POLE_STATUSES = [
+const PROJECT_STATUSES = [
   { value: 'ACTIVE', label: 'Active' },
   { value: 'FAULT_DAMAGED', label: 'Fault/Damaged' },
   { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
   { value: 'OPERATIONAL', label: 'Operational' },
 ];
 
-export default function CreatePolePage() {
+export default function CreateRiverSideProjectPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -48,61 +42,36 @@ export default function CreatePolePage() {
   const form = useForm({
     initialValues: {
       code: '',
+      name: '',
       district: '',
       street: '',
       gpsLat: undefined as number | undefined,
       gpsLng: undefined as number | undefined,
-      poleType: 'STANDARD',
-      heightMeters: 0,
-      lampType: 'LED',
-      powerRatingWatt: 0,
-      hasLedDisplay: false,
-      ledModel: '',
+      projectType: 'WALKWAY',
+      description: '',
       status: 'ACTIVE',
     },
     validate: {
       code: (value) => (!value ? 'Code is required' : null),
+      name: (value) => (!value ? 'Name is required' : null),
       district: (value) => (!value ? 'Subcity is required' : null),
       street: (value) => (!value ? 'Street is required' : null),
-      gpsLat: (value) => {
-        if (value !== undefined) {
-          if (value < -90 || value > 90) return 'Latitude must be between -90 and 90';
-        }
-        return null;
-      },
-      gpsLng: (value) => {
-        if (value !== undefined) {
-          if (value < -180 || value > 180) return 'Longitude must be between -180 and 180';
-        }
-        return null;
-      },
-      heightMeters: (value) => (value <= 0 ? 'Height must be greater than 0' : null),
-      powerRatingWatt: (value) => (value <= 0 ? 'Power rating must be greater than 0' : null),
-      ledModel: (value, values) => {
-        if (values.hasLedDisplay && !value) {
-          return 'LED Model is required when LED Display is enabled';
-        }
-        return null;
-      },
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Prepare data for API
       const apiData: any = {
         code: data.code,
+        name: data.name,
         district: data.district,
         street: data.street,
-        heightMeters: data.heightMeters,
-        powerRatingWatt: data.powerRatingWatt,
-        poleType: data.poleType,
-        lampType: data.lampType,
-        hasLedDisplay: data.hasLedDisplay,
+        projectType: data.projectType,
         status: data.status,
       };
 
-      // Add GPS coordinates only if provided (completely optional)
+      if (data.description) apiData.description = data.description;
+
       if (data.gpsLat !== undefined && data.gpsLat !== null && data.gpsLat !== '' && !isNaN(Number(data.gpsLat))) {
         apiData.gpsLat = Number(data.gpsLat);
       }
@@ -110,43 +79,24 @@ export default function CreatePolePage() {
         apiData.gpsLng = Number(data.gpsLng);
       }
 
-      // Add LED model only if hasLedDisplay is true
-      if (data.hasLedDisplay && data.ledModel) {
-        apiData.ledModel = data.ledModel;
-      }
-
       const token = localStorage.getItem('access_token');
-      const response = await axios.post('http://localhost:3011/api/v1/poles', apiData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+      const response = await axios.post('http://localhost:3011/api/v1/river-side-projects', apiData, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
       return response.data;
     },
     onSuccess: (data) => {
-      notifications.show({
-        title: 'Success',
-        message: 'Light pole registered successfully',
-        color: 'green',
-      });
-      queryClient.invalidateQueries({ queryKey: ['poles'] });
-      navigate(`/poles/${data.code}`);
+      notifications.show({ title: 'Success', message: 'River side project registered successfully', color: 'green' });
+      queryClient.invalidateQueries({ queryKey: ['river-side-projects'] });
+      navigate(`/river-side-projects/${data.code}`);
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Failed to register pole';
+      const errorMessage = error.response?.data?.message || 'Failed to register river side project';
       setApiError(errorMessage);
-      
-      // Handle unique constraint error for code
       if (errorMessage.includes('code') && errorMessage.includes('already exists')) {
         form.setFieldError('code', 'This code is already in use');
       }
-      
-      notifications.show({
-        title: 'Error',
-        message: errorMessage,
-        color: 'red',
-      });
+      notifications.show({ title: 'Error', message: errorMessage, color: 'red' });
     },
   });
 
@@ -157,7 +107,9 @@ export default function CreatePolePage() {
 
   return (
     <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Create New Light Pole</Title>
+      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>
+        Create New River Side Project
+      </Title>
 
       <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
         <form onSubmit={handleSubmit}>
@@ -168,12 +120,10 @@ export default function CreatePolePage() {
               </Alert>
             )}
 
-            <TextInput
-              label="Code"
-              placeholder="LP-001"
-              required
-              {...form.getInputProps('code')}
-            />
+            <Group grow>
+              <TextInput label="Code" placeholder="RV-001" required {...form.getInputProps('code')} />
+              <TextInput label="Name" placeholder="River Walkway Project" required {...form.getInputProps('name')} />
+            </Group>
 
             <Group grow>
               <Select
@@ -196,12 +146,7 @@ export default function CreatePolePage() {
                 searchable
                 {...form.getInputProps('district')}
               />
-              <TextInput
-                label="Street"
-                placeholder="Main Street"
-                required
-                {...form.getInputProps('street')}
-              />
+              <TextInput label="Street" placeholder="Main Street" required {...form.getInputProps('street')} />
             </Group>
 
             <Stack gap="xs">
@@ -229,8 +174,6 @@ export default function CreatePolePage() {
               <MapPicker
                 value={{ lat: form.values.gpsLat, lng: form.values.gpsLng }}
                 onChange={(lat, lng) => {
-                  // Use setValues to update only GPS fields without affecting other fields
-                  // Ensure GPS coordinates are always numbers
                   form.setValues({
                     ...form.values,
                     gpsLat: typeof lat === 'number' ? lat : Number(lat),
@@ -240,63 +183,18 @@ export default function CreatePolePage() {
               />
             </Stack>
 
-            <Group grow>
-              <Select
-                label="Pole Type"
-                data={POLE_TYPES}
-                {...form.getInputProps('poleType')}
-              />
-              <NumberInput
-                label="Height (meters)"
-                placeholder="8.5"
-                required
-                min={0}
-                precision={2}
-                {...form.getInputProps('heightMeters')}
-              />
-            </Group>
+            <Select label="Project Type" data={PROJECT_TYPES} {...form.getInputProps('projectType')} />
 
-            <Group grow>
-              <Select
-                label="Lamp Type"
-                data={LAMP_TYPES}
-                {...form.getInputProps('lampType')}
-              />
-              <NumberInput
-                label="Power Rating (Watt)"
-                placeholder="150"
-                required
-                min={0}
-                {...form.getInputProps('powerRatingWatt')}
-              />
-            </Group>
+            <Textarea label="Description (Optional)" placeholder="Project description" rows={4} {...form.getInputProps('description')} />
 
-            <Switch
-              label="Has LED Display"
-              {...form.getInputProps('hasLedDisplay', { type: 'checkbox' })}
-            />
-
-            {form.values.hasLedDisplay && (
-              <TextInput
-                label="LED Model"
-                placeholder="LED-3000"
-                required
-                {...form.getInputProps('ledModel')}
-              />
-            )}
-
-            <Select
-              label="Status"
-              data={POLE_STATUSES}
-              {...form.getInputProps('status')}
-            />
+            <Select label="Status" data={PROJECT_STATUSES} {...form.getInputProps('status')} />
 
             <Group justify="flex-end" mt="xl">
-              <Button variant="outline" onClick={() => navigate('/poles')}>
+              <Button variant="outline" onClick={() => navigate('/river-side-projects')}>
                 Cancel
               </Button>
               <Button type="submit" loading={createMutation.isPending}>
-                Register Light Pole
+                Register River Project
               </Button>
             </Group>
           </Stack>
@@ -305,4 +203,5 @@ export default function CreatePolePage() {
     </Container>
   );
 }
+
 

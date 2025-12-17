@@ -131,64 +131,71 @@ export default function PolesListPage() {
   };
 
   return (
-    <Container size="xl" py="xl">
-      <Group justify="space-between" mb="xl">
-        <Title>Light Poles</Title>
+    <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
+      <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
+        <Title size={{ base: 'h2', sm: 'h1' }}>Light Poles</Title>
         {isAdmin && (
-          <Button onClick={() => navigate('/poles/new')}>Register Light Pole</Button>
+          <Button 
+            onClick={() => navigate('/poles/new')}
+            size="md"
+          >
+            Register Light Pole
+          </Button>
         )}
       </Group>
 
-      <Paper p="md" withBorder mb="md">
-        <Group>
+      <Paper p={{ base: 'xs', sm: 'md' }} withBorder mb="md">
+        <Stack gap="md">
           <TextInput
             placeholder="Search by code, street, or subcity"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
-              setPage(1); // Reset to first page when search changes
+              setPage(1);
             }}
-            style={{ flex: 1 }}
           />
-          <Select
-            placeholder="Subcity"
-            data={[
-              'Addis Ketema',
-              'Akaky Kaliti',
-              'Arada',
-              'Bole',
-              'Gullele',
-              'Kirkos',
-              'Kolfe Keranio',
-              'Lideta',
-              'Nifas Silk-Lafto',
-              'Yeka',
-              'Lemi Kura',
-            ]}
-            value={district}
-            onChange={(value) => {
-              setDistrict(value);
-              setPage(1); // Reset to first page when filter changes
-            }}
-            clearable
-            searchable
-          />
-          <Select
-            placeholder="Status"
-            data={['ACTIVE', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE', 'OPERATIONAL']}
-            value={status}
-            onChange={(value) => {
-              setStatus(value);
-              setPage(1); // Reset to first page when filter changes
-            }}
-            clearable
-          />
-        </Group>
+          <Group grow>
+            <Select
+              placeholder="Subcity"
+              data={[
+                'Addis Ketema',
+                'Akaky Kaliti',
+                'Arada',
+                'Bole',
+                'Gullele',
+                'Kirkos',
+                'Kolfe Keranio',
+                'Lideta',
+                'Nifas Silk-Lafto',
+                'Yeka',
+                'Lemi Kura',
+              ]}
+              value={district}
+              onChange={(value) => {
+                setDistrict(value);
+                setPage(1);
+              }}
+              clearable
+              searchable
+            />
+            <Select
+              placeholder="Status"
+              data={['ACTIVE', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE', 'OPERATIONAL']}
+              value={status}
+              onChange={(value) => {
+                setStatus(value);
+                setPage(1);
+              }}
+              clearable
+            />
+          </Group>
+        </Stack>
       </Paper>
 
       <Paper withBorder>
-        <Table highlightOnHover>
-          <Table.Thead>
+        <Table.ScrollContainer minWidth={600}>
+          <Table highlightOnHover>
+            <Table.Thead>
             <Table.Tr>
               <Table.Th>Code</Table.Th>
               <Table.Th>Subcity</Table.Th>
@@ -268,9 +275,10 @@ export default function PolesListPage() {
                   </Table.Td>
                 </Table.Tr>
               ))
-            )}
-          </Table.Tbody>
-        </Table>
+          )}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
       </Paper>
 
       {data && Math.ceil(data.total / (data.limit || 10)) > 1 && (
