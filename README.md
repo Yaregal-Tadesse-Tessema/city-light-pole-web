@@ -1,6 +1,6 @@
-# City Light Pole Management Web
+# Coredor Assets Management System
 
-Frontend application for managing city light poles, issues, and maintenance built with React, Vite, and Mantine.
+Frontend application for managing city assets including light poles, public parks, car parking lots, museums, and public toilets. Built with React, Vite, and Mantine.
 
 ## Tech Stack
 
@@ -116,21 +116,33 @@ src/
 - Protected routes
 - Role-based access control
 
+### Asset Types
+
+The system manages the following city assets:
+
+1. **Light Poles** - Street lighting infrastructure
+2. **Public Parks** - Green spaces and recreational areas
+3. **Car Parking Lots** - Parking facilities and capacity management
+4. **Museums** - Cultural heritage sites and facilities
+5. **Public Toilets** - Public restroom facilities
+6. **Sport Stadiums** - Sports facilities and athletic venues
+7. **River Side Projects** - Riverfront development and waterfront infrastructure
+
 ### Pages
 
 1. **Dashboard**
-   - Summary statistics (poles, issues, maintenance)
-   - Faulty poles by district chart
+   - Summary statistics across all asset types
+   - Asset status by district charts
    - Maintenance cost summary
 
-2. **Light Poles**
-   - List all poles with filters (district, status, search)
-   - View pole details
+2. **Asset Management**
+   - List all assets with filters (district, status, search)
+   - View asset details
    - Generate and download QR codes (ADMIN)
-   - Create/edit poles (ADMIN)
+   - Create/edit assets (ADMIN)
 
 3. **Issues**
-   - List all issues
+   - List all issues across asset types
    - Create new issues (ADMIN, ENGINEER)
    - Update issue status
    - Upload before/after attachments

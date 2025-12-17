@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { IconEye, IconTrash } from '@tabler/icons-react';
 import {
   Container,
@@ -28,6 +29,8 @@ import axios from 'axios';
 const SCHEDULE_STATUSES = ['REQUESTED', 'STARTED', 'PAUSED', 'COMPLETED'];
 
 export default function MaintenancePage() {
+  const [searchParams] = useSearchParams();
+  const filterType = searchParams.get('type'); // 'park' or 'pole' or null (all)
   const [createScheduleOpened, setCreateScheduleOpened] = useState(false);
   const [editScheduleOpened, setEditScheduleOpened] = useState(false);
   const [issueModalOpened, setIssueModalOpened] = useState(false);
@@ -37,7 +40,7 @@ export default function MaintenancePage() {
   const [scheduleToDelete, setScheduleToDelete] = useState<any>(null);
 
   const { data: schedules, isLoading: schedulesLoading, refetch: refetchSchedules } = useQuery({
-    queryKey: ['maintenance', 'schedules'],
+    queryKey: ['maintenance', 'schedules', filterType],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
       const res = await axios.get('http://localhost:3011/api/v1/maintenance/schedules', {
@@ -45,16 +48,33 @@ export default function MaintenancePage() {
           Authorization: `Bearer ${token}`,
         },
       });
+      // Filter by type if specified
+      if (filterType === 'park') {
+        return res.data.filter((schedule: any) => schedule.parkCode);
+      } else if (filterType === 'pole') {
+        return res.data.filter((schedule: any) => schedule.poleCode);
+      }
       return res.data;
     },
   });
 
 
-  const { data: issues } = useQuery({
+  const { data: poleIssues } = useQuery({
     queryKey: ['issues', 'for-maintenance'],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
       const res = await axios.get('http://localhost:3011/api/v1/issues', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: parkIssues } = useQuery({
+    queryKey: ['park-issues', 'for-maintenance'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/parks/issues', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return res.data;
@@ -66,28 +86,83 @@ export default function MaintenancePage() {
     queryFn: async () => {
       if (!selectedIssueId) return null;
       const token = localStorage.getItem('access_token');
-      const res = await axios.get(`http://localhost:3011/api/v1/issues/${selectedIssueId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      return res.data;
+      // Try pole issues first, then park issues
+      try {
+        const res = await axios.get(`http://localhost:3011/api/v1/issues/${selectedIssueId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        return { ...res.data, type: 'pole' };
+      } catch {
+        try {
+          const res = await axios.get(`http://localhost:3011/api/v1/parks/issues/${selectedIssueId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          return { ...res.data, type: 'park' };
+        } catch {
+          return null;
+        }
+      }
     },
     enabled: !!selectedIssueId && issueModalOpened,
   });
 
+  // Combine pole and park issues
+  const allIssues = [
+    ...(poleIssues || []).map((issue: any) => ({ ...issue, type: 'pole' })),
+    ...(parkIssues || []).map((issue: any) => ({ ...issue, type: 'park' })),
+  ];
+
   const issueOptions =
-    issues
+    allIssues
       ?.filter((issue: any) => issue.status !== 'CLOSED' && issue.status !== 'IN_PROGRESS') // Exclude closed and in-progress issues
       .map((issue: any) => ({
         value: issue.id,
-        label: `${issue.pole?.code || issue.poleCode || 'N/A'} – ${issue.description}`,
+        label: `${issue.type === 'park' ? 'Park' : 'Pole'} ${issue.park?.code || issue.pole?.code || issue.parkCode || issue.poleCode || 'N/A'} – ${issue.description}`,
         poleCode: issue.pole?.code || issue.poleCode,
+        parkCode: issue.park?.code || issue.parkCode,
+        issueType: issue.type,
       })) || [];
+
+  const { data: polesData } = useQuery({
+    queryKey: ['poles', 'for-maintenance'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/poles?page=1&limit=100', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: parksData } = useQuery({
+    queryKey: ['parks', 'for-maintenance'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/parks?page=1&limit=100', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data;
+    },
+  });
+
+  const poleOptions = polesData?.items?.map((pole: any) => ({
+    value: pole.code,
+    label: `${pole.code} - ${pole.street}, ${pole.subcity || pole.district}`,
+  })) || [];
+
+  const parkOptions = parksData?.items?.map((park: any) => ({
+    value: park.code,
+    label: `${park.code} - ${park.street}, ${park.district}`,
+  })) || [];
 
   const scheduleForm = useForm({
     initialValues: {
       poleCode: '',
+      parkCode: '',
       issueId: '',
       frequency: 'MONTHLY', // kept as default and hidden from UI
       description: '',
@@ -96,6 +171,7 @@ export default function MaintenancePage() {
       status: 'REQUESTED',
       estimatedCost: undefined as number | undefined,
       remark: '',
+      maintenanceType: 'issue', // 'issue' or 'direct'
     },
   });
 
@@ -120,14 +196,53 @@ export default function MaintenancePage() {
   const handleCreateSchedule = async (values: any) => {
     try {
       const token = localStorage.getItem('access_token');
-      const payload = {
-        ...values,
+      const payload: any = {
+        frequency: values.frequency || 'MONTHLY',
+        description: values.description,
+        startDate: values.startDate,
+        endDate: values.endDate || undefined,
+        status: values.status || 'REQUESTED',
         estimatedCost:
           values.estimatedCost === undefined || values.estimatedCost === null || values.estimatedCost === ''
             ? undefined
             : Number(values.estimatedCost),
         remark: values.remark?.trim() || undefined,
       };
+
+      // Add issueId if maintenance type is 'issue'
+      if (values.maintenanceType === 'issue') {
+        if (!values.issueId) {
+          notifications.show({
+            title: 'Error',
+            message: 'Please select an issue',
+            color: 'red',
+          });
+          return;
+        }
+        payload.issueId = values.issueId;
+        // Also set poleCode or parkCode based on issue type
+        if (values.parkCode) {
+          payload.parkCode = values.parkCode;
+        }
+        if (values.poleCode) {
+          payload.poleCode = values.poleCode;
+        }
+      } else {
+        // Direct maintenance - require either poleCode or parkCode
+        if (values.poleCode) {
+          payload.poleCode = values.poleCode;
+        } else if (values.parkCode) {
+          payload.parkCode = values.parkCode;
+        } else {
+          notifications.show({
+            title: 'Error',
+            message: 'Please select either a pole or park for direct maintenance',
+            color: 'red',
+          });
+          return;
+        }
+      }
+
       await axios.post('http://localhost:3011/api/v1/maintenance/schedules', payload, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -182,12 +297,15 @@ export default function MaintenancePage() {
         remark: values.remark?.trim() || undefined,
       };
       
-      // Preserve issueId and poleCode from the original schedule if they exist
+      // Preserve issueId, poleCode, and parkCode from the original schedule if they exist
       if (selectedSchedule.issueId) {
         payload.issueId = selectedSchedule.issueId;
       }
       if (selectedSchedule.poleCode) {
         payload.poleCode = selectedSchedule.poleCode;
+      }
+      if (selectedSchedule.parkCode) {
+        payload.parkCode = selectedSchedule.parkCode;
       }
       await axios.patch(
         `http://localhost:3011/api/v1/maintenance/schedules/${selectedSchedule.id}`,
@@ -263,7 +381,11 @@ export default function MaintenancePage() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" mb="xl">
-        <Title>Maintenance</Title>
+        <Title>
+          Maintenance
+          {filterType === 'park' && ' - Parks'}
+          {filterType === 'pole' && ' - Poles'}
+        </Title>
         <Group>
           <Button variant="light" onClick={() => setCreateScheduleOpened(true)}>
             Create Schedule
@@ -281,7 +403,7 @@ export default function MaintenancePage() {
             <Table>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Pole Code</Table.Th>
+                  <Table.Th>Pole/Park Code</Table.Th>
                   <Table.Th>Description</Table.Th>
                   <Table.Th>Frequency</Table.Th>
                   <Table.Th>Start Date</Table.Th>
@@ -304,7 +426,7 @@ export default function MaintenancePage() {
                 ) : (
                   schedules?.map((schedule: any) => (
                     <Table.Tr key={schedule.id}>
-                      <Table.Td>{schedule.poleCode || '—'}</Table.Td>
+                      <Table.Td>{schedule.poleCode || schedule.parkCode || '—'}</Table.Td>
                       <Table.Td>{schedule.description}</Table.Td>
                       <Table.Td>{schedule.frequency}</Table.Td>
                       <Table.Td>
@@ -380,7 +502,10 @@ export default function MaintenancePage() {
       {/* Create Schedule Modal */}
       <Modal
         opened={createScheduleOpened}
-        onClose={() => setCreateScheduleOpened(false)}
+        onClose={() => {
+          setCreateScheduleOpened(false);
+          scheduleForm.reset();
+        }}
         title="Create Maintenance Schedule"
         size="lg"
         centered
@@ -388,18 +513,88 @@ export default function MaintenancePage() {
         <form onSubmit={scheduleForm.onSubmit(handleCreateSchedule)}>
           <Stack>
             <Select
-              label="Issue"
-              placeholder="Select related issue"
-              data={issueOptions}
-              searchable
-              required
-              value={scheduleForm.values.issueId}
+              label="Maintenance Type"
+              data={[
+                { value: 'issue', label: 'Related to Issue' },
+                { value: 'direct', label: 'Direct Maintenance (No Issue)' },
+              ]}
+              value={scheduleForm.values.maintenanceType}
               onChange={(value) => {
-                const selected = issueOptions.find((opt: any) => opt.value === value);
-                scheduleForm.setFieldValue('issueId', value || '');
-                scheduleForm.setFieldValue('poleCode', selected?.poleCode || '');
+                scheduleForm.setFieldValue('maintenanceType', value || 'issue');
+                // Clear related fields when switching type
+                if (value === 'direct') {
+                  scheduleForm.setFieldValue('issueId', '');
+                } else {
+                  scheduleForm.setFieldValue('poleCode', '');
+                  scheduleForm.setFieldValue('parkCode', '');
+                }
               }}
             />
+
+            {scheduleForm.values.maintenanceType === 'issue' ? (
+              <Select
+                label="Issue"
+                placeholder="Select related issue"
+                data={issueOptions}
+                searchable
+                required
+                value={scheduleForm.values.issueId}
+                onChange={(value) => {
+                  const selected = issueOptions.find((opt: any) => opt.value === value);
+                  scheduleForm.setFieldValue('issueId', value || '');
+                  if (selected?.issueType === 'park') {
+                    scheduleForm.setFieldValue('parkCode', selected?.parkCode || '');
+                    scheduleForm.setFieldValue('poleCode', '');
+                  } else {
+                    scheduleForm.setFieldValue('poleCode', selected?.poleCode || '');
+                    scheduleForm.setFieldValue('parkCode', '');
+                  }
+                }}
+              />
+            ) : (
+              <>
+                <Select
+                  label="Select Type"
+                  data={[
+                    { value: 'pole', label: 'Light Pole' },
+                    { value: 'park', label: 'Public Park' },
+                  ]}
+                  value={scheduleForm.values.poleCode ? 'pole' : scheduleForm.values.parkCode ? 'park' : ''}
+                  onChange={(value) => {
+                    // Clear both when switching
+                    scheduleForm.setFieldValue('poleCode', '');
+                    scheduleForm.setFieldValue('parkCode', '');
+                  }}
+                  required
+                />
+                {scheduleForm.values.poleCode || scheduleForm.values.parkCode ? (
+                  <Select
+                    label={scheduleForm.values.poleCode ? 'Pole Code' : 'Park Code'}
+                    placeholder={`Select a ${scheduleForm.values.poleCode ? 'pole' : 'park'}`}
+                    data={scheduleForm.values.poleCode ? poleOptions : parkOptions}
+                    searchable
+                    required
+                    value={scheduleForm.values.poleCode || scheduleForm.values.parkCode || ''}
+                    onChange={(value) => {
+                      if (scheduleForm.values.poleCode) {
+                        scheduleForm.setFieldValue('poleCode', value || '');
+                        scheduleForm.setFieldValue('parkCode', '');
+                      } else {
+                        scheduleForm.setFieldValue('parkCode', value || '');
+                        scheduleForm.setFieldValue('poleCode', '');
+                      }
+                    }}
+                  />
+                ) : (
+                  <Select
+                    label="Asset Type"
+                    placeholder="Select Light Pole or Public Park above first"
+                    data={[]}
+                    disabled
+                  />
+                )}
+              </>
+            )}
             <TextInput
               label="Description"
               placeholder="Monthly inspection"
@@ -465,7 +660,7 @@ export default function MaintenancePage() {
           <Stack>
             {selectedSchedule && (
               <Group gap="xs">
-                <Badge color="blue">{selectedSchedule.poleCode || '—'}</Badge>
+                <Badge color="blue">{selectedSchedule.poleCode || selectedSchedule.parkCode || '—'}</Badge>
                 <Badge>{selectedSchedule.frequency}</Badge>
               </Group>
             )}
@@ -541,8 +736,8 @@ export default function MaintenancePage() {
           <Stack>
             <Paper p="md" withBorder>
               <Group mb="xs">
-                <Text fw={700}>Pole Code:</Text>
-                <Badge color="blue">{selectedIssue.pole?.code || selectedIssue.poleCode || 'N/A'}</Badge>
+                <Text fw={700}>{selectedIssue.type === 'park' ? 'Park' : 'Pole'} Code:</Text>
+                <Badge color="blue">{selectedIssue.park?.code || selectedIssue.pole?.code || selectedIssue.parkCode || selectedIssue.poleCode || 'N/A'}</Badge>
               </Group>
               <Group mb="xs">
                 <Text fw={700}>Severity:</Text>
@@ -615,8 +810,8 @@ export default function MaintenancePage() {
           </Text>
           {scheduleToDelete && (
             <Paper p="sm" withBorder bg="gray.0">
-              <Text size="sm" fw={700}>Pole Code:</Text>
-              <Text size="sm">{scheduleToDelete.poleCode || '—'}</Text>
+              <Text size="sm" fw={700}>Pole/Park Code:</Text>
+              <Text size="sm">{scheduleToDelete.poleCode || scheduleToDelete.parkCode || '—'}</Text>
               <Text size="sm" fw={700} mt="xs">Description:</Text>
               <Text size="sm">{scheduleToDelete.description}</Text>
               <Text size="sm" fw={700} mt="xs">Status:</Text>

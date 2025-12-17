@@ -54,7 +54,7 @@ export default function SignupPage() {
   return (
     <Container size={420} my={40}>
       <Title ta="center" mb="md">
-        City Light Pole Management
+        Coredor Assets Management System
       </Title>
       <Text c="dimmed" size="sm" ta="center" mt={5} mb="xl">
         Create a new account

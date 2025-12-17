@@ -63,6 +63,10 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
       const fetchAllPoles = async () => {
         try {
           const token = localStorage.getItem('access_token');
+          if (!token) {
+            console.warn('No access token found');
+            return;
+          }
           const res = await axios.get('http://localhost:3011/api/v1/poles?page=1&limit=1000', {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -71,42 +75,61 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
           setAllPoles(res.data?.items || []);
         } catch (error) {
           console.error('Failed to fetch poles:', error);
+          // Don't crash the component if fetch fails
+          setAllPoles([]);
         }
       };
       fetchAllPoles();
+    } else {
+      // Reset poles when showAllPoles is false
+      setAllPoles([]);
     }
   }, [showAllPoles]);
 
   // Initialize map only once
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    
+    // Check if Leaflet is available
+    if (typeof window === 'undefined' || !L || !L.map) {
+      console.error('Leaflet is not available');
+      return;
+    }
 
-    mapRef.current = L.map(containerRef.current).setView(
-      value.lat && value.lng ? [value.lat, value.lng] : DEFAULT_CENTER,
-      13,
-    );
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(mapRef.current);
+    try {
+      mapRef.current = L.map(containerRef.current).setView(
+        value.lat && value.lng ? [value.lat, value.lng] : DEFAULT_CENTER,
+        13,
+      );
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(mapRef.current);
 
-    mapRef.current.on('click', (e: any) => {
-      const { lat, lng } = e.latlng;
-      if (markerRef.current) {
-        markerRef.current.setLatLng([lat, lng]);
-      } else {
-        markerRef.current = L.marker([lat, lng], { icon: blueIcon }).addTo(mapRef.current as LeafletMap);
+      mapRef.current.on('click', (e: any) => {
+        const { lat, lng } = e.latlng;
+        if (markerRef.current) {
+          markerRef.current.setLatLng([lat, lng]);
+        } else {
+          markerRef.current = L.marker([lat, lng], { icon: blueIcon }).addTo(mapRef.current as LeafletMap);
+        }
+        onChange(lat, lng);
+      });
+
+      // Set initial marker if value exists
+      if (value.lat && value.lng) {
+        markerRef.current = L.marker([value.lat, value.lng], { icon: blueIcon }).addTo(mapRef.current);
       }
-      onChange(lat, lng);
-    });
-
-    // Set initial marker if value exists
-    if (value.lat && value.lng) {
-      markerRef.current = L.marker([value.lat, value.lng], { icon: blueIcon }).addTo(mapRef.current);
+    } catch (error) {
+      console.error('Error initializing map:', error);
     }
 
     return () => {
       if (mapRef.current) {
-        mapRef.current.remove();
+        try {
+          mapRef.current.remove();
+        } catch (error) {
+          console.error('Error removing map:', error);
+        }
         mapRef.current = null;
         markerRef.current = null;
         allPolesMarkersRef.current = [];

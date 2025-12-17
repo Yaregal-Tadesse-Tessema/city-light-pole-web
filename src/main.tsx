@@ -7,6 +7,15 @@ import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import App from './App';
 
+// Unregister any existing service workers to prevent PWA errors
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

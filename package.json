@@ -2,7 +2,7 @@
   "name": "city-light-pole-web",
   "version": "1.0.0",
   "type": "module",
-  "description": "City Light Pole Management System - React Frontend",
+  "description": "Coredor Assets Management System - React Frontend",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
