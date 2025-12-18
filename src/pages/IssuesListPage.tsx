@@ -79,7 +79,7 @@ export default function IssuesListPage() {
     ?.filter((pole: any) => !polesWithUnclosedIssues.has(pole.code))
     .map((pole: any) => ({
       value: pole.code,
-      label: `${pole.code} - ${pole.street}, ${pole.subcity || pole.district}`,
+      label: `${pole.code} - ${pole.street}, ${pole.subcity}`,
     })) || [];
 
   const createForm = useForm({

@@ -16,11 +16,13 @@ import {
   Text,
   Stack,
   Loader,
+  Popover,
+  Checkbox,
 } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconEdit, IconTrash, IconHistory } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconHistory, IconFilter, IconArrowUp, IconArrowDown, IconArrowsSort } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import axios from 'axios';
@@ -31,22 +33,26 @@ export default function PolesListPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [district, setDistrict] = useState<string | null>(null);
+  const [subcity, setSubcity] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [streetFilter, setStreetFilter] = useState<string | null>(null);
+  const [ledDisplayFilter, setLedDisplayFilter] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'subcity' | 'street' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [poleToDelete, setPoleToDelete] = useState<string | null>(null);
   const [historyModalOpened, { open: openHistoryModal, close: closeHistoryModal }] = useDisclosure(false);
   const [selectedPoleCode, setSelectedPoleCode] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['poles', page, search, district, status],
+    queryKey: ['poles', page, search, subcity, status],
     queryFn: async () => {
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '10',
+        page: '1', // Fetch all for client-side filtering
+        limit: '1000',
       });
       if (search) params.append('search', search);
-      if (district) params.append('district', district);
+      if (subcity) params.append('subcity', subcity);
       if (status) params.append('status', status);
 
       const token = localStorage.getItem('access_token');
@@ -58,6 +64,219 @@ export default function PolesListPage() {
       return res.data;
     },
   });
+
+  // Get unique values for filters from all fetched data
+  const allFetchedPoles = data?.items || [];
+  const uniqueSubcities = Array.from(new Set(allFetchedPoles.map((p: any) => p.subcity).filter(Boolean))).sort();
+
+  const STREETS = [
+    'Africa Avenue',
+    'Bole Road',
+    'Airport Road',
+    'Churchill Avenue',
+    'Menelik II Avenue',
+    'Haile Selassie Avenue',
+    'Ras Desta Damtew Avenue',
+    'Ras Mekonnen Avenue',
+    'Ras Abebe Aregay Street',
+    'Dejazmach Balcha Abanefso Street',
+    'King George VI Street',
+    'Queen Elizabeth II Street',
+    'Mahatma Gandhi Street',
+    'Sylvia Pankhurst Street',
+    'Jomo Kenyatta Avenue',
+    'Patrice Lumumba Street',
+    'Nelson Mandela Avenue',
+    'Julius Nyerere Street',
+    'Samora Machel Street',
+    'Kwame Nkrumah Street',
+    'Ahmed Sekou Toure Street',
+    'Gamal Abdel Nasser Street',
+    'Jawaharlal Nehru Street',
+    'Alexander Pushkin Avenue',
+    'Cunningham Street',
+    'Smuts Avenue',
+    'Hachalu Hundessa Road',
+    'Haile Gebreselassie Avenue',
+    'Sahle Selassie Street',
+    'Yohannes IV Street',
+    'Tewodros II Street',
+    'Menelik I Street',
+    'Atse Yohannes Street',
+    'Atse Tewodros Street',
+    'Atse Menelik Street',
+    'Atse Haile Selassie Street',
+    'Adwa Street',
+    'Alula Aba Nega Street',
+    'Aba Kiros Street',
+    'Aba Samuel Road',
+    'Debre Zeit Road',
+    'Jimma Road',
+    'Ambo Road',
+    'Dessie Road',
+    'Gojjam Berenda Road',
+    'Sidamo Road',
+    'Wolaita Road',
+    'Arsi Road',
+    'Bale Road',
+    'Borena Road',
+    'Harar Road',
+    'Wollo Sefer Road',
+    'Mekelle Road',
+    'Gondar Road',
+    'Bahir Dar Road',
+    'Dire Dawa Road',
+    'Assab Road',
+    'Djibouti Road',
+    'Sudan Street',
+    'Egypt Street',
+    'Algeria Avenue',
+    'Tunisia Street',
+    'Morocco Street',
+    'Libya Street',
+    'Senegal Street',
+    'Mali Street',
+    'Niger Street',
+    'Nigeria Street',
+    'Ghana Street',
+    'Benin Street',
+    'Togo Street',
+    'Cameroon Street',
+    'Chad Street',
+    'Congo Street',
+    'Gabon Street',
+    'Central African Republic Street',
+    'South Africa Street',
+    'Sierra Leone Street',
+    'Liberia Street',
+    'Ivory Coast Street',
+    'Guinea Street',
+    'Ethiopia Street',
+    'Kenya Street',
+    'Uganda Street',
+    'Tanzania Street',
+    'Rwanda Street',
+    'Burundi Street',
+    'Somalia Street',
+    'Eritrea Street',
+    'Djibouti Street',
+    'Madagascar Avenue',
+    'Mauritius Street',
+    'Seychelles Street',
+    'Comoros Street',
+    'Mozambique Street',
+    'Angola Street',
+    'Namibia Street',
+    'Botswana Street',
+    'Zimbabwe Street',
+    'Zambia Street',
+    'Malawi Street',
+    'Lesotho Street',
+    'Swaziland Avenue',
+    'Sao Tome and Principe Street',
+    'Cape Verde Street',
+    '20 Meter Road',
+    '22 Meter Road',
+    '30 Meter Road',
+    '40 Meter Road',
+    'Ring Road',
+    'CMC Road',
+    'Megenagna Road',
+    'Summit Road',
+    'Salite Mihret Road',
+    'Yeka Road',
+    'Kotebe Road',
+    'Ayat Road',
+    'Gurd Shola Road',
+    'Kazanchis Road',
+    'Mexico Square Road',
+    'Meskel Square Road',
+    'Saris Road',
+    'Kaliti Road',
+    'Akaki Road',
+    'Tor Hailoch Road',
+    'Asko Road',
+    'Shiro Meda Road',
+    'Entoto Road',
+    'Piassa Road',
+    'Arada Road',
+    'Merkato Road',
+    'Kolfe Road',
+    'Jemo Road',
+    'Gotera Road',
+    'Lancha Road',
+    'Kera Road',
+    'Ayer Tena Road',
+    'Lafto Road',
+    'Nifas Silk Road',
+    'Gerji Road',
+    'Beshale Road',
+    'Lebu Road',
+    'Figa Road',
+    'Chechela Road',
+    'Bole Bulbula Road',
+    'Addis Ketema Road',
+    'Lideta Road',
+    'Kirkos Road',
+    'Yeka Abado Road',
+    'Gulele Road',
+    'Arat Kilo Road',
+    'Sidist Kilo Road',
+    'Sebategna Road',
+    'Autobus Tera Road',
+    'Shola Market Road',
+    'Bole Medhanealem Road',
+    'Megenagna Square Road',
+    'St. Urael Road',
+    'Atlas Road',
+    'Edna Mall Road',
+    'Friendship Building Road',
+    'Ethiopian Airlines Road',
+    'Millennium Hall Road',
+    'African Union Road',
+  ];
+
+  // Client-side filtering for street and LED display
+  let filteredPoles = (data?.items || []).filter((pole: any) => {
+    if (streetFilter && pole.street !== streetFilter) {
+      return false;
+    }
+    if (ledDisplayFilter === 'yes' && !pole.hasLedDisplay) {
+      return false;
+    }
+    if (ledDisplayFilter === 'no' && pole.hasLedDisplay) {
+      return false;
+    }
+    return true;
+  });
+
+  // Sorting logic
+  if (sortBy) {
+    filteredPoles = [...filteredPoles].sort((a: any, b: any) => {
+      const aValue = a[sortBy] || '';
+      const bValue = b[sortBy] || '';
+      const comparison = aValue.localeCompare(bValue, undefined, { sensitivity: 'base' });
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }
+
+  // Pagination for filtered results
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredPoles.length / itemsPerPage);
+  const paginatedPoles = filteredPoles.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+  // Handle sort click
+  const handleSort = (column: 'subcity' | 'street') => {
+    if (sortBy === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new column with ascending direction
+      setSortBy(column);
+      setSortDirection('asc');
+    }
+    setPage(1); // Reset to first page when sorting
+  };
 
   const { data: maintenanceHistory, isLoading: historyLoading } = useQuery({
     queryKey: ['maintenance-history', selectedPoleCode],
@@ -117,14 +336,12 @@ export default function PolesListPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ACTIVE':
+      case 'OPERATIONAL':
         return 'green';
       case 'FAULT_DAMAGED':
         return 'red';
       case 'UNDER_MAINTENANCE':
         return 'yellow';
-      case 'OPERATIONAL':
-        return 'blue';
       default:
         return 'gray';
     }
@@ -170,9 +387,9 @@ export default function PolesListPage() {
                 'Yeka',
                 'Lemi Kura',
               ]}
-              value={district}
+              value={subcity}
               onChange={(value) => {
-                setDistrict(value);
+                setSubcity(value);
                 setPage(1);
               }}
               clearable
@@ -180,7 +397,7 @@ export default function PolesListPage() {
             />
             <Select
               placeholder="Status"
-              data={['ACTIVE', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE', 'OPERATIONAL']}
+              data={['OPERATIONAL', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE']}
               value={status}
               onChange={(value) => {
                 setStatus(value);
@@ -198,11 +415,175 @@ export default function PolesListPage() {
             <Table.Thead>
             <Table.Tr>
               <Table.Th>Code</Table.Th>
-              <Table.Th>Subcity</Table.Th>
-              <Table.Th>Street</Table.Th>
+              <Table.Th onClick={(e) => e.stopPropagation()}>
+                <Group gap="xs" wrap="nowrap">
+                  <Text>Subcity</Text>
+                  <Popover position="bottom" withArrow shadow="md" withinPortal>
+                    <Popover.Target>
+                      <ActionIcon
+                        size="sm"
+                        variant={subcity ? 'filled' : 'subtle'}
+                        color={subcity ? 'blue' : 'gray'}
+                      >
+                        <IconFilter size={14} />
+                      </ActionIcon>
+                    </Popover.Target>
+                    <Popover.Dropdown>
+                      <Stack gap="xs">
+                        <Text size="sm" fw={600}>Filter by Subcity</Text>
+                        <Select
+                          placeholder="Select subcity"
+                          data={uniqueSubcities}
+                          value={subcity}
+                          onChange={(value) => {
+                            setSubcity(value);
+                            setPage(1);
+                          }}
+                          clearable
+                          searchable
+                        />
+                      </Stack>
+                    </Popover.Dropdown>
+                  </Popover>
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    color={sortBy === 'subcity' ? 'blue' : 'gray'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSort('subcity');
+                    }}
+                  >
+                    {sortBy === 'subcity' ? (
+                      sortDirection === 'asc' ? (
+                        <IconArrowUp size={14} />
+                      ) : (
+                        <IconArrowDown size={14} />
+                      )
+                    ) : (
+                      <IconArrowsSort size={14} />
+                    )}
+                  </ActionIcon>
+                </Group>
+              </Table.Th>
+              <Table.Th onClick={(e) => e.stopPropagation()}>
+                <Group gap="xs" wrap="nowrap">
+                  <Text>Street</Text>
+                  <Popover position="bottom" withArrow shadow="md" withinPortal>
+                    <Popover.Target>
+                      <ActionIcon
+                        size="sm"
+                        variant={streetFilter ? 'filled' : 'subtle'}
+                        color={streetFilter ? 'blue' : 'gray'}
+                      >
+                        <IconFilter size={14} />
+                      </ActionIcon>
+                    </Popover.Target>
+                    <Popover.Dropdown>
+                      <Stack gap="xs">
+                        <Text size="sm" fw={600}>Filter by Street</Text>
+                        <Select
+                          placeholder="Select street"
+                          data={STREETS}
+                          value={streetFilter}
+                          onChange={(value) => {
+                            setStreetFilter(value);
+                            setPage(1);
+                          }}
+                          clearable
+                          searchable
+                          style={{ minWidth: 250 }}
+                        />
+                      </Stack>
+                    </Popover.Dropdown>
+                  </Popover>
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    color={sortBy === 'street' ? 'blue' : 'gray'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSort('street');
+                    }}
+                  >
+                    {sortBy === 'street' ? (
+                      sortDirection === 'asc' ? (
+                        <IconArrowUp size={14} />
+                      ) : (
+                        <IconArrowDown size={14} />
+                      )
+                    ) : (
+                      <IconArrowsSort size={14} />
+                    )}
+                  </ActionIcon>
+                </Group>
+              </Table.Th>
               <Table.Th>Power Rating</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>LED Display</Table.Th>
+              <Table.Th onClick={(e) => e.stopPropagation()}>
+                <Group gap="xs" wrap="nowrap">
+                  <Text>Status</Text>
+                  <Popover position="bottom" withArrow shadow="md" withinPortal>
+                    <Popover.Target>
+                      <ActionIcon
+                        size="sm"
+                        variant={status ? 'filled' : 'subtle'}
+                        color={status ? 'blue' : 'gray'}
+                      >
+                        <IconFilter size={14} />
+                      </ActionIcon>
+                    </Popover.Target>
+                    <Popover.Dropdown>
+                      <Stack gap="xs">
+                        <Text size="sm" fw={600}>Filter by Status</Text>
+                        <Select
+                          placeholder="Select status"
+                          data={['OPERATIONAL', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE']}
+                          value={status}
+                          onChange={(value) => {
+                            setStatus(value);
+                            setPage(1);
+                          }}
+                          clearable
+                        />
+                      </Stack>
+                    </Popover.Dropdown>
+                  </Popover>
+                </Group>
+              </Table.Th>
+              <Table.Th onClick={(e) => e.stopPropagation()}>
+                <Group gap="xs" wrap="nowrap">
+                  <Text>LED Display</Text>
+                  <Popover position="bottom" withArrow shadow="md" withinPortal>
+                    <Popover.Target>
+                      <ActionIcon
+                        size="sm"
+                        variant={ledDisplayFilter ? 'filled' : 'subtle'}
+                        color={ledDisplayFilter ? 'blue' : 'gray'}
+                      >
+                        <IconFilter size={14} />
+                      </ActionIcon>
+                    </Popover.Target>
+                    <Popover.Dropdown>
+                      <Stack gap="xs">
+                        <Text size="sm" fw={600}>Filter by LED Display</Text>
+                        <Select
+                          placeholder="Select option"
+                          data={[
+                            { value: 'yes', label: 'Yes' },
+                            { value: 'no', label: 'No' },
+                          ]}
+                          value={ledDisplayFilter}
+                          onChange={(value) => {
+                            setLedDisplayFilter(value);
+                            setPage(1);
+                          }}
+                          clearable
+                        />
+                      </Stack>
+                    </Popover.Dropdown>
+                  </Popover>
+                </Group>
+              </Table.Th>
               <Table.Th>Actions</Table.Th>
             </Table.Tr>
           </Table.Thead>
@@ -211,19 +592,19 @@ export default function PolesListPage() {
               <Table.Tr>
                 <Table.Td colSpan={7}>Loading...</Table.Td>
               </Table.Tr>
-            ) : data?.items?.length === 0 ? (
+            ) : paginatedPoles.length === 0 ? (
               <Table.Tr>
                 <Table.Td colSpan={7}>No poles found</Table.Td>
               </Table.Tr>
             ) : (
-              data?.items?.map((pole: any) => (
+              paginatedPoles.map((pole: any) => (
                 <Table.Tr 
                   key={pole.code}
                   style={{ cursor: 'pointer' }}
                   onClick={() => navigate(`/poles/${pole.code}`)}
                 >
                   <Table.Td>{pole.code}</Table.Td>
-                  <Table.Td>{pole.subcity || pole.district}</Table.Td>
+                  <Table.Td>{pole.subcity}</Table.Td>
                   <Table.Td>{pole.street}</Table.Td>
                   <Table.Td>{pole.powerRatingWatt ? `${pole.powerRatingWatt}W` : '-'}</Table.Td>
                   <Table.Td>
@@ -283,11 +664,11 @@ export default function PolesListPage() {
         </Table.ScrollContainer>
       </Paper>
 
-      {data && Math.ceil(data.total / (data.limit || 10)) > 1 && (
+      {totalPages > 1 && (
         <Pagination
           value={page}
           onChange={setPage}
-          total={Math.ceil(data.total / (data.limit || 10))}
+          total={totalPages}
           mt="md"
         />
       )}

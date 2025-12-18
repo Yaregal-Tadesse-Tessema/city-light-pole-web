@@ -106,6 +106,12 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
       }).addTo(mapRef.current);
 
       mapRef.current.on('click', (e: any) => {
+        // Check if click was on a marker (prevent default behavior)
+        const target = e.originalEvent?.target;
+        if (target && (target.closest('.leaflet-marker-icon') || target.closest('.leaflet-popup'))) {
+          return; // Don't handle clicks on markers
+        }
+        
         const { lat, lng } = e.latlng;
         if (markerRef.current) {
           markerRef.current.setLatLng([lat, lng]);
@@ -118,6 +124,10 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
       // Set initial marker if value exists
       if (value.lat && value.lng) {
         markerRef.current = L.marker([value.lat, value.lng], { icon: blueIcon }).addTo(mapRef.current);
+        // Prevent marker clicks from triggering map clicks
+        markerRef.current.on('click', (e: any) => {
+          e.originalEvent?.stopPropagation();
+        });
       }
     } catch (error) {
       console.error('Error initializing map:', error);
@@ -169,6 +179,11 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
         
         // Add popup with pole code
         marker.bindPopup(`<strong>${pole.code}</strong><br/>${pole.subcity || pole.district}, ${pole.street}`);
+        
+        // Prevent marker clicks from triggering map clicks
+        marker.on('click', (e: any) => {
+          e.originalEvent?.stopPropagation();
+        });
         
         allPolesMarkersRef.current.push(marker);
       }

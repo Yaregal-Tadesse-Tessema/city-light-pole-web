@@ -64,14 +64,12 @@ export default function PoleDetailPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ACTIVE':
+      case 'OPERATIONAL':
         return 'green';
       case 'FAULT_DAMAGED':
         return 'red';
       case 'UNDER_MAINTENANCE':
         return 'yellow';
-      case 'OPERATIONAL':
-        return 'blue';
       default:
         return 'gray';
     }
@@ -124,7 +122,7 @@ export default function PoleDetailPage() {
               </Group>
               <Group>
                 <Text fw={700}>Subcity:</Text>
-                <Text>{pole.subcity || pole.district}</Text>
+                <Text>{pole.subcity}</Text>
               </Group>
               <Group>
                 <Text fw={700}>Street:</Text>
@@ -154,11 +152,73 @@ export default function PoleDetailPage() {
                 <Text fw={700}>Power Rating:</Text>
                 <Text>{pole.powerRatingWatt}W</Text>
               </Group>
-              {pole.hasLedDisplay && (
+              {pole.numberOfPoles && (
                 <Group>
-                  <Text fw={700}>LED Model:</Text>
-                  <Text>{pole.ledModel}</Text>
+                  <Text fw={700}>Number of Bulbs:</Text>
+                  <Text>{pole.numberOfPoles}</Text>
                 </Group>
+              )}
+              {pole.poleInstallationDate && (
+                <Group>
+                  <Text fw={700}>Pole Installation Date:</Text>
+                  <Text>{new Date(pole.poleInstallationDate).toLocaleDateString()}</Text>
+                </Group>
+              )}
+              {pole.hasLedDisplay && (
+                <>
+                  <Group>
+                    <Text fw={700}>LED Model:</Text>
+                    <Text>{pole.ledModel}</Text>
+                  </Group>
+                  {pole.ledInstallationDate && (
+                    <Group>
+                      <Text fw={700}>LED Installation Date:</Text>
+                      <Text>{new Date(pole.ledInstallationDate).toLocaleDateString()}</Text>
+                    </Group>
+                  )}
+                  {pole.ledStatus && (
+                    <Group>
+                      <Text fw={700}>LED Status:</Text>
+                      <Badge color={
+                        pole.ledStatus === 'OPERATIONAL' ? 'green' :
+                        pole.ledStatus === 'ON_MAINTENANCE' ? 'yellow' :
+                        'red'
+                      }>
+                        {pole.ledStatus === 'OPERATIONAL' ? 'Operational' :
+                         pole.ledStatus === 'ON_MAINTENANCE' ? 'On Maintenance' :
+                         'Failed/Damaged'}
+                      </Badge>
+                    </Group>
+                  )}
+                </>
+              )}
+              {pole.hasCamera && (
+                <>
+                  <Group>
+                    <Text fw={700}>Has Camera:</Text>
+                    <Text>Yes</Text>
+                  </Group>
+                  {pole.cameraInstallationDate && (
+                    <Group>
+                      <Text fw={700}>Camera Installation Date:</Text>
+                      <Text>{new Date(pole.cameraInstallationDate).toLocaleDateString()}</Text>
+                    </Group>
+                  )}
+                </>
+              )}
+              {pole.hasPhoneCharger && (
+                <>
+                  <Group>
+                    <Text fw={700}>Has Phone Charger:</Text>
+                    <Text>Yes</Text>
+                  </Group>
+                  {pole.phoneChargerInstallationDate && (
+                    <Group>
+                      <Text fw={700}>Phone Charger Installation Date:</Text>
+                      <Text>{new Date(pole.phoneChargerInstallationDate).toLocaleDateString()}</Text>
+                    </Group>
+                  )}
+                </>
               )}
             </Stack>
           </Paper>

@@ -313,7 +313,7 @@ export default function MaintenancePage() {
 
   const poleOptions = polesData?.items?.map((pole: any) => ({
     value: pole.code,
-    label: `${pole.code} - ${pole.street}, ${pole.subcity || pole.district}`,
+    label: `${pole.code} - ${pole.street}, ${pole.subcity}`,
   })) || [];
 
   const parkOptions = parksData?.items?.map((park: any) => ({
@@ -490,8 +490,14 @@ export default function MaintenancePage() {
         estimatedCost: payload.estimatedCost,
         remark: payload.remark,
         issueId: payload.issueId,
-        district: payload.district,
       };
+      
+      // Add district/subcity based on asset type
+      if (assetType === 'pole' && payload.subcity) {
+        newPayload.subcity = payload.subcity;
+      } else if (payload.district) {
+        newPayload.district = payload.district;
+      }
       
       if (assetType === 'park' && payload.parkCode) {
         newPayload.parkCode = payload.parkCode;

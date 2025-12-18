@@ -33,11 +33,183 @@ const LAMP_TYPES = [
   { value: 'HALOGEN', label: 'Halogen' },
 ];
 
+const LED_STATUSES = [
+  { value: 'OPERATIONAL', label: 'Operational' },
+  { value: 'ON_MAINTENANCE', label: 'On Maintenance' },
+  { value: 'FAILED_DAMAGED', label: 'Failed/Damaged' },
+];
+
 const POLE_STATUSES = [
-  { value: 'ACTIVE', label: 'Active' },
+  { value: 'OPERATIONAL', label: 'Operational' },
   { value: 'FAULT_DAMAGED', label: 'Fault/Damaged' },
   { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
-  { value: 'OPERATIONAL', label: 'Operational' },
+];
+
+const STREETS = [
+  'Africa Avenue',
+  'Bole Road',
+  'Airport Road',
+  'Churchill Avenue',
+  'Menelik II Avenue',
+  'Haile Selassie Avenue',
+  'Ras Desta Damtew Avenue',
+  'Ras Mekonnen Avenue',
+  'Ras Abebe Aregay Street',
+  'Dejazmach Balcha Abanefso Street',
+  'King George VI Street',
+  'Queen Elizabeth II Street',
+  'Mahatma Gandhi Street',
+  'Sylvia Pankhurst Street',
+  'Jomo Kenyatta Avenue',
+  'Patrice Lumumba Street',
+  'Nelson Mandela Avenue',
+  'Julius Nyerere Street',
+  'Samora Machel Street',
+  'Kwame Nkrumah Street',
+  'Ahmed Sekou Toure Street',
+  'Gamal Abdel Nasser Street',
+  'Jawaharlal Nehru Street',
+  'Alexander Pushkin Avenue',
+  'Cunningham Street',
+  'Smuts Avenue',
+  'Hachalu Hundessa Road',
+  'Haile Gebreselassie Avenue',
+  'Sahle Selassie Street',
+  'Yohannes IV Street',
+  'Tewodros II Street',
+  'Menelik I Street',
+  'Atse Yohannes Street',
+  'Atse Tewodros Street',
+  'Atse Menelik Street',
+  'Atse Haile Selassie Street',
+  'Adwa Street',
+  'Alula Aba Nega Street',
+  'Aba Kiros Street',
+  'Aba Samuel Road',
+  'Debre Zeit Road',
+  'Jimma Road',
+  'Ambo Road',
+  'Dessie Road',
+  'Gojjam Berenda Road',
+  'Sidamo Road',
+  'Wolaita Road',
+  'Arsi Road',
+  'Bale Road',
+  'Borena Road',
+  'Harar Road',
+  'Wollo Sefer Road',
+  'Mekelle Road',
+  'Gondar Road',
+  'Bahir Dar Road',
+  'Dire Dawa Road',
+  'Assab Road',
+  'Djibouti Road',
+  'Sudan Street',
+  'Egypt Street',
+  'Algeria Avenue',
+  'Tunisia Street',
+  'Morocco Street',
+  'Libya Street',
+  'Senegal Street',
+  'Mali Street',
+  'Niger Street',
+  'Nigeria Street',
+  'Ghana Street',
+  'Benin Street',
+  'Togo Street',
+  'Cameroon Street',
+  'Chad Street',
+  'Congo Street',
+  'Gabon Street',
+  'Central African Republic Street',
+  'South Africa Street',
+  'Sierra Leone Street',
+  'Liberia Street',
+  'Ivory Coast Street',
+  'Guinea Street',
+  'Ethiopia Street',
+  'Kenya Street',
+  'Uganda Street',
+  'Tanzania Street',
+  'Rwanda Street',
+  'Burundi Street',
+  'Somalia Street',
+  'Eritrea Street',
+  'Djibouti Street',
+  'Madagascar Avenue',
+  'Mauritius Street',
+  'Seychelles Street',
+  'Comoros Street',
+  'Mozambique Street',
+  'Angola Street',
+  'Namibia Street',
+  'Botswana Street',
+  'Zimbabwe Street',
+  'Zambia Street',
+  'Malawi Street',
+  'Lesotho Street',
+  'Swaziland Avenue',
+  'Sao Tome and Principe Street',
+  'Cape Verde Street',
+  '20 Meter Road',
+  '22 Meter Road',
+  '30 Meter Road',
+  '40 Meter Road',
+  'Ring Road',
+  'CMC Road',
+  'Megenagna Road',
+  'Summit Road',
+  'Salite Mihret Road',
+  'Yeka Road',
+  'Kotebe Road',
+  'Ayat Road',
+  'Gurd Shola Road',
+  'Kazanchis Road',
+  'Mexico Square Road',
+  'Meskel Square Road',
+  'Saris Road',
+  'Kaliti Road',
+  'Akaki Road',
+  'Tor Hailoch Road',
+  'Asko Road',
+  'Shiro Meda Road',
+  'Entoto Road',
+  'Piassa Road',
+  'Arada Road',
+  'Merkato Road',
+  'Kolfe Road',
+  'Jemo Road',
+  'Gotera Road',
+  'Lancha Road',
+  'Kera Road',
+  'Ayer Tena Road',
+  'Lafto Road',
+  'Nifas Silk Road',
+  'Gerji Road',
+  'Beshale Road',
+  'Lebu Road',
+  'Figa Road',
+  'Chechela Road',
+  'Bole Bulbula Road',
+  'Addis Ketema Road',
+  'Lideta Road',
+  'Kirkos Road',
+  'Yeka Abado Road',
+  'Gulele Road',
+  'Arat Kilo Road',
+  'Sidist Kilo Road',
+  'Sebategna Road',
+  'Autobus Tera Road',
+  'Shola Market Road',
+  'Bole Medhanealem Road',
+  'Megenagna Square Road',
+  'St. Urael Road',
+  'Atlas Road',
+  'Edna Mall Road',
+  'Friendship Building Road',
+  'Ethiopian Airlines Road',
+  'Millennium Hall Road',
+  'African Union Road',
 ];
 
 export default function UpdatePolePage() {
@@ -46,7 +218,7 @@ export default function UpdatePolePage() {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     code: '',
-    district: '',
+    subcity: '',
     street: '',
     gpsLat: 0,
     gpsLng: 0,
@@ -56,7 +228,15 @@ export default function UpdatePolePage() {
     powerRatingWatt: 0,
     hasLedDisplay: false,
     ledModel: '',
-    status: 'ACTIVE',
+    ledInstallationDate: '' as string,
+    ledStatus: '' as string,
+    numberOfPoles: undefined as number | undefined,
+    hasCamera: false,
+    cameraInstallationDate: '' as string,
+    hasPhoneCharger: false,
+    phoneChargerInstallationDate: '' as string,
+    poleInstallationDate: '' as string,
+    status: 'OPERATIONAL',
   });
 
   const { data: pole, isLoading } = useQuery({
@@ -77,7 +257,7 @@ export default function UpdatePolePage() {
     if (pole) {
       setFormData({
         code: pole.code || '',
-        district: pole.subcity || pole.district || '', // Handle both subcity and district for backward compatibility
+        subcity: pole.subcity || '',
         street: pole.street || '',
         gpsLat: pole.gpsLat !== undefined && pole.gpsLat !== null ? Number(pole.gpsLat) : 0,
         gpsLng: pole.gpsLng !== undefined && pole.gpsLng !== null ? Number(pole.gpsLng) : 0,
@@ -87,7 +267,15 @@ export default function UpdatePolePage() {
         powerRatingWatt: pole.powerRatingWatt || 0,
         hasLedDisplay: pole.hasLedDisplay || false,
         ledModel: pole.ledModel || '',
-        status: pole.status || 'ACTIVE',
+        ledInstallationDate: pole.ledInstallationDate ? new Date(pole.ledInstallationDate).toISOString().split('T')[0] : '',
+        ledStatus: pole.ledStatus || '',
+        numberOfPoles: pole.numberOfPoles !== undefined && pole.numberOfPoles !== null ? Number(pole.numberOfPoles) : undefined,
+        hasCamera: pole.hasCamera || false,
+        cameraInstallationDate: pole.cameraInstallationDate ? new Date(pole.cameraInstallationDate).toISOString().split('T')[0] : '',
+        hasPhoneCharger: pole.hasPhoneCharger || false,
+        phoneChargerInstallationDate: pole.phoneChargerInstallationDate ? new Date(pole.phoneChargerInstallationDate).toISOString().split('T')[0] : '',
+        poleInstallationDate: pole.poleInstallationDate ? new Date(pole.poleInstallationDate).toISOString().split('T')[0] : '',
+        status: pole.status || 'OPERATIONAL',
       });
     }
   }, [pole]);
@@ -127,7 +315,7 @@ export default function UpdatePolePage() {
     // Prepare data for API, ensuring GPS coordinates are numbers
     const apiData: any = {
       code: formData.code,
-      district: formData.district,
+      subcity: formData.subcity,
       street: formData.street,
       heightMeters: formData.heightMeters,
       powerRatingWatt: formData.powerRatingWatt,
@@ -145,9 +333,33 @@ export default function UpdatePolePage() {
       apiData.gpsLng = Number(formData.gpsLng);
     }
 
-    // Add LED model only if hasLedDisplay is true
-    if (formData.hasLedDisplay && formData.ledModel) {
-      apiData.ledModel = formData.ledModel;
+    // Add LED fields only if hasLedDisplay is true
+    if (formData.hasLedDisplay) {
+      if (formData.ledModel) {
+        apiData.ledModel = formData.ledModel;
+      }
+      if (formData.ledInstallationDate) {
+        apiData.ledInstallationDate = formData.ledInstallationDate;
+      }
+      if (formData.ledStatus) {
+        apiData.ledStatus = formData.ledStatus;
+      }
+    }
+
+    // Add new fields
+    if (formData.numberOfPoles !== undefined && formData.numberOfPoles !== null) {
+      apiData.numberOfPoles = formData.numberOfPoles;
+    }
+    apiData.hasCamera = formData.hasCamera || false;
+    if (formData.hasCamera && formData.cameraInstallationDate) {
+      apiData.cameraInstallationDate = formData.cameraInstallationDate;
+    }
+    apiData.hasPhoneCharger = formData.hasPhoneCharger || false;
+    if (formData.hasPhoneCharger && formData.phoneChargerInstallationDate) {
+      apiData.phoneChargerInstallationDate = formData.phoneChargerInstallationDate;
+    }
+    if (formData.poleInstallationDate) {
+      apiData.poleInstallationDate = formData.poleInstallationDate;
     }
 
     updateMutation.mutate(apiData);
@@ -197,15 +409,17 @@ export default function UpdatePolePage() {
                   'Lemi Kura',
                 ]}
                 searchable
-                value={formData.district}
-                onChange={(value) => setFormData({ ...formData, district: value || '' })}
+                value={formData.subcity}
+                onChange={(value) => setFormData({ ...formData, subcity: value || '' })}
               />
-              <TextInput
+              <Select
                 label="Street"
-                placeholder="Main Street"
+                placeholder="Select street"
                 required
+                data={STREETS}
+                searchable
                 value={formData.street}
-                onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, street: value || '' })}
               />
             </Group>
 
@@ -284,11 +498,74 @@ export default function UpdatePolePage() {
             />
 
             {formData.hasLedDisplay && (
+              <>
+                <TextInput
+                  label="LED Model"
+                  placeholder="LED-3000"
+                  value={formData.ledModel}
+                  onChange={(e) => setFormData({ ...formData, ledModel: e.target.value })}
+                />
+                <TextInput
+                  type="date"
+                  label="LED Installation Date"
+                  required
+                  value={formData.ledInstallationDate}
+                  onChange={(e) => setFormData({ ...formData, ledInstallationDate: e.target.value })}
+                />
+                <Select
+                  label="LED Status"
+                  data={LED_STATUSES}
+                  required
+                  value={formData.ledStatus}
+                  onChange={(value) => setFormData({ ...formData, ledStatus: value || '' })}
+                />
+              </>
+            )}
+
+            <NumberInput
+              label="Number of Bulbs"
+              placeholder="1"
+              min={1}
+              value={formData.numberOfPoles}
+              onChange={(value) => setFormData({ ...formData, numberOfPoles: value ? Number(value) : undefined })}
+            />
+
+            <TextInput
+              type="date"
+              label="Pole Installation Date"
+              value={formData.poleInstallationDate}
+              onChange={(e) => setFormData({ ...formData, poleInstallationDate: e.target.value })}
+            />
+
+            <Switch
+              label="Has Camera"
+              checked={formData.hasCamera}
+              onChange={(e) => setFormData({ ...formData, hasCamera: e.currentTarget.checked })}
+            />
+
+            {formData.hasCamera && (
               <TextInput
-                label="LED Model"
-                placeholder="LED-3000"
-                value={formData.ledModel}
-                onChange={(e) => setFormData({ ...formData, ledModel: e.target.value })}
+                type="date"
+                label="Camera Installation Date"
+                required
+                value={formData.cameraInstallationDate}
+                onChange={(e) => setFormData({ ...formData, cameraInstallationDate: e.target.value })}
+              />
+            )}
+
+            <Switch
+              label="Has Phone Charger"
+              checked={formData.hasPhoneCharger}
+              onChange={(e) => setFormData({ ...formData, hasPhoneCharger: e.currentTarget.checked })}
+            />
+
+            {formData.hasPhoneCharger && (
+              <TextInput
+                type="date"
+                label="Phone Charger Installation Date"
+                required
+                value={formData.phoneChargerInstallationDate}
+                onChange={(e) => setFormData({ ...formData, phoneChargerInstallationDate: e.target.value })}
               />
             )}
 
@@ -296,7 +573,7 @@ export default function UpdatePolePage() {
               label="Status"
               data={POLE_STATUSES}
               value={formData.status}
-              onChange={(value) => setFormData({ ...formData, status: value || 'ACTIVE' })}
+              onChange={(value) => setFormData({ ...formData, status: value || 'OPERATIONAL' })}
             />
 
             <Group justify="flex-end" mt="xl">
