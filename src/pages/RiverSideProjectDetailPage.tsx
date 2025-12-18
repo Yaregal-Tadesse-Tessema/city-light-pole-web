@@ -84,7 +84,7 @@ export default function RiverSideProjectDetailPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Stack gap="md" mb={{ base: 'md', sm: 'xl' }}>
-        <Title size={{ base: 'h2', sm: 'h1' }}>River Side Project Details: {project.code}</Title>
+        <Title order={1}>River Side Project Details: {project.code}</Title>
         <Group wrap="wrap">
           {isAdmin && (
             <Button onClick={() => navigate(`/river-side-projects/${code}/edit`)} size="md">

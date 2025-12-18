@@ -83,7 +83,7 @@ export default function ParkingLotDetailPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Stack gap="md" mb={{ base: 'md', sm: 'xl' }}>
-        <Title size={{ base: 'h2', sm: 'h1' }}>Parking Lot Details: {parkingLot.code}</Title>
+        <Title order={1}>Parking Lot Details: {parkingLot.code}</Title>
         <Group wrap="wrap">
           {isAdmin && (
             <Button 

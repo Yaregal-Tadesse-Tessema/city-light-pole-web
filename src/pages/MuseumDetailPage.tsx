@@ -83,7 +83,7 @@ export default function MuseumDetailPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Stack gap="md" mb={{ base: 'md', sm: 'xl' }}>
-        <Title size={{ base: 'h2', sm: 'h1' }}>Museum Details: {museum.code}</Title>
+        <Title order={1}>Museum Details: {museum.code}</Title>
         <Group wrap="wrap">
           {isAdmin && (
             <Button 

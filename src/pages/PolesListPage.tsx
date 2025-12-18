@@ -133,7 +133,7 @@ export default function PolesListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title size={{ base: 'h2', sm: 'h1' }}>Light Poles</Title>
+        <Title order={1}>Light Poles</Title>
         {isAdmin && (
           <Button 
             onClick={() => navigate('/poles/new')}
@@ -200,6 +200,7 @@ export default function PolesListPage() {
               <Table.Th>Code</Table.Th>
               <Table.Th>Subcity</Table.Th>
               <Table.Th>Street</Table.Th>
+              <Table.Th>Power Rating</Table.Th>
               <Table.Th>Status</Table.Th>
               <Table.Th>LED Display</Table.Th>
               <Table.Th>Actions</Table.Th>
@@ -208,11 +209,11 @@ export default function PolesListPage() {
           <Table.Tbody>
             {isLoading ? (
               <Table.Tr>
-                <Table.Td colSpan={6}>Loading...</Table.Td>
+                <Table.Td colSpan={7}>Loading...</Table.Td>
               </Table.Tr>
             ) : data?.items?.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={6}>No poles found</Table.Td>
+                <Table.Td colSpan={7}>No poles found</Table.Td>
               </Table.Tr>
             ) : (
               data?.items?.map((pole: any) => (
@@ -224,6 +225,7 @@ export default function PolesListPage() {
                   <Table.Td>{pole.code}</Table.Td>
                   <Table.Td>{pole.subcity || pole.district}</Table.Td>
                   <Table.Td>{pole.street}</Table.Td>
+                  <Table.Td>{pole.powerRatingWatt ? `${pole.powerRatingWatt}W` : '-'}</Table.Td>
                   <Table.Td>
                     <Badge color={getStatusColor(pole.status)}>
                       {pole.status}

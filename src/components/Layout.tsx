@@ -25,8 +25,8 @@ export default function Layout() {
   const location = useLocation();
   const [opened, { toggle, close }] = useDisclosure(true);
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [lightPoleMenuOpened, setLightPoleMenuOpened] = useState(true);
-  const [publicParksMenuOpened, setPublicParksMenuOpened] = useState(true);
+  const [lightPoleMenuOpened, setLightPoleMenuOpened] = useState(false);
+  const [publicParksMenuOpened, setPublicParksMenuOpened] = useState(false);
   const [parkingLotsMenuOpened, setParkingLotsMenuOpened] = useState(false);
   const [museumsMenuOpened, setMuseumsMenuOpened] = useState(false);
   const [publicToiletsMenuOpened, setPublicToiletsMenuOpened] = useState(false);
@@ -79,7 +79,7 @@ export default function Layout() {
         breakpoint: 'sm',
         collapsed: { mobile: !opened },
       }}
-      padding={{ base: 'xs', sm: 'md' }}
+      padding={0}
     >
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
@@ -559,7 +559,9 @@ export default function Layout() {
         </Box>
       </AppShell.Navbar>
       <AppShell.Main>
-        <Outlet />
+        <Box pt={{ base: 'xl', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }} pb={{ base: 'xs', sm: 'md' }}>
+          <Outlet />
+        </Box>
       </AppShell.Main>
     </AppShell>
   );

@@ -49,8 +49,8 @@ export default function DashboardPage() {
   })) || [];
 
   return (
-    <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Dashboard</Title>
+    <Container size="xl" pt={{ base: 'xl', sm: 'xl' }} pb={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
+      <Title mb={{ base: 'md', sm: 'xl' }} order={1} mt={{ base: 'md', sm: 0 }}>Dashboard</Title>
 
       <Grid>
         <Grid.Col span={{ base: 12, md: 3 }}>
@@ -153,7 +153,7 @@ export default function DashboardPage() {
 
       {faultyByDistrict && faultyByDistrict.length > 0 && (
         <Paper p={{ base: 'xs', sm: 'md' }} withBorder mt={{ base: 'md', sm: 'xl' }}>
-          <Title order={3} mb="md" size={{ base: 'h4', sm: 'h3' }}>
+          <Title order={3} mb="md">
             Faulty Poles by District
           </Title>
           <Table.ScrollContainer minWidth={200}>

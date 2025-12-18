@@ -83,7 +83,7 @@ export default function PoleDetailPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Stack gap="md" mb={{ base: 'md', sm: 'xl' }}>
-        <Title size={{ base: 'h2', sm: 'h1' }}>Pole Details: {pole.code}</Title>
+        <Title order={1}>Pole Details: {pole.code}</Title>
         <Group wrap="wrap">
           {isAdmin && (
             <Button 
