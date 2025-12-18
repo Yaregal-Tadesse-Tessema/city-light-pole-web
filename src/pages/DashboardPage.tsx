@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Container, Grid, Paper, Text, Title, Table, Badge, Select, Stack, Group } from '@mantine/core';
+import { Container, Grid, Paper, Text, Title, Table, Badge, Select, Stack, Group, Tabs } from '@mantine/core';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -21,12 +21,12 @@ const SUBCITIES = [
 
 const ASSET_TYPES = [
   { value: 'pole', label: 'Light Pole' },
-  { value: 'park', label: 'Public Park' },
-  { value: 'parking', label: 'Parking Lot' },
-  { value: 'museum', label: 'Museum' },
-  { value: 'toilet', label: 'Public Toilet' },
-  { value: 'football', label: 'Football Field' },
-  { value: 'river', label: 'River Side Project' },
+  { value: 'park', label: 'Public Park', disabled: true },
+  { value: 'parking', label: 'Parking Lot', disabled: true },
+  { value: 'museum', label: 'Museum', disabled: true },
+  { value: 'toilet', label: 'Public Toilet', disabled: true },
+  { value: 'football', label: 'Football Field', disabled: true },
+  { value: 'river', label: 'River Side Project', disabled: true },
 ];
 
 export default function DashboardPage() {
@@ -111,6 +111,84 @@ export default function DashboardPage() {
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
       const res = await axios.get('http://localhost:3011/api/v1/reports/maintenance-cost', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: maintenanceByStreet } = useQuery({
+    queryKey: ['reports', 'maintenance-poles-by-street'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/reports/maintenance-poles-by-street', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: maintenanceBySubcity } = useQuery({
+    queryKey: ['reports', 'maintenance-poles-by-subcity'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/reports/maintenance-poles-by-subcity', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: failedByStreet } = useQuery({
+    queryKey: ['reports', 'failed-poles-by-street'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/reports/failed-poles-by-street', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: failedBySubcity } = useQuery({
+    queryKey: ['reports', 'failed-poles-by-subcity'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/reports/failed-poles-by-subcity', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: operationalByStreet } = useQuery({
+    queryKey: ['reports', 'operational-poles-by-street'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/reports/operational-poles-by-street', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: operationalBySubcity } = useQuery({
+    queryKey: ['reports', 'operational-poles-by-subcity'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/reports/operational-poles-by-subcity', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -325,33 +403,259 @@ export default function DashboardPage() {
         </Grid.Col>
       </Grid>
 
-      {faultyByDistrict && faultyByDistrict.length > 0 && (
-        <Paper p={{ base: 'xs', sm: 'md' }} withBorder mt={{ base: 'md', sm: 'xl' }}>
-          <Title order={3} mb="md">
-            Faulty {ASSET_TYPES.find(t => t.value === selectedAssetType)?.label || 'Assets'} by District
-          </Title>
-          <Table.ScrollContainer minWidth={200}>
-            <Table>
-              <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Subcity</Table.Th>
-                <Table.Th>Faulty Count</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {faultyByDistrict.map((item: any) => (
-                <Table.Tr key={item.district}>
-                  <Table.Td>{item.district}</Table.Td>
-                  <Table.Td>
-                    <Badge color="red">{item.count}</Badge>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-        </Paper>
-      )}
+      <Grid mt="xl">
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Paper p={{ base: 'xs', sm: 'md' }} withBorder>
+            <Title order={3} mb="md">
+              Operational Light Poles
+            </Title>
+            <Tabs defaultValue="by-subcity">
+              <Tabs.List>
+                <Tabs.Tab value="by-subcity">By Subcity</Tabs.Tab>
+                <Tabs.Tab value="by-street">By Street</Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="by-subcity" pt="md">
+                <Table.ScrollContainer minWidth={200}>
+                  <Table highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Subcity</Table.Th>
+                        <Table.Th>Count</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {operationalBySubcity && operationalBySubcity.length > 0 ? (
+                        operationalBySubcity.map((item: any) => (
+                          <Table.Tr
+                            key={item.subcity}
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => navigate(`/poles?subcity=${encodeURIComponent(item.subcity)}&status=OPERATIONAL`)}
+                          >
+                            <Table.Td>{item.subcity}</Table.Td>
+                            <Table.Td>
+                              <Badge color="green">{item.count}</Badge>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))
+                      ) : (
+                        <Table.Tr>
+                          <Table.Td colSpan={2}>
+                            <Text c="dimmed" ta="center">No operational poles found</Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      )}
+                    </Table.Tbody>
+                  </Table>
+                </Table.ScrollContainer>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="by-street" pt="md">
+                <Table.ScrollContainer minWidth={200}>
+                  <Table highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Street</Table.Th>
+                        <Table.Th>Count</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {operationalByStreet && operationalByStreet.length > 0 ? (
+                        operationalByStreet.map((item: any) => (
+                          <Table.Tr
+                            key={item.street}
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => navigate(`/poles?street=${encodeURIComponent(item.street)}&status=OPERATIONAL`)}
+                          >
+                            <Table.Td>{item.street}</Table.Td>
+                            <Table.Td>
+                              <Badge color="green">{item.count}</Badge>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))
+                      ) : (
+                        <Table.Tr>
+                          <Table.Td colSpan={2}>
+                            <Text c="dimmed" ta="center">No operational poles found</Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      )}
+                    </Table.Tbody>
+                  </Table>
+                </Table.ScrollContainer>
+              </Tabs.Panel>
+            </Tabs>
+          </Paper>
+        </Grid.Col>
+
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Paper p={{ base: 'xs', sm: 'md' }} withBorder>
+            <Title order={3} mb="md">
+              Light Poles Under Maintenance
+            </Title>
+            <Tabs defaultValue="by-subcity">
+              <Tabs.List>
+                <Tabs.Tab value="by-subcity">By Subcity</Tabs.Tab>
+                <Tabs.Tab value="by-street">By Street</Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="by-subcity" pt="md">
+                <Table.ScrollContainer minWidth={200}>
+                  <Table highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Subcity</Table.Th>
+                        <Table.Th>Count</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {maintenanceBySubcity && maintenanceBySubcity.length > 0 ? (
+                        maintenanceBySubcity.map((item: any) => (
+                          <Table.Tr
+                            key={item.subcity}
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => navigate(`/poles?subcity=${encodeURIComponent(item.subcity)}&status=UNDER_MAINTENANCE`)}
+                          >
+                            <Table.Td>{item.subcity}</Table.Td>
+                            <Table.Td>
+                              <Badge color="yellow">{item.count}</Badge>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))
+                      ) : (
+                        <Table.Tr>
+                          <Table.Td colSpan={2}>
+                            <Text c="dimmed" ta="center">No maintenance poles found</Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      )}
+                    </Table.Tbody>
+                  </Table>
+                </Table.ScrollContainer>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="by-street" pt="md">
+                <Table.ScrollContainer minWidth={200}>
+                  <Table highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Street</Table.Th>
+                        <Table.Th>Count</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {maintenanceByStreet && maintenanceByStreet.length > 0 ? (
+                        maintenanceByStreet.map((item: any) => (
+                          <Table.Tr
+                            key={item.street}
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => navigate(`/poles?street=${encodeURIComponent(item.street)}&status=UNDER_MAINTENANCE`)}
+                          >
+                            <Table.Td>{item.street}</Table.Td>
+                            <Table.Td>
+                              <Badge color="yellow">{item.count}</Badge>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))
+                      ) : (
+                        <Table.Tr>
+                          <Table.Td colSpan={2}>
+                            <Text c="dimmed" ta="center">No maintenance poles found</Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      )}
+                    </Table.Tbody>
+                  </Table>
+                </Table.ScrollContainer>
+              </Tabs.Panel>
+            </Tabs>
+          </Paper>
+        </Grid.Col>
+
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Paper p={{ base: 'xs', sm: 'md' }} withBorder>
+            <Title order={3} mb="md">
+              Failed Light Poles
+            </Title>
+            <Tabs defaultValue="by-subcity">
+              <Tabs.List>
+                <Tabs.Tab value="by-subcity">By Subcity</Tabs.Tab>
+                <Tabs.Tab value="by-street">By Street</Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="by-subcity" pt="md">
+                <Table.ScrollContainer minWidth={200}>
+                  <Table highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Subcity</Table.Th>
+                        <Table.Th>Count</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {failedBySubcity && failedBySubcity.length > 0 ? (
+                        failedBySubcity.map((item: any) => (
+                          <Table.Tr
+                            key={item.subcity}
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => navigate(`/poles?subcity=${encodeURIComponent(item.subcity)}&status=FAULT_DAMAGED`)}
+                          >
+                            <Table.Td>{item.subcity}</Table.Td>
+                            <Table.Td>
+                              <Badge color="red">{item.count}</Badge>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))
+                      ) : (
+                        <Table.Tr>
+                          <Table.Td colSpan={2}>
+                            <Text c="dimmed" ta="center">No failed poles found</Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      )}
+                    </Table.Tbody>
+                  </Table>
+                </Table.ScrollContainer>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="by-street" pt="md">
+                <Table.ScrollContainer minWidth={200}>
+                  <Table highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Street</Table.Th>
+                        <Table.Th>Count</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {failedByStreet && failedByStreet.length > 0 ? (
+                        failedByStreet.map((item: any) => (
+                          <Table.Tr
+                            key={item.street}
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => navigate(`/poles?street=${encodeURIComponent(item.street)}&status=FAULT_DAMAGED`)}
+                          >
+                            <Table.Td>{item.street}</Table.Td>
+                            <Table.Td>
+                              <Badge color="red">{item.count}</Badge>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))
+                      ) : (
+                        <Table.Tr>
+                          <Table.Td colSpan={2}>
+                            <Text c="dimmed" ta="center">No failed poles found</Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      )}
+                    </Table.Tbody>
+                  </Table>
+                </Table.ScrollContainer>
+              </Tabs.Panel>
+            </Tabs>
+          </Paper>
+        </Grid.Col>
+      </Grid>
     </Container>
   );
 }

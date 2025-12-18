@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -31,6 +32,7 @@ export default function PolesListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [subcity, setSubcity] = useState<string | null>(null);
@@ -44,16 +46,33 @@ export default function PolesListPage() {
   const [historyModalOpened, { open: openHistoryModal, close: closeHistoryModal }] = useDisclosure(false);
   const [selectedPoleCode, setSelectedPoleCode] = useState<string | null>(null);
 
+  // Read URL query parameters on mount
+  useEffect(() => {
+    const urlSubcity = searchParams.get('subcity');
+    const urlStatus = searchParams.get('status');
+    const urlStreet = searchParams.get('street');
+    
+    if (urlSubcity) setSubcity(urlSubcity);
+    if (urlStatus) setStatus(urlStatus);
+    if (urlStreet) setStreetFilter(urlStreet);
+  }, [searchParams]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['poles', page, search, subcity, status],
+    queryKey: ['poles', page, search, subcity, status, streetFilter, ledDisplayFilter, sortBy, sortDirection],
     queryFn: async () => {
       const params = new URLSearchParams({
-        page: '1', // Fetch all for client-side filtering
-        limit: '1000',
+        page: page.toString(),
+        limit: '10',
       });
       if (search) params.append('search', search);
       if (subcity) params.append('subcity', subcity);
       if (status) params.append('status', status);
+      if (streetFilter) params.append('street', streetFilter);
+      if (ledDisplayFilter !== null) {
+        params.append('hasLedDisplay', ledDisplayFilter === 'yes' ? 'true' : 'false');
+      }
+      if (sortBy) params.append('sortBy', sortBy);
+      if (sortDirection) params.append('sortDirection', sortDirection);
 
       const token = localStorage.getItem('access_token');
       const res = await axios.get(`http://localhost:3011/api/v1/poles?${params.toString()}`, {
@@ -65,9 +84,20 @@ export default function PolesListPage() {
     },
   });
 
-  // Get unique values for filters from all fetched data
-  const allFetchedPoles = data?.items || [];
-  const uniqueSubcities = Array.from(new Set(allFetchedPoles.map((p: any) => p.subcity).filter(Boolean))).sort();
+  // Get unique subcities for filter dropdown (fetch all for dropdown options)
+  const { data: allPolesData } = useQuery({
+    queryKey: ['poles-all-for-subcities'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get(`http://localhost:3011/api/v1/poles?page=1&limit=1000`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+  const uniqueSubcities = Array.from(new Set((allPolesData?.items || []).map((p: any) => p.subcity).filter(Boolean))).sort();
 
   const STREETS = [
     'Africa Avenue',
@@ -236,34 +266,11 @@ export default function PolesListPage() {
     'African Union Road',
   ];
 
-  // Client-side filtering for street and LED display
-  let filteredPoles = (data?.items || []).filter((pole: any) => {
-    if (streetFilter && pole.street !== streetFilter) {
-      return false;
-    }
-    if (ledDisplayFilter === 'yes' && !pole.hasLedDisplay) {
-      return false;
-    }
-    if (ledDisplayFilter === 'no' && pole.hasLedDisplay) {
-      return false;
-    }
-    return true;
-  });
-
-  // Sorting logic
-  if (sortBy) {
-    filteredPoles = [...filteredPoles].sort((a: any, b: any) => {
-      const aValue = a[sortBy] || '';
-      const bValue = b[sortBy] || '';
-      const comparison = aValue.localeCompare(bValue, undefined, { sensitivity: 'base' });
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-  }
-
-  // Pagination for filtered results
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(filteredPoles.length / itemsPerPage);
-  const paginatedPoles = filteredPoles.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  // Use server-side paginated data directly
+  const paginatedPoles = data?.items || [];
+  const totalItems = data?.total || 0;
+  const itemsPerPage = data?.limit || 10;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   // Handle sort click
   const handleSort = (column: 'subcity' | 'street') => {
@@ -664,13 +671,17 @@ export default function PolesListPage() {
         </Table.ScrollContainer>
       </Paper>
 
-      {totalPages > 1 && (
-        <Pagination
-          value={page}
-          onChange={setPage}
-          total={totalPages}
-          mt="md"
-        />
+      {totalPages > 0 && (
+        <Group justify="space-between" align="center" mt="md">
+          <Text size="sm" c="dimmed">
+            Showing {paginatedPoles.length > 0 ? ((page - 1) * itemsPerPage + 1) : 0} - {Math.min(page * itemsPerPage, totalItems)} of {totalItems} poles
+          </Text>
+          <Pagination
+            value={page}
+            onChange={setPage}
+            total={totalPages}
+          />
+        </Group>
       )}
 
       <Modal

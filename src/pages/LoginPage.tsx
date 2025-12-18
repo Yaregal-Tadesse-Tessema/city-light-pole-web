@@ -34,7 +34,14 @@ export default function LoginPage() {
         message: 'Logged in successfully',
         color: 'green',
       });
-      navigate('/dashboard');
+      // Check for redirect path saved before login
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        localStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       notifications.show({
         title: 'Error',
