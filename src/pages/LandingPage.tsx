@@ -16,6 +16,7 @@ import {
   Center,
 } from '@mantine/core';
 import { useAuth } from '../hooks/useAuth';
+import LandingMap from '../components/LandingMap';
 import {
   IconBulb,
   IconAlertTriangle,
@@ -273,6 +274,20 @@ export default function LandingPage() {
             </Grid.Col>
           ))}
         </Grid>
+      </Container>
+
+      {/* Map Section */}
+      <Container size="xl" py={{ base: 24, sm: 40 }} px={{ base: 'xs', sm: 'md' }}>
+        <Stack align="center" gap="md" mb={{ base: 20, sm: 30 }}>
+          <Title order={2} size={{ base: 20, sm: 28 }} ta="center">
+            City Assets Map
+          </Title>
+          <Text c="dimmed" ta="center" size={{ base: 'sm', sm: 'md' }} maw={600}>
+            View all light poles across Addis Ababa with real-time status indicators
+          </Text>
+        </Stack>
+
+        <LandingMap />
       </Container>
 
       {/* Compact CTA Section */}
