@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { IconEye, IconTrash } from '@tabler/icons-react';
+import { IconEye, IconTrash, IconPackage } from '@tabler/icons-react';
+import MaterialRequestModal from '../components/MaterialRequestModal';
 import {
   Container,
   Paper,
@@ -27,6 +28,32 @@ import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 
 const SCHEDULE_STATUSES = ['REQUESTED', 'STARTED', 'PAUSED', 'COMPLETED'];
+
+// TextTruncate component for showing truncated text with "show more" functionality
+function TextTruncate({ text, maxLength = 50 }: { text: string; maxLength?: number }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!text || text.length <= maxLength) {
+    return <span>{text}</span>;
+  }
+
+  const truncatedText = expanded ? text : `${text.substring(0, maxLength)}...`;
+
+  return (
+    <div>
+      <span>{truncatedText}</span>
+      <Button
+        variant="subtle"
+        size="xs"
+        compact
+        onClick={() => setExpanded(!expanded)}
+        style={{ marginLeft: 8, fontSize: '0.75rem' }}
+      >
+        {expanded ? 'Show Less' : 'Show More'}
+      </Button>
+    </div>
+  );
+}
 const ASSET_TYPES = [
   { value: 'pole', label: 'Light Poles' },
   { value: 'park', label: 'Public Parks' },
@@ -124,6 +151,8 @@ export default function MaintenancePage() {
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [selectedIssueType, setSelectedIssueType] = useState<string | null>(null);
   const [scheduleToDelete, setScheduleToDelete] = useState<any>(null);
+  const [materialRequestModalOpened, setMaterialRequestModalOpened] = useState(false);
+  const [selectedScheduleForMaterial, setSelectedScheduleForMaterial] = useState<any>(null);
 
   const { data: schedules, isLoading: schedulesLoading, refetch: refetchSchedules } = useQuery({
     queryKey: ['maintenance', 'schedules', filterType],
@@ -558,6 +587,48 @@ export default function MaintenancePage() {
       editScheduleForm.setFieldError('remark', 'Remark is required when status is PAUSED or COMPLETED');
       return;
     }
+    
+    // Check if trying to start maintenance - need material request approval
+    if (values.status === 'STARTED' && selectedSchedule.status === 'REQUESTED') {
+      try {
+        const token = localStorage.getItem('access_token');
+        const materialRequestRes = await axios.get(
+          `http://localhost:3011/api/v1/material-requests/maintenance/${selectedSchedule.id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        
+        const materialRequest = materialRequestRes.data;
+        if (!materialRequest || materialRequest.status !== 'APPROVED') {
+          notifications.show({
+            title: 'Material Request Required',
+            message: 'Please request and get approval for materials before starting maintenance',
+            color: 'orange',
+          });
+          setEditScheduleOpened(false);
+          setSelectedScheduleForMaterial(selectedSchedule);
+          setMaterialRequestModalOpened(true);
+          return;
+        }
+      } catch (error: any) {
+        // If material request doesn't exist (404), show modal
+        if (error.response?.status === 404 || !error.response) {
+          notifications.show({
+            title: 'Material Request Required',
+            message: 'Please request materials before starting maintenance',
+            color: 'orange',
+          });
+          setEditScheduleOpened(false);
+          setSelectedScheduleForMaterial(selectedSchedule);
+          setMaterialRequestModalOpened(true);
+          return;
+        }
+        // For other errors, throw to be caught by outer try-catch
+        throw error;
+      }
+    }
+    
     try {
       const token = localStorage.getItem('access_token');
       const payload: any = {
@@ -700,11 +771,10 @@ export default function MaintenancePage() {
                 <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Asset Code</Table.Th>
-                  <Table.Th>Asset Name</Table.Th>
                   <Table.Th>District</Table.Th>
                   <Table.Th>Street</Table.Th>
                   <Table.Th>{getAssetInfoLabel(filterType)}</Table.Th>
-                  <Table.Th>Maintenance</Table.Th>
+                  <Table.Th w={200}>Maintenance</Table.Th>
                   <Table.Th>Frequency</Table.Th>
                   <Table.Th>Start Date</Table.Th>
                   <Table.Th>End Date</Table.Th>
@@ -717,11 +787,11 @@ export default function MaintenancePage() {
               <Table.Tbody>
                 {schedulesLoading ? (
                   <Table.Tr>
-                    <Table.Td colSpan={13}>Loading...</Table.Td>
+                    <Table.Td colSpan={12}>Loading...</Table.Td>
                   </Table.Tr>
                 ) : schedules?.length === 0 ? (
                   <Table.Tr>
-                    <Table.Td colSpan={13}>No maintenance records found</Table.Td>
+                    <Table.Td colSpan={12}>No maintenance records found</Table.Td>
                   </Table.Tr>
                 ) : (
                   schedules?.map((schedule: any) => (
@@ -731,11 +801,12 @@ export default function MaintenancePage() {
                       return (
                     <Table.Tr key={schedule.id}>
                       <Table.Td>{getScheduleAssetCode(schedule)}</Table.Td>
-                      <Table.Td>{getAssetNameByType(type, asset)}</Table.Td>
                       <Table.Td>{getAssetDistrictByType(type, asset)}</Table.Td>
                       <Table.Td>{getAssetStreet(asset)}</Table.Td>
                       <Table.Td>{getAssetInfo(type, asset)}</Table.Td>
-                      <Table.Td>{schedule.description}</Table.Td>
+                      <Table.Td>
+                        <TextTruncate text={schedule.description} maxLength={50} />
+                      </Table.Td>
                       <Table.Td>{schedule.frequency}</Table.Td>
                       <Table.Td>
                         {schedule.startDate ? new Date(schedule.startDate).toLocaleDateString() : '—'}
@@ -778,14 +849,28 @@ export default function MaintenancePage() {
                       <Table.Td>
                         <Group gap="xs">
                           {schedule.status === 'REQUESTED' && (
-                            <ActionIcon
-                              color="red"
-                              variant="light"
-                              onClick={() => handleDeleteClick(schedule)}
-                              title="Delete Schedule"
-                            >
-                              <IconTrash size={16} />
-                            </ActionIcon>
+                            <>
+                              <Button
+                                size="xs"
+                                variant="light"
+                                color="blue"
+                                leftSection={<IconPackage size={14} />}
+                                onClick={() => {
+                                  setSelectedScheduleForMaterial(schedule);
+                                  setMaterialRequestModalOpened(true);
+                                }}
+                              >
+                                Request Materials
+                              </Button>
+                              <ActionIcon
+                                color="red"
+                                variant="light"
+                                onClick={() => handleDeleteClick(schedule)}
+                                title="Delete Schedule"
+                              >
+                                <IconTrash size={16} />
+                              </ActionIcon>
+                            </>
                           )}
                           {['REQUESTED', 'STARTED', 'PAUSED'].includes(schedule.status) && (
                             <Button
@@ -1187,6 +1272,21 @@ export default function MaintenancePage() {
           </Group>
         </Stack>
       </Modal>
+
+      {/* Material Request Modal */}
+      {selectedScheduleForMaterial && (
+        <MaterialRequestModal
+          opened={materialRequestModalOpened}
+          onClose={() => {
+            setMaterialRequestModalOpened(false);
+            setSelectedScheduleForMaterial(null);
+          }}
+          maintenanceScheduleId={selectedScheduleForMaterial.id}
+          onSuccess={() => {
+            refetchSchedules();
+          }}
+        />
+      )}
     </Container>
   );
 }

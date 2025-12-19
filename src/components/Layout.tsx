@@ -18,6 +18,9 @@ import {
   IconBath,
   IconTrophy,
   IconDroplet,
+  IconPackage,
+  IconShoppingCart,
+  IconTags,
 } from '@tabler/icons-react';
 
 export default function Layout() {
@@ -32,6 +35,7 @@ export default function Layout() {
   const [publicToiletsMenuOpened, setPublicToiletsMenuOpened] = useState(false);
   const [footballFieldsMenuOpened, setFootballFieldsMenuOpened] = useState(false);
   const [riverSideProjectsMenuOpened, setRiverSideProjectsMenuOpened] = useState(false);
+  const [inventoryMenuOpened, setInventoryMenuOpened] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN';
   
@@ -68,9 +72,16 @@ export default function Layout() {
     (location.pathname === '/maintenance' && location.search.includes('type=football'));
 
   // Check if river side projects routes are active
-  const isRiverSideProjectsRouteActive = 
+  const isRiverSideProjectsRouteActive =
     location.pathname.startsWith('/river-side-projects') ||
     (location.pathname === '/maintenance' && location.search.includes('type=river'));
+
+  // Check if inventory routes are active
+  const isInventoryRouteActive =
+    location.pathname.startsWith('/inventory') ||
+    location.pathname.startsWith('/categories') ||
+    location.pathname.startsWith('/material-requests') ||
+    location.pathname.startsWith('/purchase-requests');
 
   return (
     <AppShell
@@ -530,18 +541,83 @@ export default function Layout() {
           />
         </NavLink>
         {isAdmin && (
-          <NavLink
-            component={Link}
-            to="/users"
-            label="Users"
-            leftSection={<IconUsers size={16} />}
-            active={location.pathname === '/users'}
-            onClick={() => {
-              if (isMobile) {
-                close();
+          <>
+            <NavLink
+              label="Inventory Management"
+              leftSection={<IconPackage size={16} />}
+              rightSection={
+                inventoryMenuOpened ? (
+                  <IconChevronDown size={16} />
+                ) : (
+                  <IconChevronRight size={16} />
+                )
               }
-            }}
-          />
+              active={isInventoryRouteActive}
+              opened={inventoryMenuOpened}
+              onChange={() => setInventoryMenuOpened(!inventoryMenuOpened)}
+            >
+              <NavLink
+                component={Link}
+                to="/inventory"
+                label="Inventory Items"
+                leftSection={<IconPackage size={16} />}
+                active={location.pathname.startsWith('/inventory') && !location.pathname.startsWith('/inventory/')}
+                onClick={() => {
+                  if (isMobile) {
+                    close();
+                  }
+                }}
+              />
+              <NavLink
+                component={Link}
+                to="/categories"
+                label="Categories"
+                leftSection={<IconTags size={16} />}
+                active={location.pathname.startsWith('/categories')}
+                onClick={() => {
+                  if (isMobile) {
+                    close();
+                  }
+                }}
+              />
+              <NavLink
+                component={Link}
+                to="/material-requests"
+                label="Material Requests"
+                leftSection={<IconPackage size={16} />}
+                active={location.pathname === '/material-requests'}
+                onClick={() => {
+                  if (isMobile) {
+                    close();
+                  }
+                }}
+              />
+              <NavLink
+                component={Link}
+                to="/purchase-requests"
+                label="Purchase Requests"
+                leftSection={<IconShoppingCart size={16} />}
+                active={location.pathname === '/purchase-requests'}
+                onClick={() => {
+                  if (isMobile) {
+                    close();
+                  }
+                }}
+              />
+            </NavLink>
+            <NavLink
+              component={Link}
+              to="/users"
+              label="Users"
+              leftSection={<IconUsers size={16} />}
+              active={location.pathname === '/users'}
+              onClick={() => {
+                if (isMobile) {
+                  close();
+                }
+              }}
+            />
+          </>
         )}
           </Stack>
         </ScrollArea>

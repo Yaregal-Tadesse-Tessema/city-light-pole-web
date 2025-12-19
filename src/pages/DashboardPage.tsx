@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Container, Grid, Paper, Text, Title, Table, Badge, Select, Stack, Group, Tabs } from '@mantine/core';
+import { Container, Grid, Paper, Text, Title, Table, Badge, Select, Stack, Group, Tabs, Button, Alert } from '@mantine/core';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { IconPackage, IconShoppingCart, IconAlertTriangle } from '@tabler/icons-react';
+import { useAuth } from '../hooks/useAuth';
 
 const SUBCITIES = [
   'Addis Ketema',
@@ -31,6 +33,7 @@ const ASSET_TYPES = [
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedSubcity, setSelectedSubcity] = useState<string | null>(null);
   const [selectedAssetType, setSelectedAssetType] = useState<string>('pole');
 
@@ -197,6 +200,45 @@ export default function DashboardPage() {
     },
   });
 
+  const { data: lowStockItems } = useQuery({
+    queryKey: ['inventory', 'low-stock'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/inventory/low-stock', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: pendingMaterialRequests } = useQuery({
+    queryKey: ['material-requests', 'pending'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/material-requests?status=PENDING', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: pendingPurchaseRequests } = useQuery({
+    queryKey: ['purchase-requests', 'pending'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/purchase-requests?status=PENDING', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
   const chartData = faultyByDistrict?.map((item: any) => ({
     district: item.district,
     count: item.count,
@@ -247,7 +289,78 @@ export default function DashboardPage() {
             </Text>
           </Paper>
         </Grid.Col>
+        {user?.role === 'ADMIN' && (
+          <>
+            <Grid.Col span={{ base: 12, md: 3 }}>
+              <Paper p="md" withBorder style={{ cursor: 'pointer' }} onClick={() => navigate('/inventory?lowStock=true')}>
+                <Group justify="space-between">
+                  <div>
+                    <Text size="sm" c="dimmed">
+                      Low Stock Items
+                    </Text>
+                    <Text size="xl" fw={700} c="red">
+                      {lowStockItems?.length || 0}
+                    </Text>
+                  </div>
+                  <IconPackage size={24} color="red" />
+                </Group>
+              </Paper>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 3 }}>
+              <Paper p="md" withBorder style={{ cursor: 'pointer' }} onClick={() => navigate('/material-requests?status=PENDING')}>
+                <Group justify="space-between">
+                  <div>
+                    <Text size="sm" c="dimmed">
+                      Pending Material Requests
+                    </Text>
+                    <Text size="xl" fw={700} c="orange">
+                      {pendingMaterialRequests?.length || 0}
+                    </Text>
+                  </div>
+                  <IconPackage size={24} color="orange" />
+                </Group>
+              </Paper>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 3 }}>
+              <Paper p="md" withBorder style={{ cursor: 'pointer' }} onClick={() => navigate('/purchase-requests?status=PENDING')}>
+                <Group justify="space-between">
+                  <div>
+                    <Text size="sm" c="dimmed">
+                      Pending Purchase Requests
+                    </Text>
+                    <Text size="xl" fw={700} c="yellow">
+                      {pendingPurchaseRequests?.length || 0}
+                    </Text>
+                  </div>
+                  <IconShoppingCart size={24} color="yellow" />
+                </Group>
+              </Paper>
+            </Grid.Col>
+          </>
+        )}
       </Grid>
+
+      {user?.role === 'ADMIN' && lowStockItems && lowStockItems.length > 0 && (
+        <Alert
+          icon={<IconAlertTriangle size={16} />}
+          title="Low Stock Alert"
+          color="red"
+          mb="md"
+          withCloseButton
+        >
+          <Text size="sm" mb="xs">
+            {lowStockItems.length} item(s) are below minimum threshold. 
+            <Button
+              variant="subtle"
+              size="xs"
+              onClick={() => navigate('/inventory?lowStock=true')}
+              ml="xs"
+            >
+              View Items
+            </Button>
+          </Text>
+        </Alert>
+      )}
 
       <Grid mt="xl">
         <Grid.Col span={{ base: 12, md: 8 }}>

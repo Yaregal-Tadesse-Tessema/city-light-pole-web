@@ -41,6 +41,16 @@ import UpdateRiverSideProjectPage from './pages/UpdateRiverSideProjectPage';
 import RiverSideProjectIssuesListPage from './pages/RiverSideProjectIssuesListPage';
 import MaintenancePage from './pages/MaintenancePage';
 import UsersPage from './pages/UsersPage';
+import InventoryListPage from './pages/InventoryListPage';
+import InventoryDetailPage from './pages/InventoryDetailPage';
+import CreateInventoryItemPage from './pages/CreateInventoryItemPage';
+import UpdateInventoryItemPage from './pages/UpdateInventoryItemPage';
+import MaterialRequestsPage from './pages/MaterialRequestsPage';
+import PurchaseRequestsPage from './pages/PurchaseRequestsPage';
+import CategoryListPage from './pages/CategoryListPage';
+import CategoryDetailPage from './pages/CategoryDetailPage';
+import CreateCategoryPage from './pages/CreateCategoryPage';
+import UpdateCategoryPage from './pages/UpdateCategoryPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFoundPage from './pages/NotFoundPage';
@@ -97,6 +107,16 @@ function App() {
           <Route path="/river-issues" element={<RiverSideProjectIssuesListPage />} />
           <Route path="/maintenance" element={<MaintenancePage />} />
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/inventory" element={<InventoryListPage />} />
+          <Route path="/inventory/new" element={<CreateInventoryItemPage />} />
+          <Route path="/inventory/:code" element={<InventoryDetailPage />} />
+          <Route path="/inventory/:code/edit" element={<UpdateInventoryItemPage />} />
+          <Route path="/material-requests" element={<MaterialRequestsPage />} />
+          <Route path="/purchase-requests" element={<PurchaseRequestsPage />} />
+          <Route path="/categories" element={<CategoryListPage />} />
+          <Route path="/categories/new" element={<CreateCategoryPage />} />
+          <Route path="/categories/:id" element={<CategoryDetailPage />} />
+          <Route path="/categories/:id/edit" element={<UpdateCategoryPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
