@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import L, { Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Paper, Loader, Center, Stack, Text, Group } from '@mantine/core';
+import { Paper, Loader, Center, Stack, Text, Group, Select, Button } from '@mantine/core';
+import { IconFilter, IconX } from '@tabler/icons-react';
 import axios from 'axios';
 
 // Pole status types
@@ -96,8 +97,13 @@ const LandingMap = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<LeafletMap | null>(null);
   const [poles, setPoles] = useState<Pole[]>([]);
+  const [filteredPoles, setFilteredPoles] = useState<Pole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [subcities, setSubcities] = useState<string[]>([]);
+  const [streets, setStreets] = useState<string[]>([]);
+  const [selectedSubcity, setSelectedSubcity] = useState<string | null>(null);
+  const [selectedStreet, setSelectedStreet] = useState<string | null>(null);
 
   // Fetch poles data
   useEffect(() => {
@@ -132,6 +138,19 @@ const LandingMap = () => {
           }));
 
           setPoles(processedPoles);
+          setFilteredPoles(processedPoles);
+
+          // Extract unique subcities and streets for filter dropdowns
+          const uniqueSubcities = [...new Set(processedPoles.map(pole => pole.subcity))].sort() as string[];
+          const uniqueStreets = [...new Set(processedPoles.map(pole => pole.street))].sort() as string[];
+
+          setSubcities(uniqueSubcities);
+          setStreets(uniqueStreets);
+
+          // Set default subcity filter to "Bole" (most common/populated)
+          if (uniqueSubcities.includes('Bole') && !selectedSubcity) {
+            setSelectedSubcity('Bole');
+          }
         }
       } catch (err) {
         console.error('Error fetching poles:', err);
@@ -143,6 +162,37 @@ const LandingMap = () => {
 
     fetchPoles();
   }, []);
+
+  // Filter poles based on selected filters
+  useEffect(() => {
+    let filtered = poles;
+
+    if (selectedSubcity) {
+      filtered = filtered.filter(pole => pole.subcity === selectedSubcity);
+    }
+
+    if (selectedStreet) {
+      filtered = filtered.filter(pole => pole.street === selectedStreet);
+    }
+
+    setFilteredPoles(filtered);
+  }, [poles, selectedSubcity, selectedStreet]);
+
+  // Handle filter changes
+  const handleSubcityChange = (value: string | null) => {
+    setSelectedSubcity(value);
+  };
+
+  const handleStreetChange = (value: string | null) => {
+    setSelectedStreet(value);
+  };
+
+  const clearFilters = () => {
+    // Reset to default subcity (Bole) or null if no default available
+    const defaultSubcity = subcities.includes('Bole') ? 'Bole' : null;
+    setSelectedSubcity(defaultSubcity);
+    setSelectedStreet(null);
+  };
 
   // Initialize map
   useEffect(() => {
@@ -168,9 +218,9 @@ const LandingMap = () => {
       }
     });
 
-    // Add markers for each pole
-    console.log('Adding markers for', poles.length, 'poles');
-    poles.forEach((pole, index) => {
+    // Add markers for each filtered pole
+    console.log('Adding markers for', filteredPoles.length, 'filtered poles');
+    filteredPoles.forEach((pole, index) => {
       console.log(`Adding marker ${index + 1}:`, pole.code, [pole.gpsLat, pole.gpsLng]);
       const icon = createStatusIcon(pole.status);
 
@@ -217,8 +267,8 @@ const LandingMap = () => {
     console.log('Finished adding markers');
 
     // Fit map to show all markers if there are any
-    if (poles.length > 0) {
-      const group = new L.featureGroup(poles.map(pole => L.marker([pole.gpsLat, pole.gpsLng])));
+    if (filteredPoles.length > 0) {
+      const group = new L.featureGroup(filteredPoles.map(pole => L.marker([pole.gpsLat, pole.gpsLng])));
       map.fitBounds(group.getBounds().pad(0.1));
     }
 
@@ -229,7 +279,7 @@ const LandingMap = () => {
         leafletMapRef.current = null;
       }
     };
-  }, [poles, loading]);
+  }, [filteredPoles, loading]);
 
   if (loading) {
     return (
@@ -271,7 +321,7 @@ const LandingMap = () => {
             border: '1px solid white',
             boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
           }} />
-          <Text size="sm">Operational ({poles.filter(p => p.status === 'OPERATIONAL').length})</Text>
+          <Text size="sm">Operational ({filteredPoles.filter(p => p.status === 'OPERATIONAL').length})</Text>
         </Group>
 
         <Group gap="xs">
@@ -284,7 +334,7 @@ const LandingMap = () => {
             border: '1px solid white',
             boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
           }} />
-          <Text size="sm">Fault/Damaged ({poles.filter(p => p.status === 'FAULT_DAMAGED').length})</Text>
+          <Text size="sm">Fault/Damaged ({filteredPoles.filter(p => p.status === 'FAULT_DAMAGED').length})</Text>
         </Group>
 
         <Group gap="xs">
@@ -297,9 +347,78 @@ const LandingMap = () => {
             border: '1px solid white',
             boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
           }} />
-          <Text size="sm">Under Maintenance ({poles.filter(p => p.status === 'UNDER_MAINTENANCE').length})</Text>
+          <Text size="sm">Under Maintenance ({filteredPoles.filter(p => p.status === 'UNDER_MAINTENANCE').length})</Text>
         </Group>
       </Group>
+
+      {/* Filters */}
+      <Paper withBorder p="md" bg="gray.0" style={{ position: 'relative', zIndex: 1000 }}>
+        <Stack gap="sm">
+          <Group justify="space-between" align="center">
+            <Text fw={500} size="sm">
+              <IconFilter size={16} style={{ marginRight: '8px', display: 'inline' }} />
+              Filter Poles
+            </Text>
+            {(selectedSubcity || selectedStreet) && (
+              <Button
+                size="xs"
+                variant="light"
+                color="gray"
+                leftSection={<IconX size={14} />}
+                onClick={clearFilters}
+              >
+                Clear Filters
+              </Button>
+            )}
+          </Group>
+
+          <Group grow>
+            <Select
+              placeholder="Filter by Subcity"
+              data={[
+                { value: '', label: 'All Subcities' },
+                ...subcities.map(subcity => ({ value: subcity, label: subcity }))
+              ]}
+              value={selectedSubcity || ''}
+              onChange={(value) => handleSubcityChange(value || null)}
+              clearable
+              searchable
+              size="sm"
+              styles={{
+                dropdown: {
+                  zIndex: 1001,
+                }
+              }}
+            />
+
+            <Select
+              placeholder="Filter by Street"
+              data={[
+                { value: '', label: 'All Streets' },
+                ...streets.map(street => ({ value: street, label: street }))
+              ]}
+              value={selectedStreet || ''}
+              onChange={(value) => handleStreetChange(value || null)}
+              clearable
+              searchable
+              size="sm"
+              styles={{
+                dropdown: {
+                  zIndex: 1001,
+                }
+              }}
+            />
+          </Group>
+
+          {(selectedSubcity || selectedStreet) && (
+            <Text size="xs" c="dimmed">
+              Active filters: {selectedSubcity && `Subcity: ${selectedSubcity}`}
+              {selectedSubcity && selectedStreet && ' | '}
+              {selectedStreet && `Street: ${selectedStreet}`}
+            </Text>
+          )}
+        </Stack>
+      </Paper>
 
       {/* Map Container */}
       <Paper withBorder style={{ height: '400px', overflow: 'hidden' }}>
@@ -318,7 +437,7 @@ const LandingMap = () => {
       {/* Summary */}
       <Group justify="center">
         <Text size="sm" c="dimmed">
-          Total poles displayed: {poles.length}
+          Total poles displayed: {filteredPoles.length}{poles.length !== filteredPoles.length ? ` (filtered from ${poles.length})` : ''}
         </Text>
       </Group>
     </Stack>
