@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { AppShell, Group, Text, Button, NavLink, Image, Stack, Burger, Avatar, ScrollArea, Box } from '@mantine/core';
+import { AppShell, Group, Text, Button, NavLink, Image, Stack, Burger, Avatar, ScrollArea, Box, ActionIcon, Indicator } from '@mantine/core';
 import { useDisclosure, useMediaQuery } from '@mantine/hooks';
 import { useAuth } from '../hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import {
   IconDashboard,
   IconBulb,
@@ -21,6 +23,7 @@ import {
   IconPackage,
   IconShoppingCart,
   IconTags,
+  IconBell,
 } from '@tabler/icons-react';
 
 export default function Layout() {
@@ -28,6 +31,22 @@ export default function Layout() {
   const location = useLocation();
   const [opened, { toggle, close }] = useDisclosure(true);
   const isMobile = useMediaQuery('(max-width: 768px)');
+
+  // Get unread notifications count
+  const { data: unreadCount } = useQuery({
+    queryKey: ['notifications-unread', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get(`http://localhost:3011/api/v1/notifications/user/${user.id}/unread-count`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+    enabled: !!user?.id,
+  });
   const [lightPoleMenuOpened, setLightPoleMenuOpened] = useState(false);
   const [publicParksMenuOpened, setPublicParksMenuOpened] = useState(false);
   const [parkingLotsMenuOpened, setParkingLotsMenuOpened] = useState(false);
@@ -107,6 +126,23 @@ export default function Layout() {
             />
           </Group>
           <Group gap="xs" visibleFrom="sm" wrap="nowrap">
+            <ActionIcon
+              component={Link}
+              to="/notifications"
+              variant="subtle"
+              color="blue"
+              size="lg"
+            >
+              <Indicator
+                color="red"
+                size={16}
+                disabled={unreadCount === 0 || !unreadCount}
+                label={unreadCount > 99 ? '99+' : unreadCount}
+              >
+                <IconBell size={20} />
+              </Indicator>
+            </ActionIcon>
+
             <Avatar
               src={user?.profilePicture || undefined}
               alt={user?.fullName || 'User'}
@@ -234,6 +270,71 @@ export default function Layout() {
             }}
           />
         </NavLink>
+        {isAdmin && (
+          <NavLink
+            label="Inventory Management"
+            leftSection={<IconPackage size={16} />}
+            rightSection={
+              inventoryMenuOpened ? (
+                <IconChevronDown size={16} />
+              ) : (
+                <IconChevronRight size={16} />
+              )
+            }
+            active={isInventoryRouteActive}
+            opened={inventoryMenuOpened}
+            onChange={() => setInventoryMenuOpened(!inventoryMenuOpened)}
+          >
+            <NavLink
+              component={Link}
+              to="/inventory"
+              label="Inventory Items"
+              leftSection={<IconPackage size={16} />}
+              active={location.pathname.startsWith('/inventory') && !location.pathname.startsWith('/inventory/')}
+              onClick={() => {
+                if (isMobile) {
+                  close();
+                }
+              }}
+            />
+            <NavLink
+              component={Link}
+              to="/categories"
+              label="Categories"
+              leftSection={<IconTags size={16} />}
+              active={location.pathname.startsWith('/categories')}
+              onClick={() => {
+                if (isMobile) {
+                  close();
+                }
+              }}
+            />
+            <NavLink
+              component={Link}
+              to="/material-requests"
+              label="Material Requests"
+              leftSection={<IconPackage size={16} />}
+              active={location.pathname === '/material-requests'}
+              onClick={() => {
+                if (isMobile) {
+                  close();
+                }
+              }}
+            />
+            <NavLink
+              component={Link}
+              to="/purchase-requests"
+              label="Purchase Requests"
+              leftSection={<IconShoppingCart size={16} />}
+              active={location.pathname === '/purchase-requests'}
+              onClick={() => {
+                if (isMobile) {
+                  close();
+                }
+              }}
+            />
+          </NavLink>
+        )}
         <NavLink
           label="Public Parks"
           leftSection={<IconTrees size={16} />}
@@ -541,83 +642,18 @@ export default function Layout() {
           />
         </NavLink>
         {isAdmin && (
-          <>
-            <NavLink
-              label="Inventory Management"
-              leftSection={<IconPackage size={16} />}
-              rightSection={
-                inventoryMenuOpened ? (
-                  <IconChevronDown size={16} />
-                ) : (
-                  <IconChevronRight size={16} />
-                )
+          <NavLink
+            component={Link}
+            to="/users"
+            label="Users"
+            leftSection={<IconUsers size={16} />}
+            active={location.pathname === '/users'}
+            onClick={() => {
+              if (isMobile) {
+                close();
               }
-              active={isInventoryRouteActive}
-              opened={inventoryMenuOpened}
-              onChange={() => setInventoryMenuOpened(!inventoryMenuOpened)}
-            >
-              <NavLink
-                component={Link}
-                to="/inventory"
-                label="Inventory Items"
-                leftSection={<IconPackage size={16} />}
-                active={location.pathname.startsWith('/inventory') && !location.pathname.startsWith('/inventory/')}
-                onClick={() => {
-                  if (isMobile) {
-                    close();
-                  }
-                }}
-              />
-              <NavLink
-                component={Link}
-                to="/categories"
-                label="Categories"
-                leftSection={<IconTags size={16} />}
-                active={location.pathname.startsWith('/categories')}
-                onClick={() => {
-                  if (isMobile) {
-                    close();
-                  }
-                }}
-              />
-              <NavLink
-                component={Link}
-                to="/material-requests"
-                label="Material Requests"
-                leftSection={<IconPackage size={16} />}
-                active={location.pathname === '/material-requests'}
-                onClick={() => {
-                  if (isMobile) {
-                    close();
-                  }
-                }}
-              />
-              <NavLink
-                component={Link}
-                to="/purchase-requests"
-                label="Purchase Requests"
-                leftSection={<IconShoppingCart size={16} />}
-                active={location.pathname === '/purchase-requests'}
-                onClick={() => {
-                  if (isMobile) {
-                    close();
-                  }
-                }}
-              />
-            </NavLink>
-            <NavLink
-              component={Link}
-              to="/users"
-              label="Users"
-              leftSection={<IconUsers size={16} />}
-              active={location.pathname === '/users'}
-              onClick={() => {
-                if (isMobile) {
-                  close();
-                }
-              }}
-            />
-          </>
+            }}
+          />
         )}
           </Stack>
         </ScrollArea>

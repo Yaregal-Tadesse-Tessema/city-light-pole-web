@@ -41,6 +41,7 @@ import UpdateRiverSideProjectPage from './pages/UpdateRiverSideProjectPage';
 import RiverSideProjectIssuesListPage from './pages/RiverSideProjectIssuesListPage';
 import MaintenancePage from './pages/MaintenancePage';
 import UsersPage from './pages/UsersPage';
+import NotificationsPage from './pages/NotificationsPage';
 import InventoryListPage from './pages/InventoryListPage';
 import InventoryDetailPage from './pages/InventoryDetailPage';
 import CreateInventoryItemPage from './pages/CreateInventoryItemPage';
@@ -106,6 +107,7 @@ function App() {
           <Route path="/river-side-projects/:code/edit" element={<UpdateRiverSideProjectPage />} />
           <Route path="/river-issues" element={<RiverSideProjectIssuesListPage />} />
           <Route path="/maintenance" element={<MaintenancePage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/inventory" element={<InventoryListPage />} />
           <Route path="/inventory/new" element={<CreateInventoryItemPage />} />

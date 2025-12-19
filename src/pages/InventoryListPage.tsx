@@ -34,7 +34,7 @@ export default function InventoryListPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [lowStock, setLowStock] = useState<boolean | null>(null);
+  const [lowStock, setLowStock] = useState<'low' | 'warning' | 'in_stock' | null>(null);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
@@ -47,7 +47,7 @@ export default function InventoryListPage() {
       });
       if (search) params.append('search', search);
       if (categoryId) params.append('categoryId', categoryId);
-      if (lowStock !== null) params.append('lowStock', lowStock.toString());
+      if (lowStock !== null) params.append('lowStock', lowStock);
 
       const token = localStorage.getItem('access_token');
       const res = await axios.get(`http://localhost:3011/api/v1/inventory?${params.toString()}`, {
@@ -162,12 +162,13 @@ export default function InventoryListPage() {
             <Select
               placeholder="Stock Status"
               data={[
-                { value: 'true', label: 'Low Stock' },
-                { value: 'false', label: 'In Stock' },
+                { value: 'low', label: 'Low Stock' },
+                { value: 'warning', label: 'Warning' },
+                { value: 'in_stock', label: 'In Stock' },
               ]}
-              value={lowStock !== null ? lowStock.toString() : null}
+              value={lowStock}
               onChange={(value) => {
-                setLowStock(value === null ? null : value === 'true');
+                setLowStock(value as 'low' | 'warning' | 'in_stock' | null);
                 setPage(1);
               }}
               clearable
