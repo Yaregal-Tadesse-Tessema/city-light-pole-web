@@ -335,6 +335,20 @@ export default function Layout() {
             />
           </NavLink>
         )}
+        {isAdmin && (
+          <NavLink
+            component={Link}
+            to="/users"
+            label="Users"
+            leftSection={<IconUsers size={16} />}
+            active={location.pathname === '/users'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
+          />
+        )}
         <NavLink
           label="Public Parks"
           leftSection={<IconTrees size={16} />}
@@ -641,20 +655,6 @@ export default function Layout() {
             }}
           />
         </NavLink>
-        {isAdmin && (
-          <NavLink
-            component={Link}
-            to="/users"
-            label="Users"
-            leftSection={<IconUsers size={16} />}
-            active={location.pathname === '/users'}
-            onClick={() => {
-              if (isMobile) {
-                close();
-              }
-            }}
-          />
-        )}
           </Stack>
         </ScrollArea>
         <Box mt="md" style={{ marginTop: 'auto' }}>

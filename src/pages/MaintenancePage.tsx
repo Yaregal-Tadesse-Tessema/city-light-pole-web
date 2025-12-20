@@ -163,32 +163,37 @@ export default function MaintenancePage() {
     queryKey: ['maintenance', 'schedules', filterType],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
-      // Use the old endpoints for now to check if data exists
-      const maintenanceEndpoints: Record<string, string> = {
-        pole: 'http://localhost:3011/api/v1/maintenance/schedules?type=pole',
-        park: 'http://localhost:3011/api/v1/parks/maintenance',
-        parking: 'http://localhost:3011/api/v1/parking-lots/maintenance',
-        museum: 'http://localhost:3011/api/v1/museums/maintenance',
-        toilet: 'http://localhost:3011/api/v1/public-toilets/maintenance',
-        football: 'http://localhost:3011/api/v1/football-fields/maintenance',
-        river: 'http://localhost:3011/api/v1/river-side-projects/maintenance',
-      };
-      const url = maintenanceEndpoints[filterType] || maintenanceEndpoints.pole;
+      if (!token) {
+        console.error('No access token found');
+        return { total: 0, items: [] };
+      }
 
-      const res = await axios.get(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const url = `http://localhost:3011/api/v1/maintenance/schedules?type=${filterType}&limit=10000`;
+      console.log('Fetching maintenance schedules from:', url);
 
-      // Store all schedules for client-side pagination
-      const items = Array.isArray(res.data) ? res.data : [];
-      setAllSchedules(items);
+      try {
+        const res = await axios.get(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      return {
-        total: items.length,
-        items: items,
-      };
+        console.log('API Response:', res.data);
+
+        // Handle both array response and paginated response
+        const items = Array.isArray(res.data) ? res.data : res.data.items || [];
+        console.log('Extracted items:', items.length, 'records');
+
+        setAllSchedules(items);
+
+        return {
+          total: items.length,
+          items: items,
+        };
+      } catch (error: any) {
+        console.error('Error fetching maintenance schedules:', error.response?.data || error.message);
+        return { total: 0, items: [] };
+      }
     },
   });
 
@@ -524,17 +529,8 @@ export default function MaintenancePage() {
         }
       }
 
-      const maintenanceEndpoints: Record<string, string> = {
-        pole: 'http://localhost:3011/api/v1/maintenance/schedules',
-        park: 'http://localhost:3011/api/v1/parks/maintenance',
-        parking: 'http://localhost:3011/api/v1/parking-lots/maintenance',
-        museum: 'http://localhost:3011/api/v1/museums/maintenance',
-        toilet: 'http://localhost:3011/api/v1/public-toilets/maintenance',
-        football: 'http://localhost:3011/api/v1/football-fields/maintenance',
-        river: 'http://localhost:3011/api/v1/river-side-projects/maintenance',
-      };
       const assetType = (values.assetType || filterType || 'pole').toLowerCase();
-      const endpoint = maintenanceEndpoints[assetType] || maintenanceEndpoints.pole;
+      const endpoint = 'http://localhost:3011/api/v1/maintenance/schedules';
       
       // Transform payload for new endpoints (remove old multi-asset fields, use single asset field)
       const newPayload: any = {
@@ -668,16 +664,7 @@ export default function MaintenancePage() {
       };
       
       const scheduleType = getScheduleType(selectedSchedule);
-      const maintenanceEndpoints: Record<string, string> = {
-        pole: 'http://localhost:3011/api/v1/maintenance/schedules',
-        park: 'http://localhost:3011/api/v1/parks/maintenance',
-        parking: 'http://localhost:3011/api/v1/parking-lots/maintenance',
-        museum: 'http://localhost:3011/api/v1/museums/maintenance',
-        toilet: 'http://localhost:3011/api/v1/public-toilets/maintenance',
-        football: 'http://localhost:3011/api/v1/football-fields/maintenance',
-        river: 'http://localhost:3011/api/v1/river-side-projects/maintenance',
-      };
-      const endpoint = maintenanceEndpoints[scheduleType] || maintenanceEndpoints.pole;
+      const endpoint = 'http://localhost:3011/api/v1/maintenance/schedules';
       
       await axios.patch(
         `${endpoint}/${selectedSchedule.id}`,
@@ -727,16 +714,7 @@ export default function MaintenancePage() {
       }
 
       const scheduleType = getScheduleType(scheduleToDelete);
-      const maintenanceEndpoints: Record<string, string> = {
-        pole: 'http://localhost:3011/api/v1/maintenance/schedules',
-        park: 'http://localhost:3011/api/v1/parks/maintenance',
-        parking: 'http://localhost:3011/api/v1/parking-lots/maintenance',
-        museum: 'http://localhost:3011/api/v1/museums/maintenance',
-        toilet: 'http://localhost:3011/api/v1/public-toilets/maintenance',
-        football: 'http://localhost:3011/api/v1/football-fields/maintenance',
-        river: 'http://localhost:3011/api/v1/river-side-projects/maintenance',
-      };
-      const endpoint = maintenanceEndpoints[scheduleType] || maintenanceEndpoints.pole;
+      const endpoint = 'http://localhost:3011/api/v1/maintenance/schedules';
       
       await axios.delete(`${endpoint}/${scheduleToDelete.id}`, {
         headers: {
