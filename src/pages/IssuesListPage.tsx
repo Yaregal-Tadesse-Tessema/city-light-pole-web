@@ -18,6 +18,8 @@ import {
   SimpleGrid,
   CloseButton,
   Image,
+  Pagination,
+  NumberInput,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useAuth } from '../hooks/useAuth';
@@ -44,6 +46,10 @@ export default function IssuesListPage() {
   const [createFiles, setCreateFiles] = useState<File[]>([]);
   const [updateFiles, setUpdateFiles] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   
   const canCreate = user?.role === 'ADMIN' || user?.role === 'MAINTENANCE_ENGINEER';
   const canUpdate = user?.role === 'ADMIN' || user?.role === 'MAINTENANCE_ENGINEER';
@@ -68,18 +74,26 @@ export default function IssuesListPage() {
     return response.data.map((fileData: any) => fileData.url);
   };
 
-  const { data: issues, isLoading, refetch } = useQuery({
-    queryKey: ['issues'],
+  const { data: issuesData, isLoading, refetch } = useQuery({
+    queryKey: ['issues', currentPage, pageSize],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
       const res = await axios.get('http://localhost:3011/api/v1/issues', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        params: {
+          page: currentPage,
+          limit: pageSize,
+        },
       });
       return res.data;
     },
   });
+
+  const issues = issuesData?.items || [];
+  const totalIssues = issuesData?.total || 0;
+  const totalPages = Math.ceil(totalIssues / pageSize);
 
   const { data: polesData } = useQuery({
     queryKey: ['poles', 'dropdown'],
@@ -462,6 +476,44 @@ export default function IssuesListPage() {
           </Table>
         </Table.ScrollContainer>
       </Paper>
+
+      {/* Pagination Controls */}
+      <Group justify="space-between" align="center" mt="md">
+        <Group gap="xs">
+          <Text size="sm" c="dimmed">
+            Showing {issues.length > 0 ? ((currentPage - 1) * pageSize) + 1 : 0} to {Math.min(currentPage * pageSize, totalIssues)} of {totalIssues} issues
+          </Text>
+        </Group>
+
+        <Group gap="sm">
+          <Group gap="xs">
+            <Text size="sm">Rows per page:</Text>
+            <NumberInput
+              value={pageSize}
+              onChange={(value) => {
+                const newSize = Number(value);
+                if (newSize >= 5 && newSize <= 50) {
+                  setPageSize(newSize);
+                  setCurrentPage(1); // Reset to first page when changing page size
+                }
+              }}
+              min={5}
+              max={50}
+              step={5}
+              size="xs"
+              w={70}
+            />
+          </Group>
+
+          <Pagination
+            value={currentPage}
+            onChange={setCurrentPage}
+            total={totalPages}
+            size="sm"
+            withEdges
+          />
+        </Group>
+      </Group>
 
       {/* Create Issue Modal */}
       <Modal

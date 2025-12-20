@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { IconEye, IconTrash, IconPackage } from '@tabler/icons-react';
@@ -22,6 +22,7 @@ import {
   ActionIcon,
   Loader,
   Center,
+  Pagination,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -45,7 +46,6 @@ function TextTruncate({ text, maxLength = 50 }: { text: string; maxLength?: numb
       <Button
         variant="subtle"
         size="xs"
-        compact
         onClick={() => setExpanded(!expanded)}
         style={{ marginLeft: 8, fontSize: '0.75rem' }}
       >
@@ -154,10 +154,16 @@ export default function MaintenancePage() {
   const [materialRequestModalOpened, setMaterialRequestModalOpened] = useState(false);
   const [selectedScheduleForMaterial, setSelectedScheduleForMaterial] = useState<any>(null);
 
-  const { data: schedules, isLoading: schedulesLoading, refetch: refetchSchedules } = useQuery({
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [allSchedules, setAllSchedules] = useState<any[]>([]);
+
+  const { data: schedulesData, isLoading: schedulesLoading, refetch: refetchSchedules } = useQuery({
     queryKey: ['maintenance', 'schedules', filterType],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
+      // Use the old endpoints for now to check if data exists
       const maintenanceEndpoints: Record<string, string> = {
         pole: 'http://localhost:3011/api/v1/maintenance/schedules?type=pole',
         park: 'http://localhost:3011/api/v1/parks/maintenance',
@@ -168,14 +174,35 @@ export default function MaintenancePage() {
         river: 'http://localhost:3011/api/v1/river-side-projects/maintenance',
       };
       const url = maintenanceEndpoints[filterType] || maintenanceEndpoints.pole;
+
       const res = await axios.get(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      return Array.isArray(res.data) ? res.data : [];
+
+      // Store all schedules for client-side pagination
+      const items = Array.isArray(res.data) ? res.data : [];
+      setAllSchedules(items);
+
+      return {
+        total: items.length,
+        items: items,
+      };
     },
   });
+
+  // Apply client-side pagination
+  const totalSchedules = allSchedules.length;
+  const totalPages = Math.ceil(totalSchedules / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const schedules = allSchedules.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filter type changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType]);
 
   const { data: issuesForType } = useQuery({
     queryKey: ['issues', 'for-maintenance', filterType],
@@ -892,6 +919,44 @@ export default function MaintenancePage() {
               </Table>
             </Table.ScrollContainer>
           </Paper>
+
+          {/* Pagination Controls */}
+          <Group justify="space-between" align="center" mt="md">
+            <Group gap="xs">
+              <Text size="sm" c="dimmed">
+                Showing {schedules.length > 0 ? ((currentPage - 1) * pageSize) + 1 : 0} to {Math.min(currentPage * pageSize, totalSchedules)} of {totalSchedules} schedules
+              </Text>
+            </Group>
+
+            <Group gap="sm">
+              <Group gap="xs">
+                <Text size="sm">Rows per page:</Text>
+                <NumberInput
+                  value={pageSize}
+                  onChange={(value) => {
+                    const newSize = Number(value);
+                    if (newSize >= 5 && newSize <= 50) {
+                      setPageSize(newSize);
+                      setCurrentPage(1); // Reset to first page when changing page size
+                    }
+                  }}
+                  min={5}
+                  max={50}
+                  step={5}
+                  size="xs"
+                  w={70}
+                />
+              </Group>
+
+              <Pagination
+                value={currentPage}
+                onChange={setCurrentPage}
+                total={totalPages}
+                size="sm"
+                withEdges
+              />
+            </Group>
+          </Group>
         </Tabs.Panel>
 
       </Tabs>
