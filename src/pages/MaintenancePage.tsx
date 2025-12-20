@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { IconEye, IconTrash, IconPackage, IconEdit, IconFilter, IconArrowsUpDown } from '@tabler/icons-react';
 import MaterialRequestModal from '../components/MaterialRequestModal';
@@ -125,6 +125,7 @@ function getAssetInfo(type: string, asset: any): string {
 export default function MaintenancePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const filterType = (searchParams.get('type') || 'pole').toLowerCase(); // default: light poles
   console.log('MaintenancePage filterType:', filterType);
   const [createScheduleOpened, setCreateScheduleOpened] = useState(false);
@@ -137,6 +138,9 @@ export default function MaintenancePage() {
   const [scheduleToDelete, setScheduleToDelete] = useState<any>(null);
   const [materialRequestModalOpened, setMaterialRequestModalOpened] = useState(false);
   const [selectedScheduleForMaterial, setSelectedScheduleForMaterial] = useState<any>(null);
+  const [receiveModalOpened, setReceiveModalOpened] = useState(false);
+  const [selectedScheduleForReceive, setSelectedScheduleForReceive] = useState<any>(null);
+  const [receiveNotes, setReceiveNotes] = useState('');
   const [issuesSearch, setIssuesSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -234,6 +238,44 @@ export default function MaintenancePage() {
         console.error('Error fetching maintenance schedules:', error.response?.data || error.message);
         return { total: 0, items: [] };
       }
+    },
+  });
+
+  // Receive material request mutation
+  const receiveMutation = useMutation({
+    mutationFn: async ({ materialRequestId, notes }: { materialRequestId: string; notes?: string }) => {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.post(
+        `http://localhost:3011/api/v1/material-requests/${materialRequestId}/receive`,
+        { notes },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      notifications.show({
+        title: 'Success',
+        message: 'Material request marked as received successfully',
+        color: 'green',
+      });
+      setReceiveModalOpened(false);
+      setSelectedScheduleForReceive(null);
+      setReceiveNotes('');
+      queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      queryClient.invalidateQueries({ queryKey: ['material-requests'] });
+      refetchSchedules();
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: 'Error',
+        message: error.response?.data?.message || 'Failed to mark material request as received',
+        color: 'red',
+      });
     },
   });
 
@@ -1206,6 +1248,23 @@ export default function MaintenancePage() {
                               <IconEdit size={16} />
                             </ActionIcon>
                           )}
+                          {schedule.materialRequests?.some((mr: any) => mr.status === 'AWAITING_DELIVERY') && (
+                            <ActionIcon
+                              color="purple"
+                              variant="light"
+                              onClick={() => {
+                                const awaitingRequest = schedule.materialRequests.find((mr: any) => mr.status === 'AWAITING_DELIVERY');
+                                if (awaitingRequest) {
+                                  setSelectedScheduleForReceive(schedule);
+                                  setReceiveModalOpened(true);
+                                  setReceiveNotes('');
+                                }
+                              }}
+                              title="Receive Materials"
+                            >
+                              <IconPackage size={16} />
+                            </ActionIcon>
+                          )}
                         </Group>
                       </Table.Td>
                     </Table.Tr>
@@ -1605,6 +1664,70 @@ export default function MaintenancePage() {
           }}
         />
       )}
+
+      {/* Receive Materials Modal */}
+      <Modal
+        opened={receiveModalOpened}
+        onClose={() => {
+          setReceiveModalOpened(false);
+          setSelectedScheduleForReceive(null);
+          setReceiveNotes('');
+        }}
+        title="Receive Materials"
+        centered
+      >
+        <Stack>
+          <Text size="sm" c="dimmed">
+            Confirm that you have received the materials for this maintenance schedule. This will mark the material request as delivered and start the maintenance work.
+          </Text>
+          {selectedScheduleForReceive && (
+            <Paper p="sm" withBorder bg="gray.0">
+              <Text size="sm" fw={600}>Asset Code:</Text>
+              <Text size="sm">{getScheduleAssetCode(selectedScheduleForReceive) || 'N/A'}</Text>
+              <Text size="sm" fw={600} mt="xs">Pole Details:</Text>
+              <Text size="sm">{getAssetNameByType(filterType, getScheduleAsset(selectedScheduleForReceive)) || 'N/A'}</Text>
+              <Text size="sm" fw={600} mt="xs">Awaiting Delivery:</Text>
+              <Text size="sm">
+                {selectedScheduleForReceive.materialRequests?.filter((mr: any) => mr.status === 'AWAITING_DELIVERY').length || 0} material request(s)
+              </Text>
+            </Paper>
+          )}
+          <Textarea
+            label="Delivery Notes (Optional)"
+            placeholder="Add any notes about the delivery..."
+            value={receiveNotes}
+            onChange={(event) => setReceiveNotes(event.currentTarget.value)}
+            minRows={3}
+          />
+          <Group justify="flex-end" mt="xl">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReceiveModalOpened(false);
+                setSelectedScheduleForReceive(null);
+                setReceiveNotes('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="purple"
+              onClick={() => {
+                const awaitingRequest = selectedScheduleForReceive?.materialRequests?.find((mr: any) => mr.status === 'AWAITING_DELIVERY');
+                if (awaitingRequest) {
+                  receiveMutation.mutate({
+                    materialRequestId: awaitingRequest.id,
+                    notes: receiveNotes.trim() || undefined,
+                  });
+                }
+              }}
+              loading={receiveMutation.isPending}
+            >
+              Mark as Received
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Container>
   );
 }

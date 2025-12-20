@@ -21,13 +21,14 @@ import {
   ActionIcon,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconEye, IconCheck, IconX, IconTrash, IconEdit, IconFilter, IconArrowsUpDown, IconSortAscending, IconSortDescending } from '@tabler/icons-react';
+import { IconEye, IconCheck, IconX, IconTrash, IconPackage, IconEdit, IconFilter, IconArrowsUpDown, IconSortAscending, IconSortDescending } from '@tabler/icons-react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 
 const STATUSES = [
   { value: 'PENDING', label: 'Pending' },
-  { value: 'APPROVED', label: 'Approved' },
+  { value: 'AWAITING_DELIVERY', label: 'Awaiting Delivery' },
+  { value: 'DELIVERED', label: 'Delivered' },
   { value: 'REJECTED', label: 'Rejected' },
   { value: 'FULFILLED', label: 'Fulfilled' },
 ];
@@ -42,6 +43,8 @@ export default function MaterialRequestsPage() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [receiveNotes, setReceiveNotes] = useState('');
+  const [receiveModalOpened, setReceiveModalOpened] = useState(false);
 
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('createdAt');
@@ -257,6 +260,43 @@ export default function MaterialRequestsPage() {
     },
   });
 
+  // Receive material request mutation
+  const receiveMutation = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.post(
+        `http://localhost:3011/api/v1/material-requests/${id}/receive`,
+        { notes },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      notifications.show({
+        title: 'Success',
+        message: 'Material request marked as received successfully',
+        color: 'green',
+      });
+      queryClient.invalidateQueries({ queryKey: ['material-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      setReceiveModalOpened(false);
+      setSelectedRequest(null);
+      setReceiveNotes('');
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: 'Error',
+        message: error.response?.data?.message || 'Failed to mark material request as received',
+        color: 'red',
+      });
+    },
+  });
+
   const handleViewDetails = (request: any) => {
     setSelectedRequest(request);
     setDetailModalOpened(true);
@@ -276,6 +316,20 @@ export default function MaterialRequestsPage() {
   const handleDeleteClick = (request: any) => {
     setSelectedRequest(request);
     setDeleteModalOpened(true);
+  };
+
+  const handleReceiveClick = (request: any) => {
+    setSelectedRequest(request);
+    setReceiveModalOpened(true);
+    setReceiveNotes('');
+  };
+
+  const handleReceive = () => {
+    if (!selectedRequest) return;
+    receiveMutation.mutate({
+      id: selectedRequest.id,
+      notes: receiveNotes.trim() || undefined,
+    });
   };
 
   const handleApprove = (approve: boolean) => {
@@ -525,6 +579,17 @@ export default function MaterialRequestsPage() {
                             onClick={() => handleApproveClick(request)}
                           >
                             Review
+                          </Button>
+                        )}
+                        {request.status === 'AWAITING_DELIVERY' && (
+                          <Button
+                            size="xs"
+                            variant="light"
+                            color="purple"
+                            leftSection={<IconPackage size={14} />}
+                            onClick={() => handleReceiveClick(request)}
+                          >
+                            Receive
                           </Button>
                         )}
                         {canEdit(request) && (
@@ -825,6 +890,60 @@ export default function MaterialRequestsPage() {
             </Group>
           </Stack>
         )}
+      </Modal>
+
+      {/* Receive Material Modal */}
+      <Modal
+        opened={receiveModalOpened}
+        onClose={() => {
+          setReceiveModalOpened(false);
+          setSelectedRequest(null);
+          setReceiveNotes('');
+        }}
+        title="Receive Materials"
+        centered
+      >
+        <Stack>
+          <Text size="sm" c="dimmed">
+            Confirm that you have received the materials for this request. This will mark the material request as delivered and start the maintenance work.
+          </Text>
+          {selectedRequest && (
+            <Paper p="sm" withBorder bg="gray.0">
+              <Text size="sm" fw={600}>Request ID:</Text>
+              <Text size="sm">{selectedRequest.id.substring(0, 8)}...</Text>
+              <Text size="sm" fw={600} mt="xs">Pole Code:</Text>
+              <Text size="sm">{selectedRequest.maintenanceSchedule?.poleCode || 'N/A'}</Text>
+              <Text size="sm" fw={600} mt="xs">Items:</Text>
+              <Text size="sm">{selectedRequest.items?.length || 0} items</Text>
+            </Paper>
+          )}
+          <Textarea
+            label="Delivery Notes (Optional)"
+            placeholder="Add any notes about the delivery..."
+            value={receiveNotes}
+            onChange={(event) => setReceiveNotes(event.currentTarget.value)}
+            minRows={3}
+          />
+          <Group justify="flex-end" mt="xl">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReceiveModalOpened(false);
+                setSelectedRequest(null);
+                setReceiveNotes('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="purple"
+              onClick={handleReceive}
+              loading={receiveMutation.isPending}
+            >
+              Mark as Received
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
 
       {/* Delete Confirmation Modal */}
