@@ -112,12 +112,20 @@ export default function InventoryListPage() {
   };
 
   const getStockStatus = (item: any) => {
-    if (item.currentStock <= item.minimumThreshold) {
+    const currentStock = Number(item.currentStock);
+    const minThreshold = Number(item.minimumThreshold);
+
+    console.log(`Checking stock status for ${item.name}: currentStock=${currentStock} (${typeof item.currentStock}), minThreshold=${minThreshold} (${typeof item.minimumThreshold})`);
+
+    if (currentStock <= minThreshold) {
+      console.log(`Showing LOW STOCK: ${currentStock} <= ${minThreshold}`);
       return { color: 'red', label: 'Low Stock' };
     }
-    if (item.currentStock <= item.minimumThreshold * 1.5) {
+    if (currentStock <= minThreshold * 1.5) {
+      console.log(`Showing WARNING: ${currentStock} <= ${minThreshold * 1.5}`);
       return { color: 'yellow', label: 'Warning' };
     }
+    console.log(`Showing IN STOCK: ${currentStock} > ${minThreshold * 1.5}`);
     return { color: 'green', label: 'In Stock' };
   };
 

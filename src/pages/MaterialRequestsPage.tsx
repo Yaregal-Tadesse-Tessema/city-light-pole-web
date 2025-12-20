@@ -18,7 +18,7 @@ import {
   Alert,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconEye, IconCheck, IconX } from '@tabler/icons-react';
+import { IconEye, IconCheck, IconX, IconEdit, IconTrash } from '@tabler/icons-react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 
@@ -35,6 +35,8 @@ export default function MaterialRequestsPage() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [detailModalOpened, setDetailModalOpened] = useState(false);
   const [approveModalOpened, setApproveModalOpened] = useState(false);
+  const [editModalOpened, setEditModalOpened] = useState(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
@@ -96,6 +98,68 @@ export default function MaterialRequestsPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.patch(
+        `http://localhost:3011/api/v1/material-requests/${id}`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      notifications.show({
+        title: 'Success',
+        message: 'Material request updated successfully',
+        color: 'green',
+      });
+      queryClient.invalidateQueries({ queryKey: ['material-requests'] });
+      setEditModalOpened(false);
+      setSelectedRequest(null);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: 'Error',
+        message: error.response?.data?.message || 'Failed to update material request',
+        color: 'red',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const token = localStorage.getItem('access_token');
+      await axios.delete(`http://localhost:3011/api/v1/material-requests/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    },
+    onSuccess: () => {
+      notifications.show({
+        title: 'Success',
+        message: 'Material request deleted successfully',
+        color: 'green',
+      });
+      queryClient.invalidateQueries({ queryKey: ['material-requests'] });
+      setDeleteModalOpened(false);
+      setSelectedRequest(null);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: 'Error',
+        message: error.response?.data?.message || 'Failed to delete material request',
+        color: 'red',
+      });
+    },
+  });
+
   const handleViewDetails = (request: any) => {
     setSelectedRequest(request);
     setDetailModalOpened(true);
@@ -105,6 +169,16 @@ export default function MaterialRequestsPage() {
     setSelectedRequest(request);
     setApproveModalOpened(true);
     setRejectionReason('');
+  };
+
+  const handleEditClick = (request: any) => {
+    setSelectedRequest(request);
+    setEditModalOpened(true);
+  };
+
+  const handleDeleteClick = (request: any) => {
+    setSelectedRequest(request);
+    setDeleteModalOpened(true);
   };
 
   const handleApprove = (approve: boolean) => {
@@ -124,6 +198,19 @@ export default function MaterialRequestsPage() {
     });
   };
 
+  const handleEdit = (data: any) => {
+    if (!selectedRequest) return;
+    updateMutation.mutate({
+      id: selectedRequest.id,
+      data,
+    });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!selectedRequest) return;
+    deleteMutation.mutate(selectedRequest.id);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING':
@@ -140,6 +227,14 @@ export default function MaterialRequestsPage() {
   };
 
   const canApprove = (request: any) => {
+    return user?.role === 'ADMIN' && request.status === 'PENDING';
+  };
+
+  const canEdit = (request: any) => {
+    return user?.role === 'ADMIN' && request.status === 'PENDING';
+  };
+
+  const canDelete = (request: any) => {
     return user?.role === 'ADMIN' && request.status === 'PENDING';
   };
 
@@ -236,6 +331,28 @@ export default function MaterialRequestsPage() {
                             onClick={() => handleApproveClick(request)}
                           >
                             Review
+                          </Button>
+                        )}
+                        {canEdit(request) && (
+                          <Button
+                            size="xs"
+                            variant="light"
+                            color="green"
+                            leftSection={<IconEdit size={14} />}
+                            onClick={() => handleEditClick(request)}
+                          >
+                            Edit
+                          </Button>
+                        )}
+                        {canDelete(request) && (
+                          <Button
+                            size="xs"
+                            variant="light"
+                            color="red"
+                            leftSection={<IconTrash size={14} />}
+                            onClick={() => handleDeleteClick(request)}
+                          >
+                            Delete
                           </Button>
                         )}
                       </Group>
@@ -461,6 +578,107 @@ export default function MaterialRequestsPage() {
             </Group>
           </Stack>
         )}
+      </Modal>
+
+      {/* Edit Modal */}
+      <Modal
+        opened={editModalOpened}
+        onClose={() => {
+          setEditModalOpened(false);
+          setSelectedRequest(null);
+        }}
+        title="Edit Material Request"
+        size="lg"
+        centered
+      >
+        {selectedRequest && (
+          <Stack>
+            <Alert color="orange">
+              You can only edit PENDING material requests. Approved requests cannot be modified.
+            </Alert>
+
+            <TextInput
+              label="Description"
+              placeholder="Maintenance description"
+              defaultValue={selectedRequest.description || ''}
+              // TODO: Implement edit form
+            />
+
+            <Group justify="flex-end" mt="xl">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditModalOpened(false);
+                  setSelectedRequest(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                color="green"
+                leftSection={<IconEdit size={16} />}
+                onClick={() => {
+                  // TODO: Implement edit functionality
+                  notifications.show({
+                    title: 'Info',
+                    message: 'Edit functionality will be implemented soon',
+                    color: 'blue',
+                  });
+                }}
+              >
+                Update
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        opened={deleteModalOpened}
+        onClose={() => {
+          setDeleteModalOpened(false);
+          setSelectedRequest(null);
+        }}
+        title="Delete Material Request"
+        centered
+      >
+        <Stack>
+          <Text>
+            Are you sure you want to delete this material request? This action cannot be undone.
+          </Text>
+          {selectedRequest && (
+            <Paper p="sm" withBorder bg="gray.0">
+              <Text size="sm" fw={700}>Request ID:</Text>
+              <Text size="sm">{selectedRequest.id.substring(0, 8)}...</Text>
+              <Text size="sm" fw={700} mt="xs">Description:</Text>
+              <Text size="sm">{selectedRequest.description || 'No description'}</Text>
+              <Text size="sm" fw={700} mt="xs">Status:</Text>
+              <Badge color={getStatusColor(selectedRequest.status)}>
+                {selectedRequest.status}
+              </Badge>
+            </Paper>
+          )}
+          <Group justify="flex-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteModalOpened(false);
+                setSelectedRequest(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              leftSection={<IconTrash size={16} />}
+              onClick={handleDeleteConfirm}
+              loading={deleteMutation.isPending}
+            >
+              Delete
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
     </Container>
   );
