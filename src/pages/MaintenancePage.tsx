@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { IconEye, IconTrash, IconPackage } from '@tabler/icons-react';
 import MaterialRequestModal from '../components/MaterialRequestModal';
 import {
@@ -29,6 +29,21 @@ import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 
 const SCHEDULE_STATUSES = ['REQUESTED', 'STARTED', 'PAUSED', 'COMPLETED'];
+
+function getScheduleStatusColor(status: string): string {
+  switch (status?.toUpperCase()) {
+    case 'REQUESTED':
+      return 'yellow'; // Waiting/pending status
+    case 'STARTED':
+      return 'blue'; // Active/in progress
+    case 'PAUSED':
+      return 'red'; // Blocked/needs attention
+    case 'COMPLETED':
+      return 'green'; // Successfully finished
+    default:
+      return 'gray';
+  }
+}
 
 // TextTruncate component for showing truncated text with "show more" functionality
 function TextTruncate({ text, maxLength = 50 }: { text: string; maxLength?: number }) {
@@ -89,6 +104,7 @@ function getAssetInfo(type: string, asset: any): string {
 
 export default function MaintenancePage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const filterType = (searchParams.get('type') || 'pole').toLowerCase(); // default: light poles
   console.log('MaintenancePage filterType:', filterType);
   const [createScheduleOpened, setCreateScheduleOpened] = useState(false);
@@ -605,7 +621,7 @@ export default function MaintenancePage() {
                         {schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : '—'}
                       </Table.Td>
                       <Table.Td>
-                        <Badge>{schedule.status}</Badge>
+                        <Badge color={getScheduleStatusColor(schedule.status)}>{schedule.status}</Badge>
                       </Table.Td>
                       <Table.Td>
                         {schedule.cost && schedule.cost > 0
@@ -638,6 +654,13 @@ export default function MaintenancePage() {
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs">
+                          <Button
+                            size="xs"
+                            variant="light"
+                            onClick={() => navigate(`/maintenance/${schedule.id}`)}
+                          >
+                            View Details
+                          </Button>
                           {schedule.status === 'REQUESTED' && (
                             <>
                               <Button
@@ -1036,7 +1059,7 @@ export default function MaintenancePage() {
               <Text size="sm" fw={700} mt="xs">Description:</Text>
               <Text size="sm">{scheduleToDelete.description}</Text>
               <Text size="sm" fw={700} mt="xs">Status:</Text>
-              <Badge>{scheduleToDelete.status}</Badge>
+              <Badge color={getScheduleStatusColor(scheduleToDelete.status)}>{scheduleToDelete.status}</Badge>
             </Paper>
           )}
           <Group justify="flex-end">

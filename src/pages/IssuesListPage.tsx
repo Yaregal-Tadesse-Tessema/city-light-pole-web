@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Container,
@@ -20,11 +20,13 @@ import {
   Image,
   Pagination,
   NumberInput,
+  Popover,
+  TextInput,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useAuth } from '../hooks/useAuth';
 import { notifications } from '@mantine/notifications';
-import { IconEdit, IconTrash, IconUpload, IconPhoto } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconUpload, IconPhoto, IconFilter, IconCalendar, IconArrowsUpDown } from '@tabler/icons-react';
 import axios from 'axios';
 
 const ISSUE_STATUSES = [
@@ -50,6 +52,57 @@ export default function IssuesListPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Filter state
+  const [poleCodeFilter, setPoleCodeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [severityFilter, setSeverityFilter] = useState('');
+  const [createdAtFrom, setCreatedAtFrom] = useState<Date | null>(null);
+  const [createdAtTo, setCreatedAtTo] = useState<Date | null>(null);
+  const [updatedAtFrom, setUpdatedAtFrom] = useState<Date | null>(null);
+  const [updatedAtTo, setUpdatedAtTo] = useState<Date | null>(null);
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+
+  // Reset filters function
+  const resetFilters = () => {
+    setPoleCodeFilter('');
+    setStatusFilter('');
+    setSeverityFilter('');
+    setCreatedAtFrom(null);
+    setCreatedAtTo(null);
+    setUpdatedAtFrom(null);
+    setUpdatedAtTo(null);
+    setCurrentPage(1);
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = poleCodeFilter || statusFilter || severityFilter || createdAtFrom || createdAtTo || updatedAtFrom || updatedAtTo;
+
+  // Sorting handler
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      // Toggle sort order if same field
+      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      // New field, default to DESC
+      setSortBy(field);
+      setSortOrder('DESC');
+    }
+    setCurrentPage(1); // Reset to first page when sorting changes
+  };
+
+  // Get sort icon for a column
+  const getSortIcon = () => {
+    return <IconArrowsUpDown size={16} />;
+  };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [poleCodeFilter, statusFilter, severityFilter, createdAtFrom, createdAtTo, updatedAtFrom, updatedAtTo]);
   
   const canCreate = user?.role === 'ADMIN' || user?.role === 'MAINTENANCE_ENGINEER';
   const canUpdate = user?.role === 'ADMIN' || user?.role === 'MAINTENANCE_ENGINEER';
@@ -75,7 +128,7 @@ export default function IssuesListPage() {
   };
 
   const { data: issuesData, isLoading, refetch } = useQuery({
-    queryKey: ['issues', currentPage, pageSize],
+    queryKey: ['issues', currentPage, pageSize, poleCodeFilter, statusFilter, severityFilter, createdAtFrom, createdAtTo, updatedAtFrom, updatedAtTo, sortBy, sortOrder],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
       const res = await axios.get('http://localhost:3011/api/v1/issues', {
@@ -85,6 +138,15 @@ export default function IssuesListPage() {
         params: {
           page: currentPage,
           limit: pageSize,
+          ...(poleCodeFilter && { poleCode: poleCodeFilter }),
+          ...(statusFilter && { status: statusFilter }),
+          ...(severityFilter && { severity: severityFilter }),
+          ...(createdAtFrom && { createdAtFrom: createdAtFrom.toISOString() }),
+          ...(createdAtTo && { createdAtTo: createdAtTo.toISOString() }),
+          ...(updatedAtFrom && { updatedAtFrom: updatedAtFrom.toISOString() }),
+          ...(updatedAtTo && { updatedAtTo: updatedAtTo.toISOString() }),
+          sortBy,
+          sortOrder,
         },
       });
       return res.data;
@@ -368,14 +430,26 @@ export default function IssuesListPage() {
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
         <Title order={1} size="h1">Issues</Title>
-        {canCreate && (
-          <Button 
-            onClick={() => setCreateModalOpened(true)}
-            size="md"
-          >
-            Create Issue
-          </Button>
-        )}
+        <Group gap="sm">
+          {hasActiveFilters && (
+            <Button
+              variant="light"
+              color="red"
+              size="md"
+              onClick={resetFilters}
+            >
+              Clear Filters
+            </Button>
+          )}
+          {canCreate && (
+            <Button
+              onClick={() => setCreateModalOpened(true)}
+              size="md"
+            >
+              Create Issue
+            </Button>
+          )}
+        </Group>
       </Group>
 
       <Paper withBorder>
@@ -383,15 +457,264 @@ export default function IssuesListPage() {
           <Table highlightOnHover>
             <Table.Thead>
             <Table.Tr>
-              <Table.Th>Pole Code</Table.Th>
+              <Table.Th>
+                <Group gap="xs" wrap="nowrap">
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('poleCode')}>Pole Code</Text>
+                  <Group gap="xs">
+                    <ActionIcon
+                      variant="subtle"
+                      color={sortBy === 'poleCode' ? 'blue' : 'gray'}
+                      size="sm"
+                      onClick={() => handleSort('poleCode')}
+                    >
+                      {getSortIcon()}
+                    </ActionIcon>
+                    <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+                      <Popover.Target>
+                        <ActionIcon
+                          variant="subtle"
+                          color={poleCodeFilter ? 'blue' : 'gray'}
+                          size="sm"
+                        >
+                          <IconFilter size={16} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="sm">
+                          <Text size="sm" fw={500}>Filter by Pole Code</Text>
+                          <TextInput
+                            placeholder="Enter pole code..."
+                            value={poleCodeFilter}
+                            onChange={(e) => setPoleCodeFilter(e.currentTarget.value)}
+                            size="sm"
+                          />
+                          {poleCodeFilter && (
+                            <Button
+                              size="xs"
+                              variant="light"
+                              onClick={() => setPoleCodeFilter('')}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Group>
+                </Group>
+              </Table.Th>
               <Table.Th>Description</Table.Th>
               <Table.Th>Attachments</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Severity</Table.Th>
-              <Table.Th>Reported By</Table.Th>
-              <Table.Th>Created</Table.Th>
+              <Table.Th>
+                <Group gap="xs" wrap="nowrap">
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>Status</Text>
+                  <Group gap="xs">
+                    <ActionIcon
+                      variant="subtle"
+                      color={sortBy === 'status' ? 'blue' : 'gray'}
+                      size="sm"
+                      onClick={() => handleSort('status')}
+                    >
+                      {getSortIcon()}
+                    </ActionIcon>
+                    <Popover width={200} trapFocus position="bottom" withArrow shadow="md">
+                      <Popover.Target>
+                        <ActionIcon
+                          variant="subtle"
+                          color={statusFilter ? 'blue' : 'gray'}
+                          size="sm"
+                        >
+                          <IconFilter size={16} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="sm">
+                          <Text size="sm" fw={500}>Filter by Status</Text>
+                          <Select
+                            placeholder="Select status"
+                            data={ISSUE_STATUSES}
+                            value={statusFilter}
+                            onChange={(value) => setStatusFilter(value || '')}
+                            clearable
+                            size="sm"
+                          />
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Group>
+                </Group>
+              </Table.Th>
+              <Table.Th>
+                <Group gap="xs" wrap="nowrap">
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('severity')}>Severity</Text>
+                  <Group gap="xs">
+                    <ActionIcon
+                      variant="subtle"
+                      color={sortBy === 'severity' ? 'blue' : 'gray'}
+                      size="sm"
+                      onClick={() => handleSort('severity')}
+                    >
+                      {getSortIcon()}
+                    </ActionIcon>
+                    <Popover width={200} trapFocus position="bottom" withArrow shadow="md">
+                      <Popover.Target>
+                        <ActionIcon
+                          variant="subtle"
+                          color={severityFilter ? 'blue' : 'gray'}
+                          size="sm"
+                        >
+                          <IconFilter size={16} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="sm">
+                          <Text size="sm" fw={500}>Filter by Severity</Text>
+                          <Select
+                            placeholder="Select severity"
+                            data={['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']}
+                            value={severityFilter}
+                            onChange={(value) => setSeverityFilter(value || '')}
+                            clearable
+                            size="sm"
+                          />
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Group>
+                </Group>
+              </Table.Th>
+              <Table.Th>
+                <Group gap="xs" wrap="nowrap">
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('reportedBy')}>Reported By</Text>
+                  <ActionIcon
+                    variant="subtle"
+                    color={sortBy === 'reportedBy' ? 'blue' : 'gray'}
+                    size="sm"
+                    onClick={() => handleSort('reportedBy')}
+                  >
+                    {getSortIcon()}
+                  </ActionIcon>
+                </Group>
+              </Table.Th>
+              <Table.Th>
+                <Group gap="xs" wrap="nowrap">
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('createdAt')}>Created</Text>
+                  <Group gap="xs">
+                    <ActionIcon
+                      variant="subtle"
+                      color={sortBy === 'createdAt' ? 'blue' : 'gray'}
+                      size="sm"
+                      onClick={() => handleSort('createdAt')}
+                    >
+                      {getSortIcon()}
+                    </ActionIcon>
+                    <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+                      <Popover.Target>
+                        <ActionIcon
+                          variant="subtle"
+                          color={(createdAtFrom || createdAtTo) ? 'blue' : 'gray'}
+                          size="sm"
+                        >
+                          <IconCalendar size={16} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="sm">
+                          <Text size="sm" fw={500}>Filter by Created Date</Text>
+                          <TextInput
+                            label="From"
+                            placeholder="Select start date"
+                            type="date"
+                            value={createdAtFrom ? createdAtFrom.toISOString().split('T')[0] : ''}
+                            onChange={(e) => setCreatedAtFrom(e.target.value ? new Date(e.target.value) : null)}
+                            size="sm"
+                          />
+                          <TextInput
+                            label="To"
+                            placeholder="Select end date"
+                            type="date"
+                            value={createdAtTo ? createdAtTo.toISOString().split('T')[0] : ''}
+                            onChange={(e) => setCreatedAtTo(e.target.value ? new Date(e.target.value) : null)}
+                            size="sm"
+                          />
+                          {(createdAtFrom || createdAtTo) && (
+                            <Button
+                              size="xs"
+                              variant="light"
+                              onClick={() => {
+                                setCreatedAtFrom(null);
+                                setCreatedAtTo(null);
+                              }}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Group>
+                </Group>
+              </Table.Th>
               <Table.Th>Resolution Notes</Table.Th>
-              <Table.Th>Updated</Table.Th>
+              <Table.Th>
+                <Group gap="xs" wrap="nowrap">
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('updatedAt')}>Updated</Text>
+                  <Group gap="xs">
+                    <ActionIcon
+                      variant="subtle"
+                      color={sortBy === 'updatedAt' ? 'blue' : 'gray'}
+                      size="sm"
+                      onClick={() => handleSort('updatedAt')}
+                    >
+                      {getSortIcon()}
+                    </ActionIcon>
+                    <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+                      <Popover.Target>
+                        <ActionIcon
+                          variant="subtle"
+                          color={(updatedAtFrom || updatedAtTo) ? 'blue' : 'gray'}
+                          size="sm"
+                        >
+                          <IconCalendar size={16} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="sm">
+                          <Text size="sm" fw={500}>Filter by Updated Date</Text>
+                          <TextInput
+                            label="From"
+                            placeholder="Select start date"
+                            type="date"
+                            value={updatedAtFrom ? updatedAtFrom.toISOString().split('T')[0] : ''}
+                            onChange={(e) => setUpdatedAtFrom(e.target.value ? new Date(e.target.value) : null)}
+                            size="sm"
+                          />
+                          <TextInput
+                            label="To"
+                            placeholder="Select end date"
+                            type="date"
+                            value={updatedAtTo ? updatedAtTo.toISOString().split('T')[0] : ''}
+                            onChange={(e) => setUpdatedAtTo(e.target.value ? new Date(e.target.value) : null)}
+                            size="sm"
+                          />
+                          {(updatedAtFrom || updatedAtTo) && (
+                            <Button
+                              size="xs"
+                              variant="light"
+                              onClick={() => {
+                                setUpdatedAtFrom(null);
+                                setUpdatedAtTo(null);
+                              }}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Group>
+                </Group>
+              </Table.Th>
               {canUpdate && <Table.Th>Actions</Table.Th>}
             </Table.Tr>
           </Table.Thead>
