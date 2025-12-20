@@ -23,6 +23,7 @@ import {
   Center,
   Tabs,
   Table,
+  ThemeIcon,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import {
@@ -39,6 +40,7 @@ import {
 } from '@tabler/icons-react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
+import MaterialRequestModal from '../components/MaterialRequestModal';
 
 const SCHEDULE_STATUSES = ['REQUESTED', 'STARTED', 'PAUSED', 'COMPLETED'];
 
@@ -68,6 +70,9 @@ export default function MaintenanceDetailPage() {
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [issueModalOpened, setIssueModalOpened] = useState(false);
 
+  // Material request state
+  const [selectedScheduleForMaterial, setSelectedScheduleForMaterial] = useState<any>(null);
+
   // Fetch maintenance schedule details
   const { data: schedule, isLoading, refetch } = useQuery({
     queryKey: ['maintenance', 'schedule', id],
@@ -92,6 +97,18 @@ export default function MaintenanceDetailPage() {
       return res.data || [];
     },
     enabled: !!id,
+  });
+
+  // Fetch available inventory items
+  const { data: inventoryItems } = useQuery({
+    queryKey: ['inventory', 'items'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/inventory/items', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data || [];
+    },
   });
 
   // Fetch related issue if exists
@@ -142,12 +159,16 @@ export default function MaintenanceDetailPage() {
     },
   });
 
-  const materialRequestMutation = useMutation({
-    mutationFn: async (data: any) => {
+  // Create material request mutation
+  const createMaterialRequestMutation = useMutation({
+    mutationFn: async (data: { items: Array<{itemId: string, requestedQuantity: number}>, description: string }) => {
       const token = localStorage.getItem('access_token');
       const response = await axios.post(
         'http://localhost:3011/api/v1/material-requests',
-        data,
+        {
+          ...data,
+          maintenanceScheduleId: id,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -164,6 +185,8 @@ export default function MaintenanceDetailPage() {
         color: 'green',
       });
       setMaterialRequestModalOpened(false);
+      setMaterialRequestItems([]);
+      setSelectedItemId('');
       queryClient.invalidateQueries({ queryKey: ['material-requests'] });
     },
     onError: (error: any) => {
@@ -180,8 +203,9 @@ export default function MaintenanceDetailPage() {
   };
 
   const canRequestMaterials = (schedule: any) => {
-    return user?.role === 'ADMIN' && ['REQUESTED', 'STARTED', 'PAUSED'].includes(schedule?.status || '');
+    return schedule?.status !== 'COMPLETED';
   };
+
 
   const handleEdit = (data: any) => {
     updateMutation.mutate(data);
@@ -304,7 +328,10 @@ export default function MaintenanceDetailPage() {
                   variant="light"
                   color="blue"
                   leftSection={<IconPackage size={16} />}
-                  onClick={() => setMaterialRequestModalOpened(true)}
+                  onClick={() => {
+                    setSelectedScheduleForMaterial(schedule);
+                    setMaterialRequestModalOpened(true);
+                  }}
                 >
                   Request Materials
                 </Button>
@@ -595,27 +622,21 @@ export default function MaintenanceDetailPage() {
         </form>
       </Modal>
 
-      {/* Material Request Modal - Placeholder */}
-      <Modal
-        opened={materialRequestModalOpened}
-        onClose={() => setMaterialRequestModalOpened(false)}
-        title="Request Materials"
-        size="lg"
-        centered
-      >
-        <Alert color="info" mb="md">
-          Material request functionality will be implemented here. For now, you can create material requests from the Material Requests page.
-        </Alert>
-
-        <Group justify="flex-end">
-          <Button variant="outline" onClick={() => setMaterialRequestModalOpened(false)}>
-            Close
-          </Button>
-          <Button onClick={() => navigate('/material-requests')}>
-            Go to Material Requests
-          </Button>
-        </Group>
-      </Modal>
+      {/* Material Request Modal - Using shared component */}
+      {selectedScheduleForMaterial && (
+        <MaterialRequestModal
+          opened={materialRequestModalOpened}
+          onClose={() => {
+            setMaterialRequestModalOpened(false);
+            setSelectedScheduleForMaterial(null);
+          }}
+          maintenanceScheduleId={selectedScheduleForMaterial.id}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['material-requests'] });
+            queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+          }}
+        />
+      )}
     </Container>
   );
 }

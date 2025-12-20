@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { IconEye, IconTrash, IconPackage, IconFilter, IconArrowsUpDown } from '@tabler/icons-react';
+import { IconEye, IconTrash, IconPackage, IconEdit, IconFilter, IconArrowsUpDown } from '@tabler/icons-react';
 import MaterialRequestModal from '../components/MaterialRequestModal';
 import {
   Container,
@@ -1120,7 +1120,6 @@ export default function MaintenancePage() {
                       </ActionIcon>
                     </Group>
                   </Table.Th>
-                  <Table.Th>Issue Detail</Table.Th>
                   <Table.Th>Actions</Table.Th>
                 </Table.Tr>
               </Table.Thead>
@@ -1165,50 +1164,28 @@ export default function MaintenancePage() {
                           : '-'}
                       </Table.Td>
                       <Table.Td>
-                        <ActionIcon
-                          color="blue"
-                          variant="light"
-                          onClick={() => {
-                            if (schedule.issueId) {
-                              setSelectedIssueId(schedule.issueId);
-                              setSelectedIssueType(getScheduleType(schedule));
-                              setIssueModalOpened(true);
-                            } else {
-                              notifications.show({
-                                title: 'No Issue',
-                                message: 'This maintenance record has no associated issue',
-                                color: 'gray',
-                              });
-                            }
-                          }}
-                          title={schedule.issueId ? "View Issue" : "No associated issue"}
-                        >
-                          <IconEye size={16} />
-                        </ActionIcon>
-                      </Table.Td>
-                      <Table.Td>
                         <Group gap="xs">
-                          <Button
-                            size="xs"
+                          <ActionIcon
+                            color="blue"
                             variant="light"
                             onClick={() => navigate(`/maintenance/${schedule.id}`)}
+                            title="View Details"
                           >
-                            View Details
-                          </Button>
-                          {schedule.status === 'REQUESTED' && (
+                            <IconEye size={16} />
+                          </ActionIcon>
+                          {schedule.status !== 'COMPLETED' && (
                             <>
-                              <Button
-                                size="xs"
+                              <ActionIcon
+                                color="green"
                                 variant="light"
-                                color="blue"
-                                leftSection={<IconPackage size={14} />}
                                 onClick={() => {
                                   setSelectedScheduleForMaterial(schedule);
                                   setMaterialRequestModalOpened(true);
                                 }}
+                                title="Request Materials"
                               >
-                                Request Materials
-                              </Button>
+                                <IconPackage size={16} />
+                              </ActionIcon>
                               <ActionIcon
                                 color="red"
                                 variant="light"
@@ -1220,13 +1197,14 @@ export default function MaintenancePage() {
                             </>
                           )}
                           {['REQUESTED', 'STARTED', 'PAUSED'].includes(schedule.status) && (
-                            <Button
-                              size="xs"
+                            <ActionIcon
+                              color="orange"
                               variant="light"
                               onClick={() => handleEditScheduleClick(schedule)}
+                              title={schedule.status === 'STARTED' || schedule.status === 'PAUSED' ? 'Update Status' : 'Edit Schedule'}
                             >
-                              {schedule.status === 'STARTED' || schedule.status === 'PAUSED' ? 'Update Status' : 'Edit'}
-                            </Button>
+                              <IconEdit size={16} />
+                            </ActionIcon>
                           )}
                         </Group>
                       </Table.Td>

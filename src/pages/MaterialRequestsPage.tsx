@@ -21,7 +21,7 @@ import {
   ActionIcon,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconEye, IconCheck, IconX, IconTrash, IconFilter, IconArrowsUpDown, IconSortAscending, IconSortDescending } from '@tabler/icons-react';
+import { IconEye, IconCheck, IconX, IconTrash, IconEdit, IconFilter, IconArrowsUpDown, IconSortAscending, IconSortDescending } from '@tabler/icons-react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 
@@ -398,7 +398,7 @@ export default function MaterialRequestsPage() {
                     </ActionIcon>
                   </Group>
                 </Table.Th>
-                <Table.Th>Maintenance Schedule</Table.Th>
+                <Table.Th>Pole Code</Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
                     <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('requestedBy')}>Requested By</Text>
@@ -485,7 +485,7 @@ export default function MaterialRequestsPage() {
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">
-                        Schedule #{request.maintenanceScheduleId}
+                        {request.maintenanceSchedule?.poleCode || 'N/A'}
                       </Text>
                     </Table.Td>
                     <Table.Td>
