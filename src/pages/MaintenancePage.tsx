@@ -101,6 +101,8 @@ export default function MaintenancePage() {
   const [scheduleToDelete, setScheduleToDelete] = useState<any>(null);
   const [materialRequestModalOpened, setMaterialRequestModalOpened] = useState(false);
   const [selectedScheduleForMaterial, setSelectedScheduleForMaterial] = useState<any>(null);
+  const [issuesSearch, setIssuesSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -157,11 +159,29 @@ export default function MaintenancePage() {
     setCurrentPage(1);
   }, [filterType]);
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(issuesSearch);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [issuesSearch]);
+
   const { data: issuesForType } = useQuery({
-    queryKey: ['issues', 'for-maintenance'],
+    queryKey: ['issues', 'for-maintenance', debouncedSearch],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
-      const res = await axios.get('http://localhost:3011/api/v1/issues?page=1&limit=10', {
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '10',
+      });
+
+      if (debouncedSearch.trim()) {
+        params.append('search', debouncedSearch.trim());
+      }
+
+      const res = await axios.get(`http://localhost:3011/api/v1/issues?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       // Handle both array and paginated response
@@ -745,12 +765,15 @@ export default function MaintenancePage() {
               <>
                 <Select
                   label="Issue"
-                  placeholder="Search and select related issue..."
+                  placeholder="Type to search issues by pole code..."
                   data={issueOptions}
                   searchable
                   clearable
                   required
                   value={scheduleForm.values.issueId}
+                  onSearchChange={(value) => {
+                    setIssuesSearch(value || '');
+                  }}
                   onChange={(value) => {
                     scheduleForm.setFieldValue('issueId', value || '');
                     // set asset code field based on selected issue
