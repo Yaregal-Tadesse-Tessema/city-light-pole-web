@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Container,
@@ -16,11 +16,12 @@ import {
   Text,
   Stack,
   Loader,
+  Popover,
 } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconEdit, IconTrash, IconEye } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconEye, IconFilter, IconArrowsUpDown } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import axios from 'axios';
@@ -38,12 +39,51 @@ export default function InventoryListPage() {
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['inventory', page, search, categoryId, lowStock],
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('code');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC');
+
+  // Filtering state
+  const [codeFilter, setCodeFilter] = useState('');
+  const [nameFilter, setNameFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  // Sorting handler
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      // Toggle sort order if same field
+      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      // New field, default to ASC
+      setSortBy(field);
+      setSortOrder('ASC');
+    }
+  };
+
+  // Get sort icon for a column
+  const getSortIcon = (field: string) => {
+    return <IconArrowsUpDown size={16} />;
+  };
+
+  // Reset filters function
+  const resetFilters = () => {
+    setCodeFilter('');
+    setNameFilter('');
+    setCategoryFilter('');
+    setStatusFilter('');
+    setPage(1);
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = codeFilter || nameFilter || categoryFilter || statusFilter;
+
+  const { data: allInventoryData, isLoading } = useQuery({
+    queryKey: ['inventory', 'all', search, categoryId, lowStock],
     queryFn: async () => {
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '10',
+        page: '1',
+        limit: '1000', // Fetch all items for client-side filtering
       });
       if (search) params.append('search', search);
       if (categoryId) params.append('categoryId', categoryId);
@@ -58,6 +98,92 @@ export default function InventoryListPage() {
       return res.data;
     },
   });
+
+  // Apply client-side filtering, sorting, and pagination
+  const filteredAndSortedInventory = useMemo(() => {
+    if (!allInventoryData?.items) return [];
+
+    let filtered = [...allInventoryData.items];
+
+    // Apply filters
+    if (codeFilter) {
+      filtered = filtered.filter(item =>
+        item.code?.toLowerCase().includes(codeFilter.toLowerCase())
+      );
+    }
+
+    if (nameFilter) {
+      filtered = filtered.filter(item =>
+        item.name?.toLowerCase().includes(nameFilter.toLowerCase())
+      );
+    }
+
+    if (categoryFilter) {
+      filtered = filtered.filter(item =>
+        item.category?.name?.toLowerCase().includes(categoryFilter.toLowerCase())
+      );
+    }
+
+    if (statusFilter) {
+      filtered = filtered.filter(item => {
+        const stockStatus = getStockStatus(item);
+        return stockStatus.label.toLowerCase().includes(statusFilter.toLowerCase());
+      });
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: any, bValue: any;
+
+      switch (sortBy) {
+        case 'code':
+          aValue = a.code || '';
+          bValue = b.code || '';
+          break;
+        case 'name':
+          aValue = a.name || '';
+          bValue = b.name || '';
+          break;
+        case 'category':
+          aValue = a.category?.name || '';
+          bValue = b.category?.name || '';
+          break;
+        case 'status':
+          aValue = getStockStatus(a).label;
+          bValue = getStockStatus(b).label;
+          break;
+        default:
+          aValue = a.code || '';
+          bValue = b.code || '';
+      }
+
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) return sortOrder === 'ASC' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'ASC' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [
+    allInventoryData?.items,
+    codeFilter,
+    nameFilter,
+    categoryFilter,
+    statusFilter,
+    sortBy,
+    sortOrder
+  ]);
+
+  // Apply pagination to filtered and sorted results
+  const totalItems = filteredAndSortedInventory.length;
+  const totalPages = Math.ceil(totalItems / 10);
+  const startIndex = (page - 1) * 10;
+  const endIndex = startIndex + 10;
+  const paginatedItems = filteredAndSortedInventory.slice(startIndex, endIndex);
 
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['categories'],
@@ -129,20 +255,28 @@ export default function InventoryListPage() {
     return { color: 'green', label: 'In Stock' };
   };
 
-  const paginatedItems = data?.items || [];
-  const totalItems = data?.total || 0;
-  const itemsPerPage = data?.limit || 10;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
         <Title order={1}>Inventory Management</Title>
-        {user?.role === 'ADMIN' && (
-          <Button onClick={() => navigate('/inventory/new')} size="md">
-            Add Inventory Item
-          </Button>
-        )}
+        <Group>
+          {hasActiveFilters && (
+            <Button
+              variant="light"
+              color="red"
+              size="md"
+              onClick={resetFilters}
+            >
+              Clear Filters
+            </Button>
+          )}
+          {user?.role === 'ADMIN' && (
+            <Button onClick={() => navigate('/inventory/new')} size="md">
+              Add Inventory Item
+            </Button>
+          )}
+        </Group>
       </Group>
 
       <Paper p={{ base: 'xs', sm: 'md' }} withBorder mb="md">
@@ -190,12 +324,185 @@ export default function InventoryListPage() {
           <Table highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Code</Table.Th>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Category</Table.Th>
+                <Table.Th>
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('code')}>Code</Text>
+                    <Group gap="xs">
+                      <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        size="sm"
+                        onClick={() => handleSort('code')}
+                      >
+                        {getSortIcon('code')}
+                      </ActionIcon>
+                      <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+                        <Popover.Target>
+                          <ActionIcon
+                            variant="subtle"
+                            color={codeFilter ? 'blue' : 'gray'}
+                            size="sm"
+                          >
+                            <IconFilter size={16} />
+                          </ActionIcon>
+                        </Popover.Target>
+                        <Popover.Dropdown>
+                          <Stack gap="sm">
+                            <Text size="sm" fw={500}>Filter by Code</Text>
+                            <TextInput
+                              placeholder="Enter code..."
+                              value={codeFilter}
+                              onChange={(e) => setCodeFilter(e.currentTarget.value)}
+                              size="sm"
+                            />
+                            {codeFilter && (
+                              <Button
+                                size="xs"
+                                variant="light"
+                                onClick={() => setCodeFilter('')}
+                              >
+                                Clear
+                              </Button>
+                            )}
+                          </Stack>
+                        </Popover.Dropdown>
+                      </Popover>
+                    </Group>
+                  </Group>
+                </Table.Th>
+                <Table.Th>
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>Name</Text>
+                    <Group gap="xs">
+                      <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        size="sm"
+                        onClick={() => handleSort('name')}
+                      >
+                        {getSortIcon('name')}
+                      </ActionIcon>
+                      <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+                        <Popover.Target>
+                          <ActionIcon
+                            variant="subtle"
+                            color={nameFilter ? 'blue' : 'gray'}
+                            size="sm"
+                          >
+                            <IconFilter size={16} />
+                          </ActionIcon>
+                        </Popover.Target>
+                        <Popover.Dropdown>
+                          <Stack gap="sm">
+                            <Text size="sm" fw={500}>Filter by Name</Text>
+                            <TextInput
+                              placeholder="Enter name..."
+                              value={nameFilter}
+                              onChange={(e) => setNameFilter(e.currentTarget.value)}
+                              size="sm"
+                            />
+                            {nameFilter && (
+                              <Button
+                                size="xs"
+                                variant="light"
+                                onClick={() => setNameFilter('')}
+                              >
+                                Clear
+                              </Button>
+                            )}
+                          </Stack>
+                        </Popover.Dropdown>
+                      </Popover>
+                    </Group>
+                  </Group>
+                </Table.Th>
+                <Table.Th>
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('category')}>Category</Text>
+                    <Group gap="xs">
+                      <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        size="sm"
+                        onClick={() => handleSort('category')}
+                      >
+                        {getSortIcon('category')}
+                      </ActionIcon>
+                      <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+                        <Popover.Target>
+                          <ActionIcon
+                            variant="subtle"
+                            color={categoryFilter ? 'blue' : 'gray'}
+                            size="sm"
+                          >
+                            <IconFilter size={16} />
+                          </ActionIcon>
+                        </Popover.Target>
+                        <Popover.Dropdown>
+                          <Stack gap="sm">
+                            <Text size="sm" fw={500}>Filter by Category</Text>
+                            <TextInput
+                              placeholder="Enter category..."
+                              value={categoryFilter}
+                              onChange={(e) => setCategoryFilter(e.currentTarget.value)}
+                              size="sm"
+                            />
+                            {categoryFilter && (
+                              <Button
+                                size="xs"
+                                variant="light"
+                                onClick={() => setCategoryFilter('')}
+                              >
+                                Clear
+                              </Button>
+                            )}
+                          </Stack>
+                        </Popover.Dropdown>
+                      </Popover>
+                    </Group>
+                  </Group>
+                </Table.Th>
                 <Table.Th>Current Stock</Table.Th>
                 <Table.Th>Min Threshold</Table.Th>
-                <Table.Th>Status</Table.Th>
+                <Table.Th>
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>Status</Text>
+                    <Group gap="xs">
+                      <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        size="sm"
+                        onClick={() => handleSort('status')}
+                      >
+                        {getSortIcon('status')}
+                      </ActionIcon>
+                      <Popover width={250} trapFocus position="bottom" withArrow shadow="md">
+                        <Popover.Target>
+                          <ActionIcon
+                            variant="subtle"
+                            color={statusFilter ? 'blue' : 'gray'}
+                            size="sm"
+                          >
+                            <IconFilter size={16} />
+                          </ActionIcon>
+                        </Popover.Target>
+                        <Popover.Dropdown>
+                          <Stack gap="sm">
+                            <Text size="sm" fw={500}>Filter by Status</Text>
+                            <Select
+                              placeholder="Select status"
+                              data={['In Stock', 'Warning', 'Low Stock']}
+                              value={statusFilter}
+                              onChange={(value) => setStatusFilter(value || '')}
+                              clearable
+                              size="sm"
+                            />
+                          </Stack>
+                        </Popover.Dropdown>
+                      </Popover>
+                    </Group>
+                  </Group>
+                </Table.Th>
                 <Table.Th>Unit Cost</Table.Th>
                 {user?.role === 'ADMIN' && <Table.Th>Actions</Table.Th>}
               </Table.Tr>
@@ -207,7 +514,7 @@ export default function InventoryListPage() {
                     <Loader size="sm" />
                   </Table.Td>
                 </Table.Tr>
-              ) : paginatedItems.length === 0 ? (
+              ) : paginatedItems?.length === 0 ? (
                 <Table.Tr>
                   <Table.Td colSpan={user?.role === 'ADMIN' ? 8 : 7}>
                     <Text c="dimmed" ta="center">No inventory items found</Text>
@@ -274,7 +581,7 @@ export default function InventoryListPage() {
       {totalPages > 0 && (
         <Group justify="space-between" align="center" mt="md">
           <Text size="sm" c="dimmed">
-            Showing {paginatedItems.length > 0 ? ((page - 1) * itemsPerPage + 1) : 0} - {Math.min(page * itemsPerPage, totalItems)} of {totalItems} items
+            Showing {paginatedItems.length > 0 ? ((page - 1) * 10 + 1) : 0} - {Math.min(page * 10, totalItems)} of {totalItems} items
           </Text>
           <Pagination
             value={page}

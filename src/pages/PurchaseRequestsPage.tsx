@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Container,
@@ -17,9 +17,12 @@ import {
   Center,
   Alert,
   NumberInput,
+  Popover,
+  TextInput,
+  ActionIcon,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconEye, IconCheck, IconX, IconPackage } from '@tabler/icons-react';
+import { IconEye, IconCheck, IconX, IconPackage, IconFilter, IconArrowsUpDown, IconSortAscending, IconSortDescending } from '@tabler/icons-react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 
@@ -42,22 +45,123 @@ export default function PurchaseRequestsPage() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [receiveNotes, setReceiveNotes] = useState('');
 
-  const { data: requests, isLoading } = useQuery({
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+
+  // Filtering state
+  const [materialRequestFilter, setMaterialRequestFilter] = useState('');
+  const [requestedByFilter, setRequestedByFilter] = useState('');
+  const [itemsCountFilter, setItemsCountFilter] = useState('');
+  const [totalCostFilter, setTotalCostFilter] = useState('');
+
+  // Sorting handler
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      // Toggle sort order if same field
+      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      // New field, default to DESC
+      setSortBy(field);
+      setSortOrder('DESC');
+    }
+  };
+
+  // Get sort icon for a column
+  const getSortIcon = (field: string) => {
+    if (sortBy !== field) {
+      return <IconArrowsUpDown size={16} />;
+    }
+    return sortOrder === 'ASC' ? <IconSortAscending size={16} /> : <IconSortDescending size={16} />;
+  };
+
+  const { data: allRequests, isLoading } = useQuery({
     queryKey: ['purchase-requests', statusFilter],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
       const params = statusFilter ? `?status=${statusFilter}` : '';
-      const response = await axios.get(
-        `http://localhost:3011/api/v1/purchase-requests${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const response = await axios.get(`http://localhost:3011/api/v1/purchase-requests${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
       return response.data;
     },
   });
+
+  // Apply client-side sorting and filtering
+  const requests = useMemo(() => {
+    if (!allRequests) return [];
+
+    let filtered = allRequests.filter((request: any) => {
+      // Status filter
+      if (statusFilter && request.status !== statusFilter) return false;
+
+      // Material Request filter
+      if (materialRequestFilter && !request.materialRequest?.id.toLowerCase().includes(materialRequestFilter.toLowerCase())) return false;
+
+      // Requested By filter
+      if (requestedByFilter && !request.requestedBy?.fullName.toLowerCase().includes(requestedByFilter.toLowerCase())) return false;
+
+      // Items Count filter
+      if (itemsCountFilter && !request.items?.length.toString().includes(itemsCountFilter)) return false;
+
+      // Total Cost filter
+      if (totalCostFilter) {
+        const cost = Number(request.totalCost || 0);
+        const filterCost = Number(totalCostFilter);
+        if (!isNaN(filterCost) && cost !== filterCost) return false;
+      }
+
+      return true;
+    });
+
+    // Apply sorting
+    filtered.sort((a: any, b: any) => {
+      let aValue: any, bValue: any;
+
+      switch (sortBy) {
+        case 'materialRequest':
+          aValue = a.materialRequest?.id || '';
+          bValue = b.materialRequest?.id || '';
+          break;
+        case 'requestedBy':
+          aValue = a.requestedBy?.fullName || '';
+          bValue = b.requestedBy?.fullName || '';
+          break;
+        case 'itemsCount':
+          aValue = a.items?.length || 0;
+          bValue = b.items?.length || 0;
+          break;
+        case 'totalCost':
+          aValue = Number(a.totalCost || 0);
+          bValue = Number(b.totalCost || 0);
+          break;
+        case 'status':
+          aValue = a.status || '';
+          bValue = b.status || '';
+          break;
+        case 'createdAt':
+          aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          break;
+        default:
+          aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      }
+
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) return sortOrder === 'ASC' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'ASC' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [allRequests, statusFilter, materialRequestFilter, requestedByFilter, itemsCountFilter, totalCostFilter, sortBy, sortOrder]);
 
   const approveMutation = useMutation({
     mutationFn: async ({ id, approve, reason }: { id: string; approve: boolean; reason?: string }) => {
@@ -264,12 +368,144 @@ export default function PurchaseRequestsPage() {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Request ID</Table.Th>
-                <Table.Th>Material Request</Table.Th>
-                <Table.Th>Requested By</Table.Th>
-                <Table.Th>Items Count</Table.Th>
-                <Table.Th>Total Cost</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Request Date</Table.Th>
+                <Table.Th>
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('materialRequest')}>Material Request</Text>
+                    <Popover position="bottom" withArrow shadow="md">
+                      <Popover.Target>
+                        <ActionIcon variant="subtle" color="gray" size="sm">
+                          <IconFilter size={14} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <TextInput
+                          placeholder="Filter by Material Request..."
+                          value={materialRequestFilter}
+                          onChange={(event) => setMaterialRequestFilter(event.currentTarget.value)}
+                          size="sm"
+                        />
+                      </Popover.Dropdown>
+                    </Popover>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      onClick={() => handleSort('materialRequest')}
+                    >
+                      {getSortIcon('materialRequest')}
+                    </ActionIcon>
+                  </Group>
+                </Table.Th>
+                <Table.Th>
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('requestedBy')}>Requested By</Text>
+                    <Popover position="bottom" withArrow shadow="md">
+                      <Popover.Target>
+                        <ActionIcon variant="subtle" color="gray" size="sm">
+                          <IconFilter size={14} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <TextInput
+                          placeholder="Filter by Requested By..."
+                          value={requestedByFilter}
+                          onChange={(event) => setRequestedByFilter(event.currentTarget.value)}
+                          size="sm"
+                        />
+                      </Popover.Dropdown>
+                    </Popover>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      onClick={() => handleSort('requestedBy')}
+                    >
+                      {getSortIcon('requestedBy')}
+                    </ActionIcon>
+                  </Group>
+                </Table.Th>
+                <Table.Th>
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('itemsCount')}>Items Count</Text>
+                    <Popover position="bottom" withArrow shadow="md">
+                      <Popover.Target>
+                        <ActionIcon variant="subtle" color="gray" size="sm">
+                          <IconFilter size={14} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <TextInput
+                          placeholder="Filter by Items Count..."
+                          value={itemsCountFilter}
+                          onChange={(event) => setItemsCountFilter(event.currentTarget.value)}
+                          size="sm"
+                        />
+                      </Popover.Dropdown>
+                    </Popover>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      onClick={() => handleSort('itemsCount')}
+                    >
+                      {getSortIcon('itemsCount')}
+                    </ActionIcon>
+                  </Group>
+                </Table.Th>
+                <Table.Th>
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('totalCost')}>Total Cost</Text>
+                    <Popover position="bottom" withArrow shadow="md">
+                      <Popover.Target>
+                        <ActionIcon variant="subtle" color="gray" size="sm">
+                          <IconFilter size={14} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <TextInput
+                          placeholder="Filter by Total Cost..."
+                          value={totalCostFilter}
+                          onChange={(event) => setTotalCostFilter(event.currentTarget.value)}
+                          size="sm"
+                        />
+                      </Popover.Dropdown>
+                    </Popover>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      onClick={() => handleSort('totalCost')}
+                    >
+                      {getSortIcon('totalCost')}
+                    </ActionIcon>
+                  </Group>
+                </Table.Th>
+                <Table.Th>
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>Status</Text>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      onClick={() => handleSort('status')}
+                    >
+                      {getSortIcon('status')}
+                    </ActionIcon>
+                  </Group>
+                </Table.Th>
+                <Table.Th>
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('createdAt')}>Request Date</Text>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      onClick={() => handleSort('createdAt')}
+                    >
+                      {getSortIcon('createdAt')}
+                    </ActionIcon>
+                  </Group>
+                </Table.Th>
                 <Table.Th>Actions</Table.Th>
               </Table.Tr>
             </Table.Thead>
