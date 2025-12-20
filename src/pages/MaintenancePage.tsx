@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { IconEye, IconTrash, IconPackage } from '@tabler/icons-react';
+import { IconEye, IconTrash, IconPackage, IconFilter, IconArrowsUpDown } from '@tabler/icons-react';
 import MaterialRequestModal from '../components/MaterialRequestModal';
 import {
   Container,
@@ -23,6 +23,7 @@ import {
   Loader,
   Center,
   Pagination,
+  Popover,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -44,6 +45,25 @@ function getScheduleStatusColor(status: string): string {
       return 'gray';
   }
 }
+
+// Sorting handler
+const handleSort = (field: string) => {
+  if (sortBy === field) {
+    // Toggle sort order if same field
+    setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+  } else {
+    // New field, default to DESC
+    setSortBy(field);
+    setSortOrder('DESC');
+  }
+  setCurrentPage(1); // Reset to first page when sorting changes
+};
+
+// Get sort icon for a column
+const getSortIcon = (field: string) => {
+  return <IconArrowsUpDown size={16} />;
+};
+
 
 // TextTruncate component for showing truncated text with "show more" functionality
 function TextTruncate({ text, maxLength = 50 }: { text: string; maxLength?: number }) {
@@ -125,8 +145,62 @@ export default function MaintenancePage() {
   const [pageSize, setPageSize] = useState(10);
   const [allSchedules, setAllSchedules] = useState<any[]>([]);
 
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('startDate');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+
+  // Filtering state
+  const [assetCodeFilter, setAssetCodeFilter] = useState('');
+  const [districtFilter, setDistrictFilter] = useState('');
+  const [streetFilter, setStreetFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [startDateFrom, setStartDateFrom] = useState<Date | null>(null);
+  const [startDateTo, setStartDateTo] = useState<Date | null>(null);
+  const [endDateFrom, setEndDateFrom] = useState<Date | null>(null);
+  const [endDateTo, setEndDateTo] = useState<Date | null>(null);
+
+  // Check if any filters are active
+  const hasActiveFilters = assetCodeFilter || districtFilter || streetFilter || statusFilter || startDateFrom || startDateTo || endDateFrom || endDateTo;
+
+  // Get unique subcities from current schedules
+  const getUniqueSubcities = () => {
+    const subcities = new Set<string>();
+    allSchedules.forEach(schedule => {
+      const subcity = getAssetDistrictByType(filterType, getScheduleAsset(schedule));
+      if (subcity) {
+        subcities.add(subcity);
+      }
+    });
+    return Array.from(subcities).sort();
+  };
+
+  // Get unique streets from current schedules
+  const getUniqueStreets = () => {
+    const streets = new Set<string>();
+    allSchedules.forEach(schedule => {
+      const street = getAssetStreet(getScheduleAsset(schedule));
+      if (street) {
+        streets.add(street);
+      }
+    });
+    return Array.from(streets).sort();
+  };
+
+  // Reset filters function
+  const resetFilters = () => {
+    setAssetCodeFilter('');
+    setDistrictFilter('');
+    setStreetFilter('');
+    setStatusFilter('');
+    setStartDateFrom(null);
+    setStartDateTo(null);
+    setEndDateFrom(null);
+    setEndDateTo(null);
+    setCurrentPage(1);
+  };
+
   const { data: schedulesData, isLoading: schedulesLoading, refetch: refetchSchedules } = useQuery({
-    queryKey: ['maintenance', 'schedules', filterType],
+    queryKey: ['maintenance', 'schedules', filterType, assetCodeFilter, districtFilter, streetFilter, statusFilter, startDateFrom, startDateTo, endDateFrom, endDateTo, sortBy, sortOrder],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
       if (!token) {
@@ -163,17 +237,148 @@ export default function MaintenancePage() {
     },
   });
 
-  // Apply client-side pagination
-  const totalSchedules = allSchedules.length;
+  // Apply client-side filtering, sorting, and pagination
+  const filteredAndSortedSchedules = useMemo(() => {
+    let filtered = [...allSchedules];
+
+    // Apply filters
+    if (assetCodeFilter) {
+      filtered = filtered.filter(schedule =>
+        getScheduleAssetCode(schedule)?.toLowerCase().includes(assetCodeFilter.toLowerCase())
+      );
+    }
+
+    if (districtFilter) {
+      filtered = filtered.filter(schedule =>
+        getAssetDistrictByType(filterType, getScheduleAsset(schedule))?.toLowerCase().includes(districtFilter.toLowerCase())
+      );
+    }
+
+    if (streetFilter) {
+      filtered = filtered.filter(schedule =>
+        getAssetStreet(getScheduleAsset(schedule))?.toLowerCase().includes(streetFilter.toLowerCase())
+      );
+    }
+
+    if (statusFilter) {
+      filtered = filtered.filter(schedule =>
+        schedule.status?.toLowerCase().includes(statusFilter.toLowerCase())
+      );
+    }
+
+
+    if (startDateFrom) {
+      filtered = filtered.filter(schedule => {
+        const startDate = schedule.startDate ? new Date(schedule.startDate) : null;
+        return startDate && startDate >= startDateFrom;
+      });
+    }
+
+    if (startDateTo) {
+      filtered = filtered.filter(schedule => {
+        const startDate = schedule.startDate ? new Date(schedule.startDate) : null;
+        return startDate && startDate <= startDateTo;
+      });
+    }
+
+    if (endDateFrom) {
+      filtered = filtered.filter(schedule => {
+        const endDate = schedule.endDate ? new Date(schedule.endDate) : null;
+        return endDate && endDate >= endDateFrom;
+      });
+    }
+
+    if (endDateTo) {
+      filtered = filtered.filter(schedule => {
+        const endDate = schedule.endDate ? new Date(schedule.endDate) : null;
+        return endDate && endDate <= endDateTo;
+      });
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: any, bValue: any;
+
+      switch (sortBy) {
+        case 'assetCode':
+          aValue = getScheduleAssetCode(a) || '';
+          bValue = getScheduleAssetCode(b) || '';
+          break;
+        case 'subcity':
+          aValue = getAssetDistrictByType(filterType, getScheduleAsset(a)) || '';
+          bValue = getAssetDistrictByType(filterType, getScheduleAsset(b)) || '';
+          break;
+        case 'street':
+          aValue = getAssetStreet(getScheduleAsset(a)) || '';
+          bValue = getAssetStreet(getScheduleAsset(b)) || '';
+          break;
+        case 'status':
+          aValue = a.status || '';
+          bValue = b.status || '';
+          break;
+        case 'frequency':
+          aValue = a.frequency || '';
+          bValue = b.frequency || '';
+          break;
+        case 'startDate':
+          aValue = a.startDate ? new Date(a.startDate).getTime() : 0;
+          bValue = b.startDate ? new Date(b.startDate).getTime() : 0;
+          break;
+        case 'endDate':
+          aValue = a.endDate ? new Date(a.endDate).getTime() : 0;
+          bValue = b.endDate ? new Date(b.endDate).getTime() : 0;
+          break;
+        case 'cost':
+          aValue = parseFloat(a.estimatedCost || '0') || 0;
+          bValue = parseFloat(b.estimatedCost || '0') || 0;
+          break;
+        default:
+          aValue = a.startDate ? new Date(a.startDate).getTime() : 0;
+          bValue = b.startDate ? new Date(b.startDate).getTime() : 0;
+      }
+
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) return sortOrder === 'ASC' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'ASC' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [
+    allSchedules,
+    assetCodeFilter,
+    districtFilter,
+    streetFilter,
+    statusFilter,
+    startDateFrom,
+    startDateTo,
+    endDateFrom,
+    endDateTo,
+    sortBy,
+    sortOrder,
+    filterType
+  ]);
+
+  // Apply pagination to filtered and sorted results
+  const totalSchedules = filteredAndSortedSchedules.length;
   const totalPages = Math.ceil(totalSchedules / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const schedules = allSchedules.slice(startIndex, endIndex);
+  const schedules = filteredAndSortedSchedules.slice(startIndex, endIndex);
 
   // Reset to page 1 when filter type changes
   useEffect(() => {
     setCurrentPage(1);
   }, [filterType]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [assetCodeFilter, districtFilter, streetFilter, statusFilter, startDateFrom, startDateTo, endDateFrom, endDateTo, sortBy, sortOrder]);
 
   // Debounce search input
   useEffect(() => {
@@ -555,8 +760,18 @@ export default function MaintenancePage() {
           {filterType === 'river' && ' - River Side Projects'}
         </Title>
         <Group>
-          <Button 
-            variant="light" 
+          {hasActiveFilters && (
+            <Button
+              variant="light"
+              color="red"
+              size="md"
+              onClick={resetFilters}
+            >
+              Clear Filters
+            </Button>
+          )}
+          <Button
+            variant="light"
             onClick={() => setCreateScheduleOpened(true)}
             size="md"
           >
@@ -576,16 +791,335 @@ export default function MaintenancePage() {
               <Table>
                 <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Asset Code</Table.Th>
-                  <Table.Th>District</Table.Th>
-                  <Table.Th>Street</Table.Th>
+                  <Table.Th>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('assetCode')}>Asset Code</Text>
+                      <Group gap="xs">
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          size="sm"
+                          onClick={() => handleSort('assetCode')}
+                        >
+                          {getSortIcon('assetCode')}
+                        </ActionIcon>
+                        <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+                          <Popover.Target>
+                            <ActionIcon
+                              variant="subtle"
+                              color={assetCodeFilter ? 'blue' : 'gray'}
+                              size="sm"
+                            >
+                              <IconFilter size={16} />
+                            </ActionIcon>
+                          </Popover.Target>
+                          <Popover.Dropdown>
+                            <Stack gap="sm">
+                              <Text size="sm" fw={500}>Filter by Asset Code</Text>
+                              <TextInput
+                                placeholder="Enter asset code..."
+                                value={assetCodeFilter}
+                                onChange={(e) => setAssetCodeFilter(e.currentTarget.value)}
+                                size="sm"
+                              />
+                              {assetCodeFilter && (
+                                <Button
+                                  size="xs"
+                                  variant="light"
+                                  onClick={() => setAssetCodeFilter('')}
+                                >
+                                  Clear
+                                </Button>
+                              )}
+                            </Stack>
+                          </Popover.Dropdown>
+                        </Popover>
+                      </Group>
+                    </Group>
+                  </Table.Th>
+                  <Table.Th>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('subcity')}>Subcity</Text>
+                      <Group gap="xs">
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          size="sm"
+                          onClick={() => handleSort('subcity')}
+                        >
+                          {getSortIcon('subcity')}
+                        </ActionIcon>
+                        <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+                          <Popover.Target>
+                            <ActionIcon
+                              variant="subtle"
+                              color={districtFilter ? 'blue' : 'gray'}
+                              size="sm"
+                            >
+                              <IconFilter size={16} />
+                            </ActionIcon>
+                          </Popover.Target>
+                          <Popover.Dropdown>
+                            <Stack gap="sm">
+                              <Text size="sm" fw={500}>Filter by Subcity</Text>
+                              <Select
+                                placeholder="Select subcity..."
+                                data={getUniqueSubcities()}
+                                value={districtFilter}
+                                onChange={(value) => setDistrictFilter(value || '')}
+                                clearable
+                                searchable
+                                size="sm"
+                              />
+                              {districtFilter && (
+                                <Button
+                                  size="xs"
+                                  variant="light"
+                                  onClick={() => setDistrictFilter('')}
+                                >
+                                  Clear
+                                </Button>
+                              )}
+                            </Stack>
+                          </Popover.Dropdown>
+                        </Popover>
+                      </Group>
+                    </Group>
+                  </Table.Th>
+                  <Table.Th>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('street')}>Street</Text>
+                      <Group gap="xs">
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          size="sm"
+                          onClick={() => handleSort('street')}
+                        >
+                          {getSortIcon('street')}
+                        </ActionIcon>
+                        <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+                          <Popover.Target>
+                            <ActionIcon
+                              variant="subtle"
+                              color={streetFilter ? 'blue' : 'gray'}
+                              size="sm"
+                            >
+                              <IconFilter size={16} />
+                            </ActionIcon>
+                          </Popover.Target>
+                          <Popover.Dropdown>
+                            <Stack gap="sm">
+                              <Text size="sm" fw={500}>Filter by Street</Text>
+                              <Select
+                                placeholder="Select street..."
+                                data={getUniqueStreets()}
+                                value={streetFilter}
+                                onChange={(value) => setStreetFilter(value || '')}
+                                clearable
+                                searchable
+                                size="sm"
+                              />
+                              {streetFilter && (
+                                <Button
+                                  size="xs"
+                                  variant="light"
+                                  onClick={() => setStreetFilter('')}
+                                >
+                                  Clear
+                                </Button>
+                              )}
+                            </Stack>
+                          </Popover.Dropdown>
+                        </Popover>
+                      </Group>
+                    </Group>
+                  </Table.Th>
                   <Table.Th>{getAssetInfoLabel(filterType)}</Table.Th>
                   <Table.Th w={200}>Maintenance</Table.Th>
-                  <Table.Th>Frequency</Table.Th>
-                  <Table.Th>Start Date</Table.Th>
-                  <Table.Th>End Date</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Cost</Table.Th>
+                  <Table.Th>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('frequency')}>Frequency</Text>
+                      <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        size="sm"
+                        onClick={() => handleSort('frequency')}
+                      >
+                        {getSortIcon('frequency')}
+                      </ActionIcon>
+                    </Group>
+                  </Table.Th>
+                  <Table.Th>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('startDate')}>Start Date</Text>
+                      <Group gap="xs">
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          size="sm"
+                          onClick={() => handleSort('startDate')}
+                        >
+                          {getSortIcon('startDate')}
+                        </ActionIcon>
+                        <Popover width={350} trapFocus position="bottom" withArrow shadow="md">
+                          <Popover.Target>
+                            <ActionIcon
+                              variant="subtle"
+                              color={(startDateFrom || startDateTo) ? 'blue' : 'gray'}
+                              size="sm"
+                            >
+                              <IconFilter size={16} />
+                            </ActionIcon>
+                          </Popover.Target>
+                          <Popover.Dropdown>
+                            <Stack gap="sm">
+                              <Text size="sm" fw={500}>Filter by Start Date</Text>
+                              <TextInput
+                                label="From"
+                                placeholder="Select start date"
+                                type="date"
+                                value={startDateFrom ? startDateFrom.toISOString().split('T')[0] : ''}
+                                onChange={(e) => setStartDateFrom(e.target.value ? new Date(e.target.value) : null)}
+                                size="sm"
+                              />
+                              <TextInput
+                                label="To"
+                                placeholder="Select end date"
+                                type="date"
+                                value={startDateTo ? startDateTo.toISOString().split('T')[0] : ''}
+                                onChange={(e) => setStartDateTo(e.target.value ? new Date(e.target.value) : null)}
+                                size="sm"
+                              />
+                              {(startDateFrom || startDateTo) && (
+                                <Button
+                                  size="xs"
+                                  variant="light"
+                                  onClick={() => {
+                                    setStartDateFrom(null);
+                                    setStartDateTo(null);
+                                  }}
+                                >
+                                  Clear
+                                </Button>
+                              )}
+                            </Stack>
+                          </Popover.Dropdown>
+                        </Popover>
+                      </Group>
+                    </Group>
+                  </Table.Th>
+                  <Table.Th>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('endDate')}>End Date</Text>
+                      <Group gap="xs">
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          size="sm"
+                          onClick={() => handleSort('endDate')}
+                        >
+                          {getSortIcon('endDate')}
+                        </ActionIcon>
+                        <Popover width={350} trapFocus position="bottom" withArrow shadow="md">
+                          <Popover.Target>
+                            <ActionIcon
+                              variant="subtle"
+                              color={(endDateFrom || endDateTo) ? 'blue' : 'gray'}
+                              size="sm"
+                            >
+                              <IconFilter size={16} />
+                            </ActionIcon>
+                          </Popover.Target>
+                          <Popover.Dropdown>
+                            <Stack gap="sm">
+                              <Text size="sm" fw={500}>Filter by End Date</Text>
+                              <TextInput
+                                label="From"
+                                placeholder="Select start date"
+                                type="date"
+                                value={endDateFrom ? endDateFrom.toISOString().split('T')[0] : ''}
+                                onChange={(e) => setEndDateFrom(e.target.value ? new Date(e.target.value) : null)}
+                                size="sm"
+                              />
+                              <TextInput
+                                label="To"
+                                placeholder="Select end date"
+                                type="date"
+                                value={endDateTo ? endDateTo.toISOString().split('T')[0] : ''}
+                                onChange={(e) => setEndDateTo(e.target.value ? new Date(e.target.value) : null)}
+                                size="sm"
+                              />
+                              {(endDateFrom || endDateTo) && (
+                                <Button
+                                  size="xs"
+                                  variant="light"
+                                  onClick={() => {
+                                    setEndDateFrom(null);
+                                    setEndDateTo(null);
+                                  }}
+                                >
+                                  Clear
+                                </Button>
+                              )}
+                            </Stack>
+                          </Popover.Dropdown>
+                        </Popover>
+                      </Group>
+                    </Group>
+                  </Table.Th>
+                  <Table.Th>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>Status</Text>
+                      <Group gap="xs">
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          size="sm"
+                          onClick={() => handleSort('status')}
+                        >
+                          {getSortIcon('status')}
+                        </ActionIcon>
+                        <Popover width={250} trapFocus position="bottom" withArrow shadow="md">
+                          <Popover.Target>
+                            <ActionIcon
+                              variant="subtle"
+                              color={statusFilter ? 'blue' : 'gray'}
+                              size="sm"
+                            >
+                              <IconFilter size={16} />
+                            </ActionIcon>
+                          </Popover.Target>
+                          <Popover.Dropdown>
+                            <Stack gap="sm">
+                              <Text size="sm" fw={500}>Filter by Status</Text>
+                              <Select
+                                placeholder="Select status"
+                                data={['REQUESTED', 'STARTED', 'PAUSED', 'COMPLETED']}
+                                value={statusFilter}
+                                onChange={(value) => setStatusFilter(value || '')}
+                                clearable
+                                size="sm"
+                              />
+                            </Stack>
+                          </Popover.Dropdown>
+                        </Popover>
+                      </Group>
+                    </Group>
+                  </Table.Th>
+                  <Table.Th>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('cost')}>Cost</Text>
+                      <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        size="sm"
+                        onClick={() => handleSort('cost')}
+                      >
+                        {getSortIcon('cost')}
+                      </ActionIcon>
+                    </Group>
+                  </Table.Th>
                   <Table.Th>Issue Detail</Table.Th>
                   <Table.Th>Actions</Table.Th>
                 </Table.Tr>

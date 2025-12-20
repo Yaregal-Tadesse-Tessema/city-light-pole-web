@@ -95,7 +95,7 @@ export default function IssuesListPage() {
   };
 
   // Get sort icon for a column
-  const getSortIcon = () => {
+  const getSortIcon = (field: string) => {
     return <IconArrowsUpDown size={16} />;
   };
 
@@ -463,11 +463,11 @@ export default function IssuesListPage() {
                   <Group gap="xs">
                     <ActionIcon
                       variant="subtle"
-                      color={sortBy === 'poleCode' ? 'blue' : 'gray'}
+                      color="gray"
                       size="sm"
                       onClick={() => handleSort('poleCode')}
                     >
-                      {getSortIcon()}
+                      {getSortIcon('poleCode')}
                     </ActionIcon>
                     <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
                       <Popover.Target>
@@ -511,11 +511,11 @@ export default function IssuesListPage() {
                   <Group gap="xs">
                     <ActionIcon
                       variant="subtle"
-                      color={sortBy === 'status' ? 'blue' : 'gray'}
+                      color="gray"
                       size="sm"
                       onClick={() => handleSort('status')}
                     >
-                      {getSortIcon()}
+                      {getSortIcon('status')}
                     </ActionIcon>
                     <Popover width={200} trapFocus position="bottom" withArrow shadow="md">
                       <Popover.Target>
@@ -550,11 +550,11 @@ export default function IssuesListPage() {
                   <Group gap="xs">
                     <ActionIcon
                       variant="subtle"
-                      color={sortBy === 'severity' ? 'blue' : 'gray'}
+                      color="gray"
                       size="sm"
                       onClick={() => handleSort('severity')}
                     >
-                      {getSortIcon()}
+                      {getSortIcon('severity')}
                     </ActionIcon>
                     <Popover width={200} trapFocus position="bottom" withArrow shadow="md">
                       <Popover.Target>
@@ -588,11 +588,11 @@ export default function IssuesListPage() {
                   <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('reportedBy')}>Reported By</Text>
                   <ActionIcon
                     variant="subtle"
-                    color={sortBy === 'reportedBy' ? 'blue' : 'gray'}
+                    color="gray"
                     size="sm"
                     onClick={() => handleSort('reportedBy')}
                   >
-                    {getSortIcon()}
+                    {getSortIcon('reportedBy')}
                   </ActionIcon>
                 </Group>
               </Table.Th>
@@ -602,11 +602,11 @@ export default function IssuesListPage() {
                   <Group gap="xs">
                     <ActionIcon
                       variant="subtle"
-                      color={sortBy === 'createdAt' ? 'blue' : 'gray'}
+                      color="gray"
                       size="sm"
                       onClick={() => handleSort('createdAt')}
                     >
-                      {getSortIcon()}
+                      {getSortIcon('createdAt')}
                     </ActionIcon>
                     <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
                       <Popover.Target>
@@ -662,11 +662,11 @@ export default function IssuesListPage() {
                   <Group gap="xs">
                     <ActionIcon
                       variant="subtle"
-                      color={sortBy === 'updatedAt' ? 'blue' : 'gray'}
+                      color="gray"
                       size="sm"
                       onClick={() => handleSort('updatedAt')}
                     >
-                      {getSortIcon()}
+                      {getSortIcon('updatedAt')}
                     </ActionIcon>
                     <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
                       <Popover.Target>
