@@ -362,6 +362,7 @@ export default function Layout() {
           active={isPublicParksRouteActive}
           opened={publicParksMenuOpened}
           onChange={() => setPublicParksMenuOpened(!publicParksMenuOpened)}
+          disabled
         >
           <NavLink
             component={Link}
@@ -413,6 +414,7 @@ export default function Layout() {
           active={isParkingLotsRouteActive}
           opened={parkingLotsMenuOpened}
           onChange={() => setParkingLotsMenuOpened(!parkingLotsMenuOpened)}
+          disabled
         >
           <NavLink
             component={Link}
@@ -464,6 +466,7 @@ export default function Layout() {
           active={isMuseumsRouteActive}
           opened={museumsMenuOpened}
           onChange={() => setMuseumsMenuOpened(!museumsMenuOpened)}
+          disabled
         >
           <NavLink
             component={Link}
@@ -515,6 +518,7 @@ export default function Layout() {
           active={isPublicToiletsRouteActive}
           opened={publicToiletsMenuOpened}
           onChange={() => setPublicToiletsMenuOpened(!publicToiletsMenuOpened)}
+          disabled
         >
           <NavLink
             component={Link}
@@ -566,6 +570,7 @@ export default function Layout() {
           active={isFootballFieldsRouteActive}
           opened={footballFieldsMenuOpened}
           onChange={() => setFootballFieldsMenuOpened(!footballFieldsMenuOpened)}
+          disabled
         >
           <NavLink
             component={Link}
@@ -617,6 +622,7 @@ export default function Layout() {
           active={isRiverSideProjectsRouteActive}
           opened={riverSideProjectsMenuOpened}
           onChange={() => setRiverSideProjectsMenuOpened(!riverSideProjectsMenuOpened)}
+          disabled
         >
           <NavLink
             component={Link}
