@@ -22,7 +22,7 @@ import {
   ActionIcon,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconEye, IconCheck, IconX, IconPackage, IconFilter, IconArrowsUpDown, IconSortAscending, IconSortDescending } from '@tabler/icons-react';
+import { IconEye, IconCheck, IconX, IconPackage, IconFilter, IconArrowsUpDown, IconSortAscending, IconSortDescending, IconBox } from '@tabler/icons-react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 
@@ -30,8 +30,9 @@ const STATUSES = [
   { value: 'PENDING', label: 'Pending' },
   { value: 'APPROVED', label: 'Approved' },
   { value: 'REJECTED', label: 'Rejected' },
-  { value: 'ORDERED', label: 'Ordered' },
-  { value: 'RECEIVED', label: 'Received' },
+  { value: 'WAITING_FOR_PURCHASE', label: 'Waiting for Purchase' },
+  { value: 'IN_STOCK', label: 'In Stock' },
+  { value: 'DELIVERED', label: 'Delivered' },
 ];
 
 export default function PurchaseRequestsPage() {
@@ -204,7 +205,7 @@ export default function PurchaseRequestsPage() {
     },
   });
 
-  const markOrderedMutation = useMutation({
+  const waitingForPurchaseMutation = useMutation({
     mutationFn: async (id: string) => {
       const token = localStorage.getItem('access_token');
       const response = await axios.post(
@@ -213,6 +214,7 @@ export default function PurchaseRequestsPage() {
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
         },
       );
@@ -222,7 +224,7 @@ export default function PurchaseRequestsPage() {
       notifications.show({
         title: 'Success',
         message: 'Purchase request marked as ordered',
-        color: 'green',
+        color: 'cyan',
       });
       queryClient.invalidateQueries({ queryKey: ['purchase-requests'] });
     },
@@ -235,13 +237,13 @@ export default function PurchaseRequestsPage() {
     },
   });
 
-  const receiveMutation = useMutation({
-    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+  const inStockMutation = useMutation({
+    mutationFn: async (id: string) => {
       const token = localStorage.getItem('access_token');
       const response = await axios.post(
         `http://localhost:3011/api/v1/purchase-requests/${id}/receive`,
         {
-          notes,
+          notes: 'Received in stock'
         },
         {
           headers: {
@@ -255,12 +257,72 @@ export default function PurchaseRequestsPage() {
     onSuccess: () => {
       notifications.show({
         title: 'Success',
-        message: 'Purchase request received and items added to inventory',
+        message: 'Purchase request marked as arrived in stock',
+        color: 'orange',
+      });
+      queryClient.invalidateQueries({ queryKey: ['purchase-requests'] });
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: 'Error',
+        message: error.response?.data?.message || 'Failed to mark as arrived in stock',
+        color: 'red',
+      });
+    },
+  });
+
+  const deliverMutation = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.post(
+        `http://localhost:3011/api/v1/purchase-requests/${id}/deliver`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      return response.data;
+    },
+    onSuccess: async () => {
+      notifications.show({
+        title: 'Success',
+        message: 'Purchase request delivered',
         color: 'green',
       });
+
+      // If this purchase request is related to a maintenance schedule,
+      // update the maintenance status when materials are delivered
+      if (selectedRequest?.maintenanceScheduleId) {
+        try {
+          const token = localStorage.getItem('access_token');
+          await axios.patch(
+            `http://localhost:3011/api/v1/maintenance/schedules/${selectedRequest.maintenanceScheduleId}`,
+            {
+              status: 'STARTED', // Change status to STARTED when materials are delivered
+              remark: 'Materials delivered - ready to start maintenance work'
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          console.log('Updated maintenance status to STARTED for schedule:', selectedRequest.maintenanceScheduleId);
+        } catch (error) {
+          console.error('Failed to update maintenance status:', error);
+          // Don't show error notification for maintenance update failure
+          // since the purchase delivery was successful
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ['purchase-requests'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['material-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance', 'schedules'] });
       setReceiveModalOpened(false);
       setSelectedRequest(null);
       setReceiveNotes('');
@@ -268,7 +330,7 @@ export default function PurchaseRequestsPage() {
     onError: (error: any) => {
       notifications.show({
         title: 'Error',
-        message: error.response?.data?.message || 'Failed to receive purchase',
+        message: error.response?.data?.message || 'Failed to deliver purchase',
         color: 'red',
       });
     },
@@ -308,9 +370,9 @@ export default function PurchaseRequestsPage() {
     });
   };
 
-  const handleReceive = () => {
+  const handleDeliver = () => {
     if (!selectedRequest) return;
-    receiveMutation.mutate({
+    deliverMutation.mutate({
       id: selectedRequest.id,
       notes: receiveNotes || undefined,
     });
@@ -324,9 +386,11 @@ export default function PurchaseRequestsPage() {
         return 'blue';
       case 'REJECTED':
         return 'red';
-      case 'ORDERED':
+      case 'WAITING_FOR_PURCHASE':
         return 'cyan';
-      case 'RECEIVED':
+      case 'IN_STOCK':
+        return 'orange';
+      case 'DELIVERED':
         return 'green';
       default:
         return 'gray';
@@ -337,15 +401,16 @@ export default function PurchaseRequestsPage() {
     return user?.role === 'ADMIN' && request.status === 'PENDING';
   };
 
-  const canOrder = (request: any) => {
+  const canWaitingForPurchase = (request: any) => {
     return user?.role === 'ADMIN' && request.status === 'APPROVED';
   };
 
-  const canReceive = (request: any) => {
-    return (
-      user?.role === 'ADMIN' &&
-      (request.status === 'APPROVED' || request.status === 'ORDERED')
-    );
+  const canInStock = (request: any) => {
+    return user?.role === 'ADMIN' && request.status === 'ORDERED';
+  };
+
+  const canDeliver = (request: any) => {
+    return user?.role === 'ADMIN' && request.status === 'ARRIVED_IN_STOCK';
   };
 
   return (
@@ -396,6 +461,7 @@ export default function PurchaseRequestsPage() {
                     </ActionIcon>
                   </Group>
                 </Table.Th>
+                <Table.Th>Maintenance Code</Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
                     <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('requestedBy')}>Requested By</Text>
@@ -512,7 +578,7 @@ export default function PurchaseRequestsPage() {
             <Table.Tbody>
               {isLoading ? (
                 <Table.Tr>
-                  <Table.Td colSpan={8}>
+                  <Table.Td colSpan={9}>
                     <Center>
                       <Loader size="sm" />
                     </Center>
@@ -520,7 +586,7 @@ export default function PurchaseRequestsPage() {
                 </Table.Tr>
               ) : !requests || requests.length === 0 ? (
                 <Table.Tr>
-                  <Table.Td colSpan={8}>
+                  <Table.Td colSpan={9}>
                     <Text c="dimmed" ta="center">No purchase requests found</Text>
                   </Table.Td>
                 </Table.Tr>
@@ -537,6 +603,11 @@ export default function PurchaseRequestsPage() {
                         {request.materialRequestId
                           ? `MR-${request.materialRequestId.substring(0, 8)}...`
                           : 'Direct Purchase'}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">
+                        {request.maintenanceSchedule?.maintenanceCode || 'N/A'}
                       </Text>
                     </Table.Td>
                     <Table.Td>
@@ -583,19 +654,31 @@ export default function PurchaseRequestsPage() {
                             Review
                           </Button>
                         )}
-                        {canOrder(request) && (
+                        {canWaitingForPurchase(request) && (
                           <Button
                             size="xs"
                             variant="light"
                             color="cyan"
                             leftSection={<IconPackage size={14} />}
-                            onClick={() => markOrderedMutation.mutate(request.id)}
-                            loading={markOrderedMutation.isPending}
+                            onClick={() => waitingForPurchaseMutation.mutate(request.id)}
+                            loading={waitingForPurchaseMutation.isPending}
                           >
-                            Mark Ordered
+                            Mark as Ordered
                           </Button>
                         )}
-                        {canReceive(request) && (
+                        {canInStock(request) && (
+                          <Button
+                            size="xs"
+                            variant="light"
+                            color="orange"
+                            leftSection={<IconBox size={14} />}
+                            onClick={() => inStockMutation.mutate(request.id)}
+                            loading={inStockMutation.isPending}
+                          >
+                            Mark as Arrived
+                          </Button>
+                        )}
+                        {canDeliver(request) && (
                           <Button
                             size="xs"
                             variant="light"
@@ -603,7 +686,7 @@ export default function PurchaseRequestsPage() {
                             leftSection={<IconCheck size={14} />}
                             onClick={() => handleReceiveClick(request)}
                           >
-                            Receive
+                            Deliver
                           </Button>
                         )}
                       </Group>
@@ -852,7 +935,7 @@ export default function PurchaseRequestsPage() {
           setSelectedRequest(null);
           setReceiveNotes('');
         }}
-        title="Receive Purchase"
+        title="Deliver Purchase"
         size="md"
         centered
       >
@@ -886,8 +969,8 @@ export default function PurchaseRequestsPage() {
             </div>
 
             <Textarea
-              label="Notes (optional)"
-              placeholder="Enter any notes about the receipt..."
+              label="Delivery Notes (optional)"
+              placeholder="Enter any notes about the delivery..."
               value={receiveNotes}
               onChange={(e) => setReceiveNotes(e.target.value)}
               minRows={3}
@@ -907,10 +990,10 @@ export default function PurchaseRequestsPage() {
               <Button
                 color="green"
                 leftSection={<IconCheck size={16} />}
-                onClick={handleReceive}
-                loading={receiveMutation.isPending}
+                onClick={handleDeliver}
+                loading={deliverMutation.isPending}
               >
-                Mark as Received
+                Mark as Delivered
               </Button>
             </Group>
           </Stack>

@@ -24,17 +24,20 @@ import {
   Center,
   Pagination,
   Popover,
+  Tooltip,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 
-const SCHEDULE_STATUSES = ['REQUESTED', 'STARTED', 'PAUSED', 'COMPLETED'];
+const SCHEDULE_STATUSES = ['REQUESTED', 'PARTIALLY_STARTED', 'STARTED', 'PAUSED', 'COMPLETED'];
 
 function getScheduleStatusColor(status: string): string {
   switch (status?.toUpperCase()) {
     case 'REQUESTED':
       return 'yellow'; // Waiting/pending status
+    case 'PARTIALLY_STARTED':
+      return 'orange'; // Partially started - some materials delivered
     case 'STARTED':
       return 'blue'; // Active/in progress
     case 'PAUSED':
@@ -46,18 +49,6 @@ function getScheduleStatusColor(status: string): string {
   }
 }
 
-// Sorting handler
-const handleSort = (field: string) => {
-  if (sortBy === field) {
-    // Toggle sort order if same field
-    setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
-  } else {
-    // New field, default to DESC
-    setSortBy(field);
-    setSortOrder('DESC');
-  }
-  setCurrentPage(1); // Reset to first page when sorting changes
-};
 
 // Get sort icon for a column
 const getSortIcon = (field: string) => {
@@ -155,10 +146,24 @@ export default function MaintenancePage() {
 
   // Filtering state
   const [assetCodeFilter, setAssetCodeFilter] = useState('');
+  const [maintenanceCodeFilter, setMaintenanceCodeFilter] = useState('');
   const [districtFilter, setDistrictFilter] = useState('');
   const [streetFilter, setStreetFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [startDateFrom, setStartDateFrom] = useState<Date | null>(null);
+
+  // Sorting handler
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      // Toggle sort order if same field
+      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      // New field, default to DESC
+      setSortBy(field);
+      setSortOrder('DESC');
+    }
+    setCurrentPage(1); // Reset to first page when sorting changes
+  };
   const [startDateTo, setStartDateTo] = useState<Date | null>(null);
   const [endDateFrom, setEndDateFrom] = useState<Date | null>(null);
   const [endDateTo, setEndDateTo] = useState<Date | null>(null);
@@ -219,8 +224,8 @@ export default function MaintenancePage() {
         const res = await axios.get(url, {
           headers: {
             Authorization: `Bearer ${token}`,
-          },
-        });
+    },
+  });
 
         console.log('API Response:', res.data);
 
@@ -244,7 +249,19 @@ export default function MaintenancePage() {
   // Receive material request mutation
   const receiveMutation = useMutation({
     mutationFn: async ({ materialRequestId, notes }: { materialRequestId: string; notes?: string }) => {
+      console.log('🔄 Receiving material request:', materialRequestId, 'with notes:', notes);
       const token = localStorage.getItem('access_token');
+
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+
+      if (!materialRequestId) {
+        throw new Error('Material request ID is required.');
+      }
+
+      console.log('🔗 Making API call to:', `http://localhost:3011/api/v1/material-requests/${materialRequestId}/receive`);
+
       const response = await axios.post(
         `http://localhost:3011/api/v1/material-requests/${materialRequestId}/receive`,
         { notes },
@@ -255,6 +272,7 @@ export default function MaintenancePage() {
           },
         },
       );
+      console.log('✅ Material request received successfully:', response.data);
       return response.data;
     },
     onSuccess: () => {
@@ -266,14 +284,23 @@ export default function MaintenancePage() {
       setReceiveModalOpened(false);
       setSelectedScheduleForReceive(null);
       setReceiveNotes('');
-      queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance', 'schedules'] });
       queryClient.invalidateQueries({ queryKey: ['material-requests'] });
       refetchSchedules();
     },
     onError: (error: any) => {
+      console.error('❌ Receive material request failed:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+
+      const errorMessage = error.response?.data?.message ||
+                          error.response?.data?.error ||
+                          error.message ||
+                          'Failed to mark material request as received';
+
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to mark material request as received',
+        title: 'Error Receiving Materials',
+        message: errorMessage,
         color: 'red',
       });
     },
@@ -308,6 +335,11 @@ export default function MaintenancePage() {
       );
     }
 
+    if (maintenanceCodeFilter) {
+      filtered = filtered.filter(schedule =>
+        schedule.maintenanceCode?.toLowerCase().includes(maintenanceCodeFilter.toLowerCase())
+      );
+    }
 
     if (startDateFrom) {
       filtered = filtered.filter(schedule => {
@@ -345,6 +377,10 @@ export default function MaintenancePage() {
         case 'assetCode':
           aValue = getScheduleAssetCode(a) || '';
           bValue = getScheduleAssetCode(b) || '';
+          break;
+        case 'maintenanceCode':
+          aValue = a.maintenanceCode || '';
+          bValue = b.maintenanceCode || '';
           break;
         case 'subcity':
           aValue = getAssetDistrictByType(filterType, getScheduleAsset(a)) || '';
@@ -628,6 +664,8 @@ export default function MaintenancePage() {
       });
       setCreateScheduleOpened(false);
       scheduleForm.reset();
+      // Invalidate specific maintenance schedules query instead of all maintenance queries
+      queryClient.invalidateQueries({ queryKey: ['maintenance', 'schedules'] });
       refetchSchedules();
     } catch (error: any) {
       notifications.show({
@@ -659,8 +697,8 @@ export default function MaintenancePage() {
       return;
     }
     
-    // Check if trying to start maintenance - need material request approval
-    if (values.status === 'STARTED' && selectedSchedule.status === 'REQUESTED') {
+    // Check if trying to start maintenance - need material/purchase request completion
+    if (values.status === 'STARTED' && (selectedSchedule.status === 'REQUESTED' || selectedSchedule.status === 'PARTIALLY_STARTED')) {
       try {
         const token = localStorage.getItem('access_token');
         const materialRequestRes = await axios.get(
@@ -830,8 +868,8 @@ export default function MaintenancePage() {
         <Tabs.Panel value="schedules" pt={{ base: 'md', sm: 'xl' }}>
           <Paper withBorder>
             <Table.ScrollContainer minWidth={1200}>
-              <Table>
-                <Table.Thead>
+            <Table>
+              <Table.Thead>
                 <Table.Tr>
                   <Table.Th>
                     <Group gap="xs" wrap="nowrap">
@@ -873,6 +911,53 @@ export default function MaintenancePage() {
                                   Clear
                                 </Button>
                               )}
+                            </Stack>
+                          </Popover.Dropdown>
+                        </Popover>
+                      </Group>
+                    </Group>
+                  </Table.Th>
+                  <Table.Th>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('maintenanceCode')}>Maintenance Code</Text>
+                      <Group gap="xs">
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          size="sm"
+                          onClick={() => handleSort('maintenanceCode')}
+                        >
+                          {getSortIcon('maintenanceCode')}
+                        </ActionIcon>
+                        <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+                          <Popover.Target>
+                            <ActionIcon
+                              variant="subtle"
+                              color={maintenanceCodeFilter ? 'blue' : 'gray'}
+                              size="sm"
+                            >
+                              <IconFilter size={16} />
+                            </ActionIcon>
+                          </Popover.Target>
+                          <Popover.Dropdown>
+                            <Stack gap="sm">
+                              <Text size="sm" fw={500}>Filter by Maintenance Code</Text>
+                              <TextInput
+                                placeholder="Enter maintenance code..."
+                                value={maintenanceCodeFilter}
+                                onChange={(e) => setMaintenanceCodeFilter(e.currentTarget.value)}
+                                size="sm"
+                              />
+                              <Button
+                                size="xs"
+                                variant="light"
+                                onClick={() => {
+                                  setMaintenanceCodeFilter('');
+                                }}
+                                disabled={!maintenanceCodeFilter}
+                              >
+                                Clear
+                              </Button>
                             </Stack>
                           </Popover.Dropdown>
                         </Popover>
@@ -1137,7 +1222,7 @@ export default function MaintenancePage() {
                               <Text size="sm" fw={500}>Filter by Status</Text>
                               <Select
                                 placeholder="Select status"
-                                data={['REQUESTED', 'STARTED', 'PAUSED', 'COMPLETED']}
+                                data={['REQUESTED', 'PARTIALLY_STARTED', 'STARTED', 'PAUSED', 'COMPLETED']}
                                 value={statusFilter}
                                 onChange={(value) => setStatusFilter(value || '')}
                                 clearable
@@ -1182,6 +1267,11 @@ export default function MaintenancePage() {
                       return (
                     <Table.Tr key={schedule.id}>
                       <Table.Td>{getScheduleAssetCode(schedule)}</Table.Td>
+                      <Table.Td>
+                        <Text fw={500} size="sm" c="blue">
+                          {schedule.maintenanceCode}
+                        </Text>
+                      </Table.Td>
                       <Table.Td>{getAssetDistrictByType(type, asset)}</Table.Td>
                       <Table.Td>{getAssetStreet(asset)}</Table.Td>
                       <Table.Td>{getAssetInfo(type, asset)}</Table.Td>
@@ -1238,32 +1328,43 @@ export default function MaintenancePage() {
                               </ActionIcon>
                             </>
                           )}
-                          {['REQUESTED', 'STARTED', 'PAUSED'].includes(schedule.status) && (
+                          {['REQUESTED', 'PARTIALLY_STARTED', 'STARTED', 'PAUSED'].includes(schedule.status) && (
                             <ActionIcon
                               color="orange"
                               variant="light"
                               onClick={() => handleEditScheduleClick(schedule)}
-                              title={schedule.status === 'STARTED' || schedule.status === 'PAUSED' ? 'Update Status' : 'Edit Schedule'}
+                              title={schedule.status === 'STARTED' || schedule.status === 'PAUSED' || schedule.status === 'PARTIALLY_STARTED' ? 'Update Status' : 'Edit Schedule'}
                             >
                               <IconEdit size={16} />
                             </ActionIcon>
                           )}
                           {schedule.materialRequests?.some((mr: any) => mr.status === 'AWAITING_DELIVERY') && (
-                            <ActionIcon
-                              color="purple"
-                              variant="light"
-                              onClick={() => {
-                                const awaitingRequest = schedule.materialRequests.find((mr: any) => mr.status === 'AWAITING_DELIVERY');
-                                if (awaitingRequest) {
-                                  setSelectedScheduleForReceive(schedule);
-                                  setReceiveModalOpened(true);
-                                  setReceiveNotes('');
-                                }
-                              }}
-                              title="Receive Materials"
-                            >
-                              <IconPackage size={16} />
-                            </ActionIcon>
+                            <Tooltip label="Receive Materials">
+                              <ActionIcon
+                                color="purple"
+                                variant="light"
+                                onClick={() => {
+                                  console.log('📦 Receive button clicked for schedule:', schedule.maintenanceCode);
+                                  console.log('📋 Material requests:', schedule.materialRequests);
+                                  const awaitingRequests = schedule.materialRequests?.filter((mr: any) => mr.status === 'AWAITING_DELIVERY') || [];
+                                  console.log('⏳ Awaiting delivery requests:', awaitingRequests);
+
+                                  if (awaitingRequests.length > 0) {
+                                    setSelectedScheduleForReceive(schedule);
+                                    setReceiveModalOpened(true);
+                                    setReceiveNotes('');
+                                  } else {
+                                    notifications.show({
+                                      title: 'No Materials Awaiting Delivery',
+                                      message: 'There are no material requests currently awaiting delivery for this maintenance schedule.',
+                                      color: 'orange',
+                                    });
+                                  }
+                                }}
+                              >
+                                <IconPackage size={16} />
+                              </ActionIcon>
+                            </Tooltip>
                           )}
                         </Group>
                       </Table.Td>
@@ -1272,8 +1373,8 @@ export default function MaintenancePage() {
                     })()
                   ))
                 )}
-                </Table.Tbody>
-              </Table>
+              </Table.Tbody>
+            </Table>
             </Table.ScrollContainer>
           </Paper>
 
@@ -1713,11 +1814,60 @@ export default function MaintenancePage() {
             <Button
               color="purple"
               onClick={() => {
-                const awaitingRequest = selectedScheduleForReceive?.materialRequests?.find((mr: any) => mr.status === 'AWAITING_DELIVERY');
-                if (awaitingRequest) {
+                console.log('🎯 Mark as Received button clicked');
+
+                if (!selectedScheduleForReceive) {
+                  console.error('❌ No schedule selected for receive');
+                  notifications.show({
+                    title: 'Error',
+                    message: 'No maintenance schedule selected.',
+                    color: 'red',
+                  });
+                  return;
+                }
+
+                const awaitingRequests = selectedScheduleForReceive?.materialRequests?.filter((mr: any) => mr.status === 'AWAITING_DELIVERY') || [];
+                console.log('📋 Available awaiting requests:', awaitingRequests);
+
+                if (awaitingRequests.length === 0) {
+                  console.warn('⚠️ No materials awaiting delivery');
+                  notifications.show({
+                    title: 'No Materials Awaiting Delivery',
+                    message: 'There are no material requests currently awaiting delivery for this maintenance schedule.',
+                    color: 'orange',
+                  });
+                  return;
+                }
+
+                // For now, receive the first awaiting request
+                // TODO: Allow selecting which request to receive if multiple exist
+                const awaitingRequest = awaitingRequests[0];
+                console.log('📦 Receiving material request:', awaitingRequest);
+                console.log('📦 Material request ID:', awaitingRequest.id);
+                console.log('📦 Material request maintenanceScheduleId:', awaitingRequest.maintenanceScheduleId);
+                console.log('📦 Selected schedule ID:', selectedScheduleForReceive.id);
+
+                if (!awaitingRequest.id) {
+                  console.error('❌ Material request has no ID');
+                  notifications.show({
+                    title: 'Error',
+                    message: 'Material request ID is missing.',
+                    color: 'red',
+                  });
+                  return;
+                }
+
+                try {
                   receiveMutation.mutate({
                     materialRequestId: awaitingRequest.id,
                     notes: receiveNotes.trim() || undefined,
+                  });
+                } catch (syncError) {
+                  console.error('❌ Synchronous error in receive mutation:', syncError);
+                  notifications.show({
+                    title: 'Error',
+                    message: 'An unexpected error occurred while processing the request.',
+                    color: 'red',
                   });
                 }
               }}

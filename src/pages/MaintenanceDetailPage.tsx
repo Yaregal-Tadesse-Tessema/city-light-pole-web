@@ -37,6 +37,8 @@ import {
   IconMapPin,
   IconTools,
   IconAlertTriangle,
+  IconShoppingCart,
+  IconBox,
 } from '@tabler/icons-react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
@@ -99,12 +101,29 @@ export default function MaintenanceDetailPage() {
     enabled: !!id,
   });
 
+  // Fetch related purchase requests for this maintenance schedule
+  const { data: purchaseRequests } = useQuery({
+    queryKey: ['purchase-requests', 'maintenance', id],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+
+      // Get purchase requests filtered by maintenanceScheduleId on the backend
+      const res = await axios.get(`http://localhost:3011/api/v1/purchase-requests?maintenanceScheduleId=${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log('Purchase requests for maintenance schedule', id, ':', res.data);
+      return res.data || [];
+    },
+    enabled: !!id,
+  });
+
   // Fetch available inventory items
   const { data: inventoryItems } = useQuery({
     queryKey: ['inventory', 'items'],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
-      const res = await axios.get('http://localhost:3011/api/v1/inventory/items', {
+      const res = await axios.get('http://localhost:3011/api/v1/inventory', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return res.data || [];
@@ -148,7 +167,7 @@ export default function MaintenanceDetailPage() {
       });
       setEditModalOpened(false);
       refetch();
-      queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance', 'schedules'] });
     },
     onError: (error: any) => {
       notifications.show({
@@ -348,6 +367,11 @@ export default function MaintenanceDetailPage() {
                 </Group>
 
                 <Group>
+                  <Text fw={600}>Maintenance Code:</Text>
+                  <Badge color="green">{schedule.maintenanceCode}</Badge>
+                </Group>
+
+                <Group>
                   <Text fw={600}>District:</Text>
                   <Text>{getAssetDistrict(schedule)}</Text>
                 </Group>
@@ -407,6 +431,7 @@ export default function MaintenanceDetailPage() {
         <Tabs defaultValue="materials">
           <Tabs.List>
             <Tabs.Tab value="materials">Material Requests</Tabs.Tab>
+            <Tabs.Tab value="all-requests">Material Purchase Requests</Tabs.Tab>
             {schedule.issueId && (
               <Tabs.Tab value="issue">Related Issue</Tabs.Tab>
             )}
@@ -445,6 +470,61 @@ export default function MaintenanceDetailPage() {
                             onClick={() => navigate(`/material-requests/${request.id}`)}
                           >
                             View Details
+                          </Button>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))
+                  )}
+                </Table.Tbody>
+              </Table>
+            </Paper>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="all-requests" pt="xl">
+            <Paper withBorder>
+              <Group mb="md">
+                <IconShoppingCart size={20} color="var(--mantine-color-green-6)" />
+                <Title order={4} c="green">Material Purchase Requests</Title>
+              </Group>
+              <Table>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Request ID</Table.Th>
+                    <Table.Th>Items Count</Table.Th>
+                    <Table.Th>Total Cost</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                    <Table.Th>Request Date</Table.Th>
+                    <Table.Th>Actions</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {purchaseRequests?.length === 0 ? (
+                    <Table.Tr>
+                      <Table.Td colSpan={6}>No purchase requests found</Table.Td>
+                    </Table.Tr>
+                  ) : (
+                    purchaseRequests?.map((request: any) => (
+                      <Table.Tr key={request.id}>
+                        <Table.Td>{request.id.substring(0, 8)}...</Table.Td>
+                        <Table.Td>{request.items?.length || 0} items</Table.Td>
+                        <Table.Td>${(() => {
+                          const total = request.items?.reduce((sum: number, item: any) => {
+                            const cost = typeof item.totalCost === 'number' ? item.totalCost : 0;
+                            return sum + cost;
+                          }, 0) || 0;
+                          return total.toFixed(2);
+                        })()}</Table.Td>
+                        <Table.Td>
+                          <Badge color={getStatusColor(request.status)}>{request.status}</Badge>
+                        </Table.Td>
+                        <Table.Td>{new Date(request.createdAt).toLocaleDateString()}</Table.Td>
+                        <Table.Td>
+                          <Button
+                            size="xs"
+                            variant="light"
+                            onClick={() => navigate('/purchase-requests')}
+                          >
+                            View All
                           </Button>
                         </Table.Td>
                       </Table.Tr>
@@ -633,7 +713,7 @@ export default function MaintenanceDetailPage() {
           maintenanceScheduleId={selectedScheduleForMaterial.id}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['material-requests'] });
-            queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+            queryClient.invalidateQueries({ queryKey: ['maintenance', 'schedules'] });
           }}
         />
       )}

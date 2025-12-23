@@ -184,7 +184,7 @@ export default function MaterialRequestsPage() {
         color: variables.approve ? 'green' : 'orange',
       });
       queryClient.invalidateQueries({ queryKey: ['material-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance', 'schedules'] });
       setApproveModalOpened(false);
       setSelectedRequest(null);
       setRejectionReason('');
@@ -283,7 +283,7 @@ export default function MaterialRequestsPage() {
         color: 'green',
       });
       queryClient.invalidateQueries({ queryKey: ['material-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance', 'schedules'] });
       setReceiveModalOpened(false);
       setSelectedRequest(null);
       setReceiveNotes('');
@@ -453,6 +453,7 @@ export default function MaterialRequestsPage() {
                   </Group>
                 </Table.Th>
                 <Table.Th>Pole Code</Table.Th>
+                <Table.Th>Maintenance Code</Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
                     <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('requestedBy')}>Requested By</Text>
@@ -517,7 +518,7 @@ export default function MaterialRequestsPage() {
             <Table.Tbody>
               {isLoading ? (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>
+                  <Table.Td colSpan={8}>
                     <Center>
                       <Loader size="sm" />
                     </Center>
@@ -525,7 +526,7 @@ export default function MaterialRequestsPage() {
                 </Table.Tr>
               ) : !requests || requests.length === 0 ? (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>
+                  <Table.Td colSpan={8}>
                     <Text c="dimmed" ta="center">No material requests found</Text>
                   </Table.Td>
                 </Table.Tr>
@@ -533,13 +534,24 @@ export default function MaterialRequestsPage() {
                 requests.map((request: any) => (
                   <Table.Tr key={request.id}>
                     <Table.Td>
-                      <Text fw={500} size="sm">
+                      <Text
+                        fw={500}
+                        size="sm"
+                        style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                        c="blue"
+                        onClick={() => navigate(`/material-requests/${request.id}`)}
+                      >
                         {request.id.substring(0, 8)}...
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">
                         {request.maintenanceSchedule?.poleCode || 'N/A'}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">
+                        {request.maintenanceSchedule?.maintenanceCode || 'N/A'}
                       </Text>
                     </Table.Td>
                     <Table.Td>

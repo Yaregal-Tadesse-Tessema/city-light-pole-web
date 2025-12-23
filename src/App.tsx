@@ -48,6 +48,7 @@ import InventoryDetailPage from './pages/InventoryDetailPage';
 import CreateInventoryItemPage from './pages/CreateInventoryItemPage';
 import UpdateInventoryItemPage from './pages/UpdateInventoryItemPage';
 import MaterialRequestsPage from './pages/MaterialRequestsPage';
+import MaterialRequestDetailPage from './pages/MaterialRequestDetailPage';
 import PurchaseRequestsPage from './pages/PurchaseRequestsPage';
 import CategoryListPage from './pages/CategoryListPage';
 import CategoryDetailPage from './pages/CategoryDetailPage';
@@ -116,6 +117,7 @@ function App() {
           <Route path="/inventory/:code" element={<InventoryDetailPage />} />
           <Route path="/inventory/:code/edit" element={<UpdateInventoryItemPage />} />
           <Route path="/material-requests" element={<MaterialRequestsPage />} />
+          <Route path="/material-requests/:id" element={<MaterialRequestDetailPage />} />
           <Route path="/purchase-requests" element={<PurchaseRequestsPage />} />
           <Route path="/categories" element={<CategoryListPage />} />
           <Route path="/categories/new" element={<CreateCategoryPage />} />
