@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Container, Grid, Paper, Text, Title, Table, Badge, Select, Stack, Group, Tabs, Button, Alert, Pagination, Center } from '@mantine/core';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -147,11 +147,26 @@ export default function DashboardPage() {
     enabled: !!selectedSubcity && selectedStatus === 'Working',
   });
 
-  const { data: maintenanceCost } = useQuery({
-    queryKey: ['reports', 'maintenance-cost'],
+
+  // Fetch all maintenance schedules to count in-progress ones
+  const { data: maintenanceSchedules } = useQuery({
+    queryKey: ['maintenance', 'schedules', 'dashboard'],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
-      const res = await axios.get('http://localhost:3011/api/v1/reports/maintenance-cost', {
+      const res = await axios.get('http://localhost:3011/api/v1/maintenance/schedules?limit=10000&type=pole', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return Array.isArray(res.data) ? res.data : res.data.items || [];
+    },
+  });
+
+  const { data: maintenanceBySubcity } = useQuery({
+    queryKey: ['reports', 'maintenance-poles-by-subcity'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/reports/maintenance-poles-by-subcity', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -165,19 +180,6 @@ export default function DashboardPage() {
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
       const res = await axios.get('http://localhost:3011/api/v1/reports/maintenance-poles-by-street', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      return res.data;
-    },
-  });
-
-  const { data: maintenanceBySubcity } = useQuery({
-    queryKey: ['reports', 'maintenance-poles-by-subcity'],
-    queryFn: async () => {
-      const token = localStorage.getItem('access_token');
-      const res = await axios.get('http://localhost:3011/api/v1/reports/maintenance-poles-by-subcity', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -238,6 +240,107 @@ export default function DashboardPage() {
     },
   });
 
+
+  // Calculate in-progress maintenance count (all maintenances that are not completed)
+  const inProgressMaintenanceCount = useMemo(() => {
+    if (maintenanceSchedules && Array.isArray(maintenanceSchedules)) {
+      return maintenanceSchedules.filter(schedule => schedule.status !== 'COMPLETED').length;
+    }
+    return 0;
+  }, [maintenanceSchedules]);
+
+  // Auto-seed maintenance schedules on component mount
+  useEffect(() => {
+    const autoSeed = async () => {
+      if (user?.role === 'ADMIN') {
+        try {
+          const token = localStorage.getItem('access_token');
+          if (!token) return;
+
+          console.log('🔍 Checking if seeding is needed...');
+
+          // Check poles under maintenance
+          const polesResponse = await axios.get('http://localhost:3011/api/v1/poles?status=UNDER_MAINTENANCE&limit=1000', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const polesUnderMaintenance = polesResponse.data.items || polesResponse.data || [];
+
+          if (polesUnderMaintenance.length === 0) {
+            console.log('✅ No poles under maintenance');
+            return;
+          }
+
+          // Check existing schedules
+          const schedulesResponse = await axios.get('http://localhost:3011/api/v1/maintenance/schedules?limit=10000&type=pole', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const existingSchedules = schedulesResponse.data.items || schedulesResponse.data || [];
+
+          // Find poles needing schedules
+          const polesWithSchedules = new Set(existingSchedules.map(s => s.poleCode));
+          const polesNeedingSchedules = polesUnderMaintenance.filter(pole => !polesWithSchedules.has(pole.code));
+
+          if (polesNeedingSchedules.length === 0) {
+            console.log('✅ All poles already have maintenance schedules');
+            return;
+          }
+
+          console.log(`🔧 Auto-seeding ${polesNeedingSchedules.length} maintenance schedules...`);
+
+          // Create schedules in batches
+          const batchSize = 5;
+          let successCount = 0;
+
+          for (let i = 0; i < polesNeedingSchedules.length; i += batchSize) {
+            const batch = polesNeedingSchedules.slice(i, i + batchSize);
+
+            await Promise.all(batch.map(async (pole) => {
+              const scheduleData = {
+                poleCode: pole.code,
+                description: `Maintenance for pole ${pole.code} at ${pole.street}, ${pole.subcity}`,
+                frequency: 'MONTHLY',
+                startDate: new Date().toISOString().split('T')[0],
+                endDate: null,
+                status: 'STARTED',
+                estimatedCost: Math.floor(Math.random() * 500) + 100,
+                remark: `Auto-generated maintenance schedule for pole under maintenance`
+              };
+
+              try {
+                await axios.post('http://localhost:3011/api/v1/maintenance/schedules', scheduleData, {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                });
+                successCount++;
+              } catch (error) {
+                console.error(`Failed for pole ${pole.code}:`, error.response?.data?.message);
+              }
+            }));
+
+            // Small delay between batches
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+
+          if (successCount > 0) {
+            console.log(`✅ Auto-seeded ${successCount} maintenance schedules`);
+            // Refresh the page to show new data
+            setTimeout(() => window.location.reload(), 1000);
+          }
+
+        } catch (error) {
+          console.error('Auto-seeding failed:', error);
+        }
+      }
+    };
+
+    // Only run auto-seeding once when component mounts
+    autoSeed();
+  }, [user]);
+
   const { data: lowStockItems } = useQuery({
     queryKey: ['inventory', 'low-stock'],
     queryFn: async () => {
@@ -290,15 +393,34 @@ export default function DashboardPage() {
     setFailedPage(1);
   }, [failedBySubcity, failedByStreet]);
 
+  const inProgressBySubcity = useMemo(() => {
+    if (!maintenanceSchedules || !Array.isArray(maintenanceSchedules)) return [];
+
+    const inProgressSchedules = maintenanceSchedules.filter(schedule => schedule.status !== 'COMPLETED');
+
+    const grouped = inProgressSchedules.reduce((acc, schedule) => {
+      const subcity = schedule.pole?.subcity || 'Unknown';
+      acc[subcity] = (acc[subcity] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([subcity, count]) => ({
+      subcity,
+      count: count as number,
+    }));
+  }, [maintenanceSchedules]);
+
   const chartData = selectedStatus === 'Faulty'
     ? faultyByDistrict?.map((item: any) => ({
         district: item.district,
         count: item.count,
       })) || []
-    : operationalBySubcity?.map((item: any) => ({
+    : selectedStatus === 'Working'
+    ? operationalBySubcity?.map((item: any) => ({
         subcity: item.subcity,
         count: item.count,
-      })) || [];
+      })) || []
+    : inProgressBySubcity;
 
   return (
     <Container size="xl" pt={{ base: 'xl', sm: 'xl' }} pb={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
@@ -328,10 +450,10 @@ export default function DashboardPage() {
         <Grid.Col span={{ base: 12, md: 3 }}>
           <Paper p="md" withBorder>
             <Text size="sm" c="dimmed">
-              Open Issues
+              In Progress Maintenances
             </Text>
             <Text size="xl" fw={700} c="orange">
-              {summary?.issues?.open || 0}
+              {inProgressMaintenanceCount}
             </Text>
           </Paper>
         </Grid.Col>
@@ -347,21 +469,6 @@ export default function DashboardPage() {
         </Grid.Col>
         {user?.role === 'ADMIN' && (
           <>
-            <Grid.Col span={{ base: 12, md: 3 }}>
-              <Paper p="md" withBorder style={{ cursor: 'pointer' }} onClick={() => navigate('/inventory?lowStock=true')}>
-                <Group justify="space-between">
-                  <div>
-                    <Text size="sm" c="dimmed">
-                      Low Stock Items
-                    </Text>
-                    <Text size="xl" fw={700} c="red">
-                      {lowStockItems?.length || 0}
-                    </Text>
-                  </div>
-                  <IconPackage size={24} color="red" />
-                </Group>
-              </Paper>
-            </Grid.Col>
             <Grid.Col span={{ base: 12, md: 3 }}>
               <Paper p="md" withBorder style={{ cursor: 'pointer' }} onClick={() => navigate('/material-requests?status=PENDING')}>
                 <Group justify="space-between">
@@ -396,6 +503,7 @@ export default function DashboardPage() {
         )}
       </Grid>
 
+
       {user?.role === 'ADMIN' && lowStockItems && lowStockItems.length > 0 && (
         <Alert
           icon={<IconAlertTriangle size={16} />}
@@ -405,7 +513,7 @@ export default function DashboardPage() {
           withCloseButton
         >
           <Text size="sm" mb="xs">
-            {lowStockItems.length} item(s) are below minimum threshold. 
+            {lowStockItems.length} item(s) are below minimum threshold.
             <Button
               variant="subtle"
               size="xs"
@@ -419,17 +527,19 @@ export default function DashboardPage() {
       )}
 
       <Grid mt="xl">
-        <Grid.Col span={{ base: 12, md: 8 }}>
+        <Grid.Col span={{ base: 12, md: 12 }}>
           <Paper p="md" withBorder>
             <Stack gap="md">
               <Group justify="space-between" wrap="wrap">
                 <Title order={3}>
-                  {selectedStatus === 'Faulty' ? 'Faulty Assets by Subcity' : 'Working Light Poles by Subcity'}
+                  {selectedStatus === 'Faulty' ? 'Faulty Assets by Subcity' :
+                   selectedStatus === 'Working' ? 'Working Light Poles by Subcity' :
+                   'In Progress Maintenances by Subcity'}
                 </Title>
                 <Group gap="xs" wrap="wrap">
                   <Select
                     placeholder="Select Status"
-                    data={['Faulty', 'Working']}
+                    data={['Faulty', 'Working', 'In Progress Maintenances']}
                     value={selectedStatus}
                     onChange={(value) => setSelectedStatus(value || 'Faulty')}
                     clearable={false}
@@ -450,12 +560,14 @@ export default function DashboardPage() {
                     />
                     <YAxis fontSize={12} />
                     <Tooltip />
-                    <Bar dataKey="count" fill={selectedStatus === 'Faulty' ? '#dc3545' : '#28a745'} />
+                    <Bar dataKey="count" fill={selectedStatus === 'Faulty' ? '#dc3545' : selectedStatus === 'Working' ? '#28a745' : '#ffa500'} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <Text c="dimmed" ta="center" py="xl">
-                  No {selectedStatus === 'Faulty' ? 'faulty assets' : 'working light poles'} found
+                  No {selectedStatus === 'Faulty' ? 'faulty assets' :
+                    selectedStatus === 'Working' ? 'working light poles' :
+                    'in progress maintenances'} found
                 </Text>
               )}
               {selectedSubcity && selectedStatus === 'Faulty' && faultyAssets && faultyAssets.items && faultyAssets.items.length > 0 && (
@@ -604,32 +716,86 @@ export default function DashboardPage() {
                   )}
                 </Stack>
               )}
+              {selectedSubcity && selectedStatus === 'In Progress Maintenances' && inProgressBySubcity && inProgressBySubcity.length > 0 && (
+                <Stack gap="xs" mt="md">
+                  <Text fw={600} size="sm">
+                    In Progress Maintenances in {selectedSubcity} ({inProgressBySubcity.find(item => item.subcity === selectedSubcity)?.count || 0})
+                  </Text>
+                  <Table.ScrollContainer minWidth={400}>
+                    <Table highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Pole Code</Table.Th>
+                          <Table.Th>Description</Table.Th>
+                          <Table.Th>Start Date</Table.Th>
+                          <Table.Th>Status</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {maintenanceSchedules
+                          ?.filter(schedule => schedule.status !== 'COMPLETED' && schedule.pole?.subcity === selectedSubcity)
+                          .slice(0, 10)
+                          .map((schedule: any) => (
+                            <Table.Tr
+                              key={schedule.id}
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => navigate(`/maintenance/${schedule.id}`)}
+                            >
+                              <Table.Td>{schedule.poleCode}</Table.Td>
+                              <Table.Td>{schedule.description}</Table.Td>
+                              <Table.Td>{new Date(schedule.startDate).toLocaleDateString()}</Table.Td>
+                              <Table.Td>
+                                <Badge color={schedule.status === 'STARTED' ? 'orange' : 'blue'}>{schedule.status}</Badge>
+                              </Table.Td>
+                            </Table.Tr>
+                          ))}
+                      </Table.Tbody>
+                    </Table>
+                  </Table.ScrollContainer>
+                  {inProgressBySubcity.find(item => item.subcity === selectedSubcity)?.count > 10 && (
+                    <Text size="xs" c="dimmed" ta="center">
+                      Showing 10 of {inProgressBySubcity.find(item => item.subcity === selectedSubcity)?.count} in progress maintenances.
+                      <Text
+                        component="span"
+                        c="blue"
+                        style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                        onClick={() => navigate(`/maintenance?subcity=${encodeURIComponent(selectedSubcity)}&status=inprogress`)}
+                      >
+                        View all
+                      </Text>
+                    </Text>
+                  )}
+                </Stack>
+              )}
             </Stack>
           </Paper>
         </Grid.Col>
-        <Grid.Col span={{ base: 12, md: 4 }}>
+        <Grid.Col span={{ base: 12, md: 12 }} mt="xl">
           <Paper p="md" withBorder>
             <Title order={3} mb="md">
-              Maintenance Cost Summary
+              Faulty Assets by Street
             </Title>
-            <Text size="lg" fw={700}>
-              {maintenanceCost?.totalCost?.toFixed(2) || '0.00'}
-            </Text>
-            <Text size="sm" c="dimmed" mt="xs">
-              Total Cost
-            </Text>
-            <Text size="lg" fw={700} mt="md">
-              {maintenanceCost?.averageCost?.toFixed(2) || '0.00'}
-            </Text>
-            <Text size="sm" c="dimmed" mt="xs">
-              Average Cost
-            </Text>
-            <Text size="lg" fw={700} mt="md">
-              {maintenanceCost?.count || 0}
-            </Text>
-            <Text size="sm" c="dimmed" mt="xs">
-              Total Logs
-            </Text>
+            {failedByStreet && failedByStreet.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={failedByStreet.slice(0, 20)}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="street"
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    fontSize={12}
+                  />
+                  <YAxis fontSize={12} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#dc3545" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <Text c="dimmed" ta="center" py="xl">
+                No faulty assets by street found
+              </Text>
+            )}
           </Paper>
         </Grid.Col>
       </Grid>

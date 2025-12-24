@@ -25,6 +25,7 @@ import {
   IconTags,
   IconBell,
   IconReport,
+  IconReplace,
 } from '@tabler/icons-react';
 
 export default function Layout() {
@@ -236,7 +237,19 @@ export default function Layout() {
             to="/poles"
             label="Light Poles"
             leftSection={<IconBulb size={16} />}
-            active={location.pathname.startsWith('/poles')}
+            active={location.pathname.startsWith('/poles') && !location.pathname.includes('/replace')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
+          />
+          <NavLink
+            component={Link}
+            to="/poles/replace"
+            label="Replace Pole"
+            leftSection={<IconReplace size={16} />}
+            active={location.pathname === '/poles/replace'}
             onClick={() => {
               if (isMobile) {
                 close();
