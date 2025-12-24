@@ -620,7 +620,7 @@ export default function PurchaseRequestsPage() {
                     </Table.Td>
                     <Table.Td>
                       <Text fw={500} size="sm">
-                        ${Number(request.totalCost || 0).toFixed(2)}
+                        {Number(request.totalCost || 0).toFixed(2)}
                       </Text>
                     </Table.Td>
                     <Table.Td>
@@ -733,7 +733,7 @@ export default function PurchaseRequestsPage() {
             <Group justify="space-between">
               <Text fw={600}>Total Cost:</Text>
               <Text fw={700} size="lg">
-                ${Number(selectedRequest.totalCost || 0).toFixed(2)}
+                {Number(selectedRequest.totalCost || 0).toFixed(2)}
               </Text>
             </Group>
             <Group justify="space-between">
@@ -822,10 +822,10 @@ export default function PurchaseRequestsPage() {
                         {item.inventoryItem?.name || item.inventoryItemCode}
                       </Table.Td>
                       <Table.Td>{item.requestedQuantity}</Table.Td>
-                      <Table.Td>${Number(item.unitCost || 0).toFixed(2)}</Table.Td>
+                      <Table.Td>{Number(item.unitCost || 0).toFixed(2)}</Table.Td>
                       <Table.Td>
                         <Text fw={500}>
-                          ${Number(item.totalCost || 0).toFixed(2)}
+                          {Number(item.totalCost || 0).toFixed(2)}
                         </Text>
                       </Table.Td>
                     </Table.Tr>
@@ -874,8 +874,8 @@ export default function PurchaseRequestsPage() {
                         {item.inventoryItem?.name || item.inventoryItemCode}
                       </Table.Td>
                       <Table.Td>{item.requestedQuantity}</Table.Td>
-                      <Table.Td>${Number(item.unitCost || 0).toFixed(2)}</Table.Td>
-                      <Table.Td>${Number(item.totalCost || 0).toFixed(2)}</Table.Td>
+                      <Table.Td>{Number(item.unitCost || 0).toFixed(2)}</Table.Td>
+                      <Table.Td>{Number(item.totalCost || 0).toFixed(2)}</Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
@@ -883,7 +883,7 @@ export default function PurchaseRequestsPage() {
             </div>
 
             <Text fw={700} size="lg" ta="right">
-              Total: ${Number(selectedRequest.totalCost || 0).toFixed(2)}
+              Total: {Number(selectedRequest.totalCost || 0).toFixed(2)}
             </Text>
 
             <Textarea

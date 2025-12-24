@@ -41,6 +41,7 @@ import UpdateRiverSideProjectPage from './pages/UpdateRiverSideProjectPage';
 import RiverSideProjectIssuesListPage from './pages/RiverSideProjectIssuesListPage';
 import MaintenancePage from './pages/MaintenancePage';
 import MaintenanceDetailPage from './pages/MaintenanceDetailPage';
+import ReportsPage from './pages/ReportsPage';
 import UsersPage from './pages/UsersPage';
 import NotificationsPage from './pages/NotificationsPage';
 import InventoryListPage from './pages/InventoryListPage';
@@ -110,6 +111,7 @@ function App() {
           <Route path="/river-issues" element={<RiverSideProjectIssuesListPage />} />
           <Route path="/maintenance" element={<MaintenancePage />} />
           <Route path="/maintenance/:id" element={<MaintenanceDetailPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/inventory" element={<InventoryListPage />} />

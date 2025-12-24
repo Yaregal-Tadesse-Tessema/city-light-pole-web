@@ -255,11 +255,11 @@ export default function RiverSideProjectDetailPage() {
                           <Table.Td>{schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : '-'}</Table.Td>
                           <Table.Td>{schedule.performedBy?.fullName || 'Unknown'}</Table.Td>
                           <Table.Td>
-                            {schedule.cost && schedule.cost > 0
-                              ? `$${parseFloat(schedule.cost).toFixed(2)}`
-                              : schedule.estimatedCost && schedule.estimatedCost > 0
-                              ? `$${parseFloat(schedule.estimatedCost).toFixed(2)}`
-                              : '-'}
+                              {schedule.cost && schedule.cost > 0
+                                ? `${parseFloat(schedule.cost).toFixed(2)}`
+                                : schedule.estimatedCost && schedule.estimatedCost > 0
+                                ? `${parseFloat(schedule.estimatedCost).toFixed(2)}`
+                                : '-'}
                           </Table.Td>
                         </Table.Tr>
                       ))}

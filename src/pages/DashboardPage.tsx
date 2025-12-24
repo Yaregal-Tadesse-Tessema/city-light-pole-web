@@ -613,13 +613,13 @@ export default function DashboardPage() {
               Maintenance Cost Summary
             </Title>
             <Text size="lg" fw={700}>
-              ${maintenanceCost?.totalCost?.toFixed(2) || '0.00'}
+              {maintenanceCost?.totalCost?.toFixed(2) || '0.00'}
             </Text>
             <Text size="sm" c="dimmed" mt="xs">
               Total Cost
             </Text>
             <Text size="lg" fw={700} mt="md">
-              ${maintenanceCost?.averageCost?.toFixed(2) || '0.00'}
+              {maintenanceCost?.averageCost?.toFixed(2) || '0.00'}
             </Text>
             <Text size="sm" c="dimmed" mt="xs">
               Average Cost

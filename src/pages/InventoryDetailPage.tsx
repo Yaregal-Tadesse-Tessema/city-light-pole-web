@@ -148,7 +148,7 @@ export default function InventoryDetailPage() {
             <>
               <Group justify="space-between">
                 <Text fw={600}>Unit Cost:</Text>
-                <Text>${Number(item.unitCost).toFixed(2)}</Text>
+                <Text>{Number(item.unitCost).toFixed(2)}</Text>
               </Group>
               <Divider />
             </>

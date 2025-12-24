@@ -303,9 +303,9 @@ export default function RiverSideProjectsListPage() {
                   </Table.Td>
                   <Table.Td>
                     {log.estimatedCost && parseFloat(log.estimatedCost) > 0
-                      ? `$${parseFloat(log.estimatedCost).toFixed(2)}`
+                      ? `${parseFloat(log.estimatedCost).toFixed(2)}`
                       : log.cost && parseFloat(log.cost) > 0
-                      ? `$${parseFloat(log.cost).toFixed(2)}`
+                      ? `${parseFloat(log.cost).toFixed(2)}`
                       : '-'}
                   </Table.Td>
                   <Table.Td>{log.startDate ? new Date(log.startDate).toLocaleDateString() : '-'}</Table.Td>

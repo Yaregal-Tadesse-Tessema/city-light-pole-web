@@ -343,11 +343,11 @@ export default function FootballFieldsListPage() {
                     <Badge>{log.status}</Badge>
                   </Table.Td>
                   <Table.Td>
-                    {log.estimatedCost && parseFloat(log.estimatedCost) > 0
-                      ? `$${parseFloat(log.estimatedCost).toFixed(2)}`
-                      : log.cost && parseFloat(log.cost) > 0
-                      ? `$${parseFloat(log.cost).toFixed(2)}`
-                      : '-'}
+                      {log.estimatedCost && parseFloat(log.estimatedCost) > 0
+                        ? `${parseFloat(log.estimatedCost).toFixed(2)}`
+                        : log.cost && parseFloat(log.cost) > 0
+                        ? `${parseFloat(log.cost).toFixed(2)}`
+                        : '-'}
                   </Table.Td>
                   <Table.Td>
                     {log.startDate

@@ -24,6 +24,7 @@ import {
   IconShoppingCart,
   IconTags,
   IconBell,
+  IconReport,
 } from '@tabler/icons-react';
 
 export default function Layout() {
@@ -349,6 +350,18 @@ export default function Layout() {
             }}
           />
         )}
+        <NavLink
+          component={Link}
+          to="/reports"
+          label="Reports"
+          leftSection={<IconReport size={16} />}
+          active={location.pathname === '/reports'}
+          onClick={() => {
+            if (isMobile) {
+              close();
+            }
+          }}
+        />
         <NavLink
           label="Public Parks"
           leftSection={<IconTrees size={16} />}

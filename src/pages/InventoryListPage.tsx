@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Container,
@@ -18,7 +18,7 @@ import {
   Loader,
   Popover,
 } from '@mantine/core';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconEdit, IconTrash, IconEye, IconFilter, IconArrowsUpDown } from '@tabler/icons-react';
@@ -31,6 +31,7 @@ import axios from 'axios';
 export default function InventoryListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -38,6 +39,20 @@ export default function InventoryListPage() {
   const [lowStock, setLowStock] = useState<'low' | 'warning' | 'in_stock' | null>(null);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+
+  // Initialize filters from URL parameters
+  useEffect(() => {
+    const lowStockParam = searchParams.get('lowStock');
+    if (lowStockParam) {
+      if (lowStockParam === 'true') {
+        setLowStock('low');
+      } else {
+        setLowStock(lowStockParam as 'low' | 'warning' | 'in_stock');
+      }
+    } else {
+      setLowStock(null);
+    }
+  }, [searchParams]);
 
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('code');
@@ -312,6 +327,14 @@ export default function InventoryListPage() {
               onChange={(value) => {
                 setLowStock(value as 'low' | 'warning' | 'in_stock' | null);
                 setPage(1);
+                // Update URL parameters
+                const newSearchParams = new URLSearchParams(searchParams);
+                if (value) {
+                  newSearchParams.set('lowStock', value);
+                } else {
+                  newSearchParams.delete('lowStock');
+                }
+                setSearchParams(newSearchParams);
               }}
               clearable
             />
@@ -540,7 +563,7 @@ export default function InventoryListPage() {
                         <Badge color={stockStatus.color}>{stockStatus.label}</Badge>
                       </Table.Td>
                       <Table.Td>
-                        {item.unitCost ? `$${Number(item.unitCost).toFixed(2)}` : 'N/A'}
+                        {item.unitCost ? `${Number(item.unitCost).toFixed(2)}` : 'N/A'}
                       </Table.Td>
                       {user?.role === 'ADMIN' && (
                         <Table.Td onClick={(e) => e.stopPropagation()}>

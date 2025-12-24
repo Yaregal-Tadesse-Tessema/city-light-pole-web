@@ -342,9 +342,9 @@ export default function PoleDetailPage() {
                         </Table.Td>
                         <Table.Td>
                           {schedule.cost && schedule.cost > 0
-                            ? `$${parseFloat(schedule.cost).toFixed(2)}`
+                            ? `${parseFloat(schedule.cost).toFixed(2)}`
                             : schedule.estimatedCost && schedule.estimatedCost > 0
-                            ? `$${parseFloat(schedule.estimatedCost).toFixed(2)}`
+                            ? `${parseFloat(schedule.estimatedCost).toFixed(2)}`
                             : '-'}
                         </Table.Td>
                       </Table.Tr>
