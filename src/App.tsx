@@ -9,6 +9,7 @@ import PoleDetailPage from './pages/PoleDetailPage';
 import CreatePolePage from './pages/CreatePolePage';
 import UpdatePolePage from './pages/UpdatePolePage';
 import CreatePoleReplacementPage from './pages/CreatePoleReplacementPage';
+import PoleReplacementsListPage from './pages/PoleReplacementsListPage';
 import ParksListPage from './pages/ParksListPage';
 import ParkDetailPage from './pages/ParkDetailPage';
 import CreateParkPage from './pages/CreateParkPage';
@@ -77,7 +78,8 @@ function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/poles" element={<PolesListPage />} />
           <Route path="/poles/new" element={<CreatePolePage />} />
-          <Route path="/poles/replace" element={<CreatePoleReplacementPage />} />
+          <Route path="/replacements" element={<PoleReplacementsListPage />} />
+          <Route path="/replacements/new" element={<CreatePoleReplacementPage />} />
           <Route path="/poles/:code" element={<PoleDetailPage />} />
           <Route path="/poles/:code/edit" element={<UpdatePolePage />} />
           <Route path="/parks" element={<ParksListPage />} />

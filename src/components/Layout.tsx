@@ -246,18 +246,6 @@ export default function Layout() {
           />
           <NavLink
             component={Link}
-            to="/poles/replace"
-            label="Replace Pole"
-            leftSection={<IconReplace size={16} />}
-            active={location.pathname === '/poles/replace'}
-            onClick={() => {
-              if (isMobile) {
-                close();
-              }
-            }}
-          />
-          <NavLink
-            component={Link}
             to="/issues"
             label="Issues"
             leftSection={<IconAlertTriangle size={16} />}
@@ -277,6 +265,18 @@ export default function Layout() {
               location.pathname === '/maintenance' &&
               (!location.search.includes('type=') || location.search.includes('type=pole'))
             }
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
+          />
+          <NavLink
+            component={Link}
+            to="/replacements"
+            label="Replace Pole"
+            leftSection={<IconReplace size={16} />}
+            active={location.pathname.startsWith('/replacements')}
             onClick={() => {
               if (isMobile) {
                 close();

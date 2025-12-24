@@ -43,6 +43,7 @@ const POLE_STATUSES = [
   { value: 'OPERATIONAL', label: 'Operational' },
   { value: 'FAULT_DAMAGED', label: 'Fault/Damaged' },
   { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
+  { value: 'REPLACED', label: 'Replaced' },
 ];
 
 const STREETS = [

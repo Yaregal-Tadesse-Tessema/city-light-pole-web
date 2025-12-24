@@ -48,6 +48,14 @@ const COMPONENT_TYPES = [
   { value: 'mounting_hardware', label: 'Mounting Hardware' },
 ];
 
+const REPLACEMENT_REASONS = [
+  { value: 'DAMAGE', label: 'Damage' },
+  { value: 'UPGRADE', label: 'Upgrade' },
+  { value: 'MAINTENANCE', label: 'Maintenance' },
+  { value: 'OBSOLETE', label: 'Obsolete' },
+  { value: 'OTHER', label: 'Other' },
+];
+
 interface Pole {
   id: string;
   code: string;
@@ -140,11 +148,11 @@ export default function CreatePoleReplacementPage() {
     },
   });
 
-  // When old pole is selected, populate new pole form with similar details
+  // When old pole is selected, populate new pole form with similar details (except code)
   useEffect(() => {
     if (selectedOldPole) {
       form.setValues({
-        code: `NEW-${selectedOldPole.code}`,
+        // Don't auto-fill code - let user enter manually (placeholder shows suggestion)
         subcity: selectedOldPole.subcity,
         street: selectedOldPole.street,
         gpsLat: selectedOldPole.gpsLat,
@@ -432,7 +440,7 @@ export default function CreatePoleReplacementPage() {
               <Group grow>
                 <TextInput
                   label="Pole Code"
-                  placeholder="Enter new pole code"
+                  placeholder={selectedOldPole ? `Suggested: NEW-${selectedOldPole.code}` : "Enter new pole code"}
                   {...form.getInputProps('code')}
                   required
                 />
@@ -599,9 +607,10 @@ export default function CreatePoleReplacementPage() {
                 />
               </Group>
 
-              <TextInput
+              <Select
                 label="Replacement Reason"
-                placeholder="Enter reason for replacement"
+                placeholder="Select reason for replacement"
+                data={REPLACEMENT_REASONS}
                 {...form.getInputProps('replacementReason')}
                 required
               />

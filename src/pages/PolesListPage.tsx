@@ -60,13 +60,72 @@ export default function PolesListPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['poles', page, search, subcity, status, streetFilter, ledDisplayFilter, sortBy, sortDirection],
     queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+
+      // Special handling for REPLACED status - query pole replacements instead
+      if (status === 'REPLACED') {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: '10',
+        });
+
+        const res = await axios.get(`http://localhost:3011/api/v1/pole-replacements?${params.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        // Transform replacement data to look like pole data for display
+        const replacements = res.data.items || res.data;
+        const transformedData = {
+          ...res.data,
+          items: await Promise.all(replacements.map(async (replacement: any) => {
+            // Get the old pole details
+            try {
+              const poleRes = await axios.get(`http://localhost:3011/api/v1/poles/${replacement.oldPoleCode}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const pole = poleRes.data;
+
+              // Add replacement info to the pole data
+              return {
+                ...pole,
+                replacementInfo: {
+                  newPoleCode: replacement.newPoleCode,
+                  replacementDate: replacement.replacementDate,
+                  replacementReason: replacement.replacementReason,
+                  replacedBy: replacement.replacedBy,
+                }
+              };
+            } catch (error) {
+              // If old pole not found, return minimal data
+              return {
+                code: replacement.oldPoleCode,
+                status: 'REPLACED',
+                subcity: 'Unknown',
+                street: 'Unknown',
+                replacementInfo: {
+                  newPoleCode: replacement.newPoleCode,
+                  replacementDate: replacement.replacementDate,
+                  replacementReason: replacement.replacementReason,
+                  replacedBy: replacement.replacedBy,
+                }
+              };
+            }
+          }))
+        };
+
+        return transformedData;
+      }
+
+      // Normal poles query for other statuses
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '10',
       });
       if (search) params.append('search', search);
       if (subcity) params.append('subcity', subcity);
-      if (status) params.append('status', status);
+      if (status && status !== 'REPLACED') params.append('status', status);
       if (streetFilter) params.append('street', streetFilter);
       if (ledDisplayFilter !== null) {
         params.append('hasLedDisplay', ledDisplayFilter === 'yes' ? 'true' : 'false');
@@ -74,7 +133,6 @@ export default function PolesListPage() {
       if (sortBy) params.append('sortBy', sortBy);
       if (sortDirection) params.append('sortDirection', sortDirection);
 
-      const token = localStorage.getItem('access_token');
       const res = await axios.get(`http://localhost:3011/api/v1/poles?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -404,7 +462,7 @@ export default function PolesListPage() {
             />
             <Select
               placeholder="Status"
-              data={['OPERATIONAL', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE']}
+              data={['OPERATIONAL', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE', 'REPLACED']}
               value={status}
               onChange={(value) => {
                 setStatus(value);
@@ -544,7 +602,7 @@ export default function PolesListPage() {
                         <Text size="sm" fw={600}>Filter by Status</Text>
                         <Select
                           placeholder="Select status"
-                          data={['OPERATIONAL', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE']}
+                          data={['OPERATIONAL', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE', 'REPLACED']}
                           value={status}
                           onChange={(value) => {
                             setStatus(value);
@@ -592,16 +650,23 @@ export default function PolesListPage() {
                 </Group>
               </Table.Th>
               <Table.Th>Actions</Table.Th>
+              {status === 'REPLACED' && (
+                <>
+                  <Table.Th>New Pole Code</Table.Th>
+                  <Table.Th>Replacement Date</Table.Th>
+                  <Table.Th>Reason</Table.Th>
+                </>
+              )}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {isLoading ? (
               <Table.Tr>
-                <Table.Td colSpan={7}>Loading...</Table.Td>
+                <Table.Td colSpan={status === 'REPLACED' ? 10 : 7}>Loading...</Table.Td>
               </Table.Tr>
             ) : paginatedPoles.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={7}>No poles found</Table.Td>
+                <Table.Td colSpan={status === 'REPLACED' ? 10 : 7}>No poles found</Table.Td>
               </Table.Tr>
             ) : (
               paginatedPoles.map((pole: any) => (
@@ -663,6 +728,19 @@ export default function PolesListPage() {
                       )}
                     </Group>
                   </Table.Td>
+                  {status === 'REPLACED' && pole.replacementInfo && (
+                    <>
+                      <Table.Td>{pole.replacementInfo.newPoleCode}</Table.Td>
+                      <Table.Td>
+                        {new Date(pole.replacementInfo.replacementDate).toLocaleDateString()}
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge color="orange" variant="light">
+                          {pole.replacementInfo.replacementReason}
+                        </Badge>
+                      </Table.Td>
+                    </>
+                  )}
                 </Table.Tr>
               ))
           )}

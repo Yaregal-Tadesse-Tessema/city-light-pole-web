@@ -6,7 +6,7 @@ import { IconFilter, IconX } from '@tabler/icons-react';
 import axios from 'axios';
 
 // Pole status types
-type PoleStatus = 'OPERATIONAL' | 'FAULT_DAMAGED' | 'UNDER_MAINTENANCE';
+type PoleStatus = 'OPERATIONAL' | 'FAULT_DAMAGED' | 'UNDER_MAINTENANCE' | 'REPLACED';
 
 // Pole interface
 interface Pole {
