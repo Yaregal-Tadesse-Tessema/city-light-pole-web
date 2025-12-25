@@ -42,9 +42,12 @@ export default function PurchaseRequestsPage() {
   const [detailModalOpened, setDetailModalOpened] = useState(false);
   const [approveModalOpened, setApproveModalOpened] = useState(false);
   const [receiveModalOpened, setReceiveModalOpened] = useState(false);
+  const [deliverModalOpened, setDeliverModalOpened] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [receiveNotes, setReceiveNotes] = useState('');
+  const [grnCode, setGrnCode] = useState('');
+  const [receivingCode, setReceivingCode] = useState('');
 
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('createdAt');
@@ -272,11 +275,14 @@ export default function PurchaseRequestsPage() {
   });
 
   const deliverMutation = useMutation({
-    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+    mutationFn: async ({ id, notes, grnCode }: { id: string; notes?: string; grnCode?: string }) => {
       const token = localStorage.getItem('access_token');
       const response = await axios.post(
-        `http://localhost:3011/api/v1/purchase-requests/${id}/deliver`,
-        {},
+        `http://localhost:3011/api/v1/purchase-requests/${id}/receive`,
+        {
+          notes: notes || undefined,
+          grnCode: grnCode || undefined,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -351,6 +357,13 @@ export default function PurchaseRequestsPage() {
     setSelectedRequest(request);
     setReceiveModalOpened(true);
     setReceiveNotes('');
+    setGrnCode('');
+  };
+
+  const handleDeliverClick = (request: any) => {
+    setSelectedRequest(request);
+    setDeliverModalOpened(true);
+    setReceivingCode('');
   };
 
   const handleApprove = (approve: boolean) => {
@@ -375,6 +388,7 @@ export default function PurchaseRequestsPage() {
     deliverMutation.mutate({
       id: selectedRequest.id,
       notes: receiveNotes || undefined,
+      grnCode: grnCode || undefined,
     });
   };
 
@@ -411,6 +425,81 @@ export default function PurchaseRequestsPage() {
 
   const canDeliver = (request: any) => {
     return user?.role === 'ADMIN' && request.status === 'ARRIVED_IN_STOCK';
+  };
+
+  const finalDeliverMutation = useMutation({
+    mutationFn: async ({ id, receivingCode }: { id: string; receivingCode?: string }) => {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.post(
+        `http://localhost:3011/api/v1/purchase-requests/${id}/deliver`,
+        {
+          receivingCode: receivingCode || undefined,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      return response.data;
+    },
+    onSuccess: async () => {
+      notifications.show({
+        title: 'Success',
+        message: 'Purchase delivered to maintenance team',
+        color: 'green',
+      });
+
+      // If this purchase request is related to a maintenance schedule,
+      // update the maintenance status when materials are delivered
+      if (selectedRequest?.maintenanceScheduleId) {
+        try {
+          const token = localStorage.getItem('access_token');
+          await axios.patch(
+            `http://localhost:3011/api/v1/maintenance/schedules/${selectedRequest.maintenanceScheduleId}`,
+            {
+              status: 'STARTED', // Change status to STARTED when materials are delivered
+              remark: 'Materials delivered to maintenance team - ready to start work'
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          console.log('Updated maintenance status to STARTED for schedule:', selectedRequest.maintenanceScheduleId);
+        } catch (error) {
+          console.error('Failed to update maintenance status:', error);
+          // Don't show error notification for maintenance update failure
+          // since the purchase delivery was successful
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['purchase-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['material-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance', 'schedules'] });
+      setDeliverModalOpened(false);
+      setSelectedRequest(null);
+      setReceivingCode('');
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: 'Error',
+        message: error.response?.data?.message || 'Failed to deliver purchase to maintenance team',
+        color: 'red',
+      });
+    },
+  });
+
+  const handleFinalDeliver = () => {
+    if (!selectedRequest) return;
+    finalDeliverMutation.mutate({
+      id: selectedRequest.id,
+      receivingCode: receivingCode || undefined,
+    });
   };
 
   return (
@@ -672,8 +761,7 @@ export default function PurchaseRequestsPage() {
                             variant="light"
                             color="orange"
                             leftSection={<IconBox size={14} />}
-                            onClick={() => inStockMutation.mutate(request.id)}
-                            loading={inStockMutation.isPending}
+                            onClick={() => handleReceiveClick(request)}
                           >
                             Mark as Arrived
                           </Button>
@@ -684,7 +772,7 @@ export default function PurchaseRequestsPage() {
                             variant="light"
                             color="green"
                             leftSection={<IconCheck size={14} />}
-                            onClick={() => handleReceiveClick(request)}
+                            onClick={() => handleDeliverClick(request)}
                           >
                             Deliver
                           </Button>
@@ -790,6 +878,12 @@ export default function PurchaseRequestsPage() {
                 <Text size="sm">
                   {new Date(selectedRequest.receivedAt).toLocaleString()}
                 </Text>
+              </Group>
+            )}
+            {selectedRequest.grnCode && (
+              <Group justify="space-between">
+                <Text fw={600}>GRN Code:</Text>
+                <Text size="sm">{selectedRequest.grnCode}</Text>
               </Group>
             )}
             {selectedRequest.rejectionReason && (
@@ -934,8 +1028,9 @@ export default function PurchaseRequestsPage() {
           setReceiveModalOpened(false);
           setSelectedRequest(null);
           setReceiveNotes('');
+          setGrnCode('');
         }}
-        title="Deliver Purchase"
+        title="Receive Purchase"
         size="md"
         centered
       >
@@ -976,6 +1071,13 @@ export default function PurchaseRequestsPage() {
               minRows={3}
             />
 
+            <TextInput
+              label="GRN Code"
+              placeholder="Enter Goods Received Note code..."
+              value={grnCode}
+              onChange={(e) => setGrnCode(e.target.value)}
+            />
+
             <Group justify="flex-end" mt="xl">
               <Button
                 variant="outline"
@@ -983,6 +1085,7 @@ export default function PurchaseRequestsPage() {
                   setReceiveModalOpened(false);
                   setSelectedRequest(null);
                   setReceiveNotes('');
+                  setGrnCode('');
                 }}
               >
                 Cancel
@@ -993,7 +1096,79 @@ export default function PurchaseRequestsPage() {
                 onClick={handleDeliver}
                 loading={deliverMutation.isPending}
               >
-                Mark as Delivered
+                Receive Purchase
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+
+      {/* Deliver Modal */}
+      <Modal
+        opened={deliverModalOpened}
+        onClose={() => {
+          setDeliverModalOpened(false);
+          setSelectedRequest(null);
+          setReceivingCode('');
+        }}
+        title="Deliver Purchase to Maintenance Team"
+        size="md"
+        centered
+      >
+        {selectedRequest && (
+          <Stack>
+            <Alert color="blue">
+              Deliver this purchase to the maintenance team. This will mark the purchase as completed
+              and ready for use in maintenance operations.
+            </Alert>
+
+            <div>
+              <Text fw={600} mb="xs">Items to be delivered:</Text>
+              <Table>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Item</Table.Th>
+                    <Table.Th>Quantity</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {selectedRequest.items?.map((item: any) => (
+                    <Table.Tr key={item.id}>
+                      <Table.Td>
+                        {item.inventoryItem?.name || item.inventoryItemCode}
+                      </Table.Td>
+                      <Table.Td>{item.requestedQuantity}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </div>
+
+            <TextInput
+              label="Receiving Code"
+              placeholder="Enter receiving code for delivery..."
+              value={receivingCode}
+              onChange={(e) => setReceivingCode(e.target.value)}
+            />
+
+            <Group justify="flex-end" mt="xl">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeliverModalOpened(false);
+                  setSelectedRequest(null);
+                  setReceivingCode('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                color="green"
+                leftSection={<IconCheck size={16} />}
+                onClick={() => handleFinalDeliver()}
+                loading={finalDeliverMutation.isPending}
+              >
+                Deliver to Maintenance
               </Button>
             </Group>
           </Stack>
