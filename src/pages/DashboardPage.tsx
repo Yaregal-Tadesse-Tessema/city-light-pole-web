@@ -4,7 +4,7 @@ import { Container, Grid, Paper, Text, Title, Table, Badge, Select, Stack, Group
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { IconPackage, IconShoppingCart, IconAlertTriangle } from '@tabler/icons-react';
+import { IconPackage, IconShoppingCart, IconAlertTriangle, IconCarCrash } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
 
 const SUBCITIES = [
@@ -49,6 +49,19 @@ export default function DashboardPage() {
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
       const res = await axios.get('http://localhost:3011/api/v1/reports/summary', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: accidentStats } = useQuery({
+    queryKey: ['accidents', 'dashboard-stats'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/accidents/dashboard-stats', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -496,6 +509,21 @@ export default function DashboardPage() {
                     </Text>
                   </div>
                   <IconShoppingCart size={24} color="yellow" />
+                </Group>
+              </Paper>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 3 }}>
+              <Paper p="md" withBorder style={{ cursor: 'pointer' }} onClick={() => navigate('/accidents')}>
+                <Group justify="space-between">
+                  <div>
+                    <Text size="sm" c="dimmed">
+                      Total Accidents
+                    </Text>
+                    <Text size="xl" fw={700} c="red">
+                      {accidentStats?.totalAccidents || 0}
+                    </Text>
+                  </div>
+                  <IconCarCrash size={24} color="red" />
                 </Group>
               </Paper>
             </Grid.Col>

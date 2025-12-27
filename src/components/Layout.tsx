@@ -26,6 +26,7 @@ import {
   IconBell,
   IconReport,
   IconReplace,
+  IconCarCrash,
 } from '@tabler/icons-react';
 
 export default function Layout() {
@@ -185,7 +186,8 @@ export default function Layout() {
             fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-family='Arial' font-size='14' fill='%23999'%3ELogo%3C/text%3E%3C/svg%3E"
           />
           <Text size="sm" fw={600} ta="center" c="dimmed">
-            Coredor Assets Management System
+            Addis Ababa
+            Light Poles Management System
           </Text>
         </Stack>
         <Group mb="md" visibleFrom="sm" style={{ flexShrink: 0 }}>
@@ -369,6 +371,18 @@ export default function Layout() {
           label="Reports"
           leftSection={<IconReport size={16} />}
           active={location.pathname === '/reports'}
+          onClick={() => {
+            if (isMobile) {
+              close();
+            }
+          }}
+        />
+        <NavLink
+          component={Link}
+          to="/accidents"
+          label="Accident Management"
+          leftSection={<IconCarCrash size={16} />}
+          active={location.pathname.startsWith('/accidents')}
           onClick={() => {
             if (isMobile) {
               close();
