@@ -372,10 +372,12 @@ export default function AccidentDetailPage() {
     }).format(amount);
   };
 
-  const canInspect = (user?.role === 'ADMIN' || user?.role === 'INSPECTOR') && accident?.status === 'REPORTED';
-  const canApproveSupervisor = (user?.role === 'ADMIN' || user?.role === 'SUPERVISOR') && accident?.status === 'INSPECTED';
-  const canApproveFinance = (user?.role === 'ADMIN' || user?.role === 'FINANCE') && accident?.status === 'SUPERVISOR_REVIEW';
-  const canCompleteRepair = (user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.role === 'INSPECTOR') && accident?.status === 'UNDER_REPAIR';
+  // Admin users can do all actions
+  const isAdmin = user?.role === 'ADMIN';
+  const canInspect = isAdmin || (user?.role === 'INSPECTOR' && accident?.status === 'REPORTED');
+  const canApproveSupervisor = isAdmin || (user?.role === 'SUPERVISOR' && accident?.status === 'INSPECTED');
+  const canApproveFinance = isAdmin || (user?.role === 'FINANCE' && accident?.status === 'SUPERVISOR_REVIEW');
+  const canCompleteRepair = isAdmin || ((user?.role === 'SUPERVISOR' || user?.role === 'INSPECTOR') && accident?.status === 'UNDER_REPAIR');
 
   // Debug logging
   console.log('User:', user);
@@ -459,7 +461,7 @@ export default function AccidentDetailPage() {
           <Tabs.Tab value="assessment">Damage Assessment</Tabs.Tab>
           <Tabs.Tab value="photos">Photos & Evidence</Tabs.Tab>
           <Tabs.Tab value="approvals">Approval History</Tabs.Tab>
-          {(accident?.status === 'APPROVED' || accident?.status === 'UNDER_REPAIR' || accident?.status === 'COMPLETED') && (
+          {(isAdmin || accident?.status === 'APPROVED' || accident?.status === 'UNDER_REPAIR' || accident?.status === 'COMPLETED') && (
             <Tabs.Tab value="claims">Insurance Claims</Tabs.Tab>
           )}
         </Tabs.List>
@@ -673,13 +675,14 @@ export default function AccidentDetailPage() {
                 </>
               ) : (
                 <Alert color="blue">
-                  {accident?.status === 'REPORTED' && canInspect && ' Click the "Perform Damage Assessment" button to get started.'}
-                  {accident?.status === 'INSPECTED' && (canApproveSupervisor || canApproveFinance) && ' Click the "Process Approval" button to continue the workflow.'}
-                  {accident?.status === 'SUPERVISOR_REVIEW' && canApproveFinance && ' Click the "Process Approval" button for final finance approval.'}
-                  {accident?.status === 'APPROVED' && ' Accident has been approved. Repairs can begin and insurance claims can be filed.'}
-                  {accident?.status === 'UNDER_REPAIR' && canCompleteRepair && ' Repairs are in progress. Click the "Complete Repairs" button when finished. Insurance claims can be managed in the Claims tab.'}
-                  {accident?.status === 'COMPLETED' && ' Accident repairs have been completed. Insurance claims can be managed in the Claims tab.'}
-                  {accident?.status === 'REJECTED' && ' This accident report has been rejected.'}
+                  {isAdmin && ' As an admin, you can perform all actions in the workflow.'}
+                  {!isAdmin && accident?.status === 'REPORTED' && canInspect && ' Click the "Perform Damage Assessment" button to get started.'}
+                  {!isAdmin && accident?.status === 'INSPECTED' && (canApproveSupervisor || canApproveFinance) && ' Click the "Process Approval" button to continue the workflow.'}
+                  {!isAdmin && accident?.status === 'SUPERVISOR_REVIEW' && canApproveFinance && ' Click the "Process Approval" button for final finance approval.'}
+                  {!isAdmin && accident?.status === 'APPROVED' && ' Accident has been approved. Repairs can begin and insurance claims can be filed.'}
+                  {!isAdmin && accident?.status === 'UNDER_REPAIR' && canCompleteRepair && ' Repairs are in progress. Click the "Complete Repairs" button when finished. Insurance claims can be managed in the Claims tab.'}
+                  {!isAdmin && accident?.status === 'COMPLETED' && ' Accident repairs have been completed. Insurance claims can be managed in the Claims tab.'}
+                  {!isAdmin && accident?.status === 'REJECTED' && ' This accident report has been rejected.'}
                 </Alert>
               )}
             </Stack>
@@ -827,7 +830,7 @@ export default function AccidentDetailPage() {
                     {accident.claimStatus?.replace(/_/g, ' ') || 'NOT SUBMITTED'}
                   </Badge>
                 </div>
-                {(user?.role === 'ADMIN' || user?.role === 'FINANCE') && (
+                {(isAdmin || user?.role === 'FINANCE') && (
                   <Select
                     placeholder="Update claim status"
                     data={[
