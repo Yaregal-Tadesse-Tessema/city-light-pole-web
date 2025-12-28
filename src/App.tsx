@@ -59,6 +59,7 @@ import CreateCategoryPage from './pages/CreateCategoryPage';
 import UpdateCategoryPage from './pages/UpdateCategoryPage';
 import AccidentsListPage from './pages/AccidentsListPage';
 import AccidentDetailPage from './pages/AccidentDetailPage';
+import DamagedComponentsPage from './pages/DamagedComponentsPage';
 import CreateAccidentPage from './pages/CreateAccidentPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -135,6 +136,7 @@ function App() {
           <Route path="/accidents" element={<AccidentsListPage />} />
           <Route path="/accidents/create" element={<CreateAccidentPage />} />
           <Route path="/accidents/:id" element={<AccidentDetailPage />} />
+          <Route path="/damaged-components" element={<DamagedComponentsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

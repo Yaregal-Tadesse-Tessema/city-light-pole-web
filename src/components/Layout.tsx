@@ -389,6 +389,20 @@ export default function Layout() {
             }
           }}
         />
+        {isAdmin && (
+          <NavLink
+            component={Link}
+            to="/damaged-components"
+            label="Damaged Components"
+            leftSection={<IconTools size={16} />}
+            active={location.pathname === '/damaged-components'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
+          />
+        )}
         <NavLink
           label="Public Parks"
           leftSection={<IconTrees size={16} />}
