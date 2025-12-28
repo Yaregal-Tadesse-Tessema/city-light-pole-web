@@ -170,7 +170,7 @@ export default function DamagedComponentsPage() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" mb="lg">
-        <Title>Damaged Components Management</Title>
+        <Title>Components Management</Title>
         <Button leftSection={<IconPlus size={16} />} onClick={handleCreate}>
           Add Component
         </Button>

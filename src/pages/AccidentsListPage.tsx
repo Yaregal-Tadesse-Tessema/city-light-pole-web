@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,9 +7,11 @@ import {
   IconPlus,
   IconFilter,
   IconFileDownload,
-  IconCheck,
+  IconDownload,
+  IconFileText,
+  IconFileTypePdf,
+  IconFileTypeXls,
   IconX,
-  IconClock,
 } from '@tabler/icons-react';
 import {
   Container,
@@ -22,7 +24,6 @@ import {
   Button,
   Modal,
   TextInput,
-  Stack,
   Select,
   ActionIcon,
   Loader,
@@ -30,10 +31,14 @@ import {
   Pagination,
   Tooltip,
   Alert,
+  Menu,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const ACCIDENT_TYPES = [
   'VEHICLE_COLLISION',
@@ -219,6 +224,203 @@ export default function AccidentsListPage() {
     downloadReportMutation.mutate({ id, type });
   };
 
+  const resetFilters = () => {
+    setFilters({
+      search: '',
+      accidentType: null,
+      status: null,
+      claimStatus: null,
+      poleId: '',
+      page: 1,
+      limit: 10,
+    });
+  };
+
+  const hasActiveFilters = () => {
+    return filters.search || filters.accidentType || filters.status || filters.claimStatus || filters.poleId;
+  };
+
+  // Export functions
+  const exportToPDF = async () => {
+    // Get all filtered data without pagination
+    const token = localStorage.getItem('access_token');
+    const { page, limit, ...exportFilters } = filters; // Exclude pagination
+
+    const params = new URLSearchParams();
+    Object.entries(exportFilters).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        params.append(key, value.toString());
+      }
+    });
+
+    console.log('PDF Export - Filter params:', Object.fromEntries(params));
+    console.log('PDF Export - Full URL:', `http://localhost:3011/api/v1/accidents?${params}`);
+
+    try {
+      const response = await axios.get(`http://localhost:3011/api/v1/accidents?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const accidents = response.data.data || [];
+      console.log('PDF Export - Accidents data:', accidents);
+
+      if (!accidents || accidents.length === 0) {
+        notifications.show({
+          title: 'No Data',
+          message: 'No accident data found to export.',
+          color: 'orange',
+        });
+        return;
+      }
+
+      const doc = new jsPDF();
+
+      // Add title
+      doc.setFontSize(20);
+      doc.text('Accident Reports', 14, 22);
+
+      // Add summary info
+      doc.setFontSize(12);
+      doc.text(`Total Accidents: ${accidents.length}`, 14, 35);
+      doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, 14, 42);
+
+      // Prepare table data with error handling
+      const tableData = accidents.map((accident: any) => {
+        try {
+          return [
+            accident?.incidentId || 'N/A',
+            accident?.accidentDate ? formatDate(accident.accidentDate) : 'N/A',
+            accident?.accidentType ? accident.accidentType.replace(/_/g, ' ') : 'N/A',
+            accident?.status || 'N/A',
+            accident?.poleId || 'N/A',
+            accident?.vehiclePlateNumber || 'N/A',
+            accident?.driverName || 'N/A',
+            accident?.estimatedCost ? formatCurrency(accident.estimatedCost) : formatCurrency(0),
+          ];
+        } catch (error) {
+          console.error('Error processing accident:', accident, error);
+          return ['ERROR', 'ERROR', 'ERROR', 'ERROR', 'ERROR', 'ERROR', 'ERROR', 'ERROR'];
+        }
+      });
+
+      console.log('PDF Export - Table data:', tableData);
+
+      // Add table
+      autoTable(doc, {
+        head: [['Incident ID', 'Date', 'Type', 'Status', 'Pole ID', 'Vehicle', 'Driver', 'Cost']],
+        body: tableData,
+        startY: 55,
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [41, 128, 185],
+          textColor: 255,
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+      });
+
+      // Save the PDF
+      doc.save(`accidents-${new Date().toISOString().split('T')[0]}.pdf`);
+
+      notifications.show({
+        title: 'Export Successful',
+        message: `PDF exported with ${accidents.length} records.`,
+        color: 'green',
+      });
+    } catch (error) {
+      notifications.show({
+        title: 'Export Error',
+        message: 'Failed to export data. Please try again.',
+        color: 'red',
+      });
+    }
+  };
+
+  const exportToExcel = async () => {
+    // Get all filtered data without pagination
+    const token = localStorage.getItem('access_token');
+    const { page, limit, ...exportFilters } = filters; // Exclude pagination
+
+    const params = new URLSearchParams();
+    Object.entries(exportFilters).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        params.append(key, value.toString());
+      }
+    });
+
+    console.log('Excel Export - Filter params:', Object.fromEntries(params));
+    console.log('Excel Export - Full URL:', `http://localhost:3011/api/v1/accidents?${params}`);
+
+    try {
+      const response = await axios.get(`http://localhost:3011/api/v1/accidents?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const accidents = response.data.data || [];
+
+      if (!accidents || accidents.length === 0) {
+        notifications.show({
+          title: 'No Data',
+          message: 'No accident data found to export.',
+          color: 'orange',
+        });
+        return;
+      }
+
+      // Prepare data for Excel
+      const excelData = accidents.map((accident: any) => ({
+        'Incident ID': accident?.incidentId || 'N/A',
+        'Date': accident?.accidentDate ? formatDate(accident.accidentDate) : 'N/A',
+        'Time': accident?.accidentTime || 'N/A',
+        'Type': accident?.accidentType ? accident.accidentType.replace(/_/g, ' ') : 'N/A',
+        'Status': accident?.status || 'N/A',
+        'Pole ID': accident?.poleId || 'N/A',
+        'Latitude': accident?.latitude || 'N/A',
+        'Longitude': accident?.longitude || 'N/A',
+        'Location': accident?.locationDescription || 'N/A',
+        'Vehicle Plate': accident?.vehiclePlateNumber || 'N/A',
+        'Driver Name': accident?.driverName || 'N/A',
+        'Insurance Company': accident?.insuranceCompany || 'N/A',
+        'Claim Reference': accident?.claimReferenceNumber || 'N/A',
+        'Claim Status': accident?.claimStatus ? accident.claimStatus.replace(/_/g, ' ') : 'N/A',
+        'Damage Level': accident?.damageLevel || 'N/A',
+        'Damage Description': accident?.damageDescription || 'N/A',
+        'Safety Risk': accident?.safetyRisk ? 'Yes' : 'No',
+        'Estimated Cost': accident?.estimatedCost || 0,
+        'Reported By': accident?.reportedBy?.fullName || 'N/A',
+        'Reported Date': accident?.createdAt ? formatDate(accident.createdAt) : 'N/A',
+        'Updated Date': accident?.updatedAt ? formatDate(accident.updatedAt) : 'N/A',
+      }));
+
+      // Create workbook and worksheet
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Accidents');
+
+      // Save the Excel file
+      const fileName = `accidents-${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      notifications.show({
+        title: 'Export Successful',
+        message: `Excel exported with ${accidents.length} records.`,
+        color: 'green',
+      });
+    } catch (error) {
+      notifications.show({
+        title: 'Export Error',
+        message: 'Failed to export data. Please try again.',
+        color: 'red',
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -244,21 +446,63 @@ export default function AccidentsListPage() {
     <Container size="xl" py="xl">
       <Group justify="space-between" mb="lg">
         <Title order={2}>Accident Management</Title>
-        {(user?.role === 'ADMIN' || user?.role === 'INSPECTOR') && (
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => navigate('/accidents/create')}
-          >
-            Report Accident
-          </Button>
-        )}
+        <Group>
+          <Menu shadow="md" width={200}>
+            <Menu.Target>
+              <Button
+                variant="light"
+                leftSection={<IconDownload size={16} />}
+                rightSection={<IconFileText size={14} />}
+              >
+                Export Data
+              </Button>
+            </Menu.Target>
+
+            <Menu.Dropdown>
+              <Menu.Item
+                leftSection={<IconFileTypePdf size={16} />}
+                onClick={exportToPDF}
+              >
+                Export as PDF
+              </Menu.Item>
+              <Menu.Item
+                leftSection={<IconFileTypeXls size={16} />}
+                onClick={exportToExcel}
+              >
+                Export as Excel
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+
+          {(user?.role === 'ADMIN' || user?.role === 'INSPECTOR') && (
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => navigate('/accidents/create')}
+            >
+              Report Accident
+            </Button>
+          )}
+        </Group>
       </Group>
 
       {/* Filters */}
       <Paper p="md" mb="md" withBorder>
-        <Title order={4} mb="md">
-          Filters
-        </Title>
+        <Group justify="space-between" mb="md">
+          <Title order={4}>
+            Filters
+          </Title>
+          {hasActiveFilters() && (
+            <Button
+              variant="light"
+              color="red"
+              size="sm"
+              leftSection={<IconX size={16} />}
+              onClick={resetFilters}
+            >
+              Reset Filters
+            </Button>
+          )}
+        </Group>
         <Group grow>
           <TextInput
             placeholder="Search by incident ID, pole ID..."
@@ -273,7 +517,7 @@ export default function AccidentsListPage() {
               label: type.replace(/_/g, ' '),
             }))}
             value={filters.accidentType}
-            onChange={(value) => setFilters({ ...filters, accidentType: value || '', page: 1 })}
+            onChange={(value) => setFilters({ ...filters, accidentType: value || null, page: 1 })}
             clearable
           />
           <Select
@@ -283,7 +527,7 @@ export default function AccidentsListPage() {
               label: status.replace(/_/g, ' '),
             }))}
             value={filters.status}
-            onChange={(value) => setFilters({ ...filters, status: value || '', page: 1 })}
+            onChange={(value) => setFilters({ ...filters, status: value || null, page: 1 })}
             clearable
           />
           <Select
@@ -293,7 +537,7 @@ export default function AccidentsListPage() {
               label: status.replace(/_/g, ' '),
             }))}
             value={filters.claimStatus}
-            onChange={(value) => setFilters({ ...filters, claimStatus: value || '', page: 1 })}
+            onChange={(value) => setFilters({ ...filters, claimStatus: value || null, page: 1 })}
             clearable
           />
           <TextInput

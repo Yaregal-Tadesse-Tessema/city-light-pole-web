@@ -58,6 +58,7 @@ export default function Layout() {
   const [footballFieldsMenuOpened, setFootballFieldsMenuOpened] = useState(false);
   const [riverSideProjectsMenuOpened, setRiverSideProjectsMenuOpened] = useState(false);
   const [inventoryMenuOpened, setInventoryMenuOpened] = useState(false);
+  const [accidentMenuOpened, setAccidentMenuOpened] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN';
   
@@ -378,31 +379,58 @@ export default function Layout() {
           }}
         />
         <NavLink
-          component={Link}
-          to="/accidents"
           label="Accident Management"
           leftSection={<IconCarCrash size={16} />}
-          active={location.pathname.startsWith('/accidents')}
-          onClick={() => {
-            if (isMobile) {
-              close();
-            }
-          }}
-        />
-        {isAdmin && (
+          rightSection={
+            accidentMenuOpened ? (
+              <IconChevronDown size={16} />
+            ) : (
+              <IconChevronRight size={16} />
+            )
+          }
+          active={location.pathname.startsWith('/accidents') || location.pathname === '/damaged-components' || location.pathname === '/accident-reports'}
+          opened={accidentMenuOpened}
+          onChange={() => setAccidentMenuOpened(!accidentMenuOpened)}
+        >
           <NavLink
             component={Link}
-            to="/damaged-components"
-            label="Damaged Components"
-            leftSection={<IconTools size={16} />}
-            active={location.pathname === '/damaged-components'}
+            to="/accidents"
+            label="Accidents"
+            leftSection={<IconCarCrash size={16} />}
+            active={location.pathname.startsWith('/accidents') && !location.pathname.includes('/reports')}
             onClick={() => {
               if (isMobile) {
                 close();
               }
             }}
           />
-        )}
+          <NavLink
+            component={Link}
+            to="/accident-reports"
+            label="Reports"
+            leftSection={<IconReport size={16} />}
+            active={location.pathname === '/accident-reports'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
+          />
+          {isAdmin && (
+            <NavLink
+              component={Link}
+              to="/damaged-components"
+              label="Components"
+              leftSection={<IconTools size={16} />}
+              active={location.pathname === '/damaged-components'}
+              onClick={() => {
+                if (isMobile) {
+                  close();
+                }
+              }}
+            />
+          )}
+        </NavLink>
         <NavLink
           label="Public Parks"
           leftSection={<IconTrees size={16} />}

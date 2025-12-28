@@ -938,46 +938,53 @@ export default function AccidentDetailPage() {
                         <Title order={5}>Detailed Cost Breakdown</Title>
                       </Card.Section>
                       <Stack p="md" gap="xs">
-                        {/* Show costs for damaged components (excluding Labour and Transport) */}
-                        {accident.damagedComponents?.map((damagedComponent, index) => {
-                          const componentName = componentNameMap[damagedComponent.damagedComponentId];
-
-                          // Skip Labour Cost and Transport Cost as they're shown separately
-                          if (componentName === 'Labour Cost' || componentName === 'Transport Cost') {
-                            return null;
-                          }
+                        {/* Calculate displayed components count for total */}
+                        {(() => {
+                          const displayedComponents = accident.damagedComponents?.filter((damagedComponent) => {
+                            const componentName = componentNameMap[damagedComponent.damagedComponentId];
+                            return componentName !== 'Labour Cost' && componentName !== 'Transport Cost';
+                          }) || [];
 
                           return (
-                            <Group key={index} justify="space-between">
-                              <Text size="sm">{componentName || damagedComponent.damagedComponentId}:</Text>
-                              <Text size="sm" fw={500}>{formatCurrency(2000.00)}</Text>
-                            </Group>
+                            <>
+                              {/* Show costs for damaged components (excluding Labour and Transport) */}
+                              {displayedComponents.map((damagedComponent, index) => {
+                                const componentName = componentNameMap[damagedComponent.damagedComponentId];
+
+                                return (
+                                  <Group key={index} justify="space-between">
+                                    <Text size="sm">{componentName || damagedComponent.damagedComponentId}:</Text>
+                                    <Text size="sm" fw={500}>{formatCurrency(2000.00)}</Text>
+                                  </Group>
+                                );
+                              })}
+
+                              {/* Show labor and transport costs */}
+                              {accident.costBreakdown?.labor && (
+                                <Group justify="space-between">
+                                  <Text size="sm">Labor Cost:</Text>
+                                  <Text size="sm" fw={500}>{formatCurrency(accident.costBreakdown.labor)}</Text>
+                                </Group>
+                              )}
+
+                              {accident.costBreakdown?.transport && (
+                                <Group justify="space-between">
+                                  <Text size="sm">Transport Cost:</Text>
+                                  <Text size="sm" fw={500}>{formatCurrency(accident.costBreakdown.transport)}</Text>
+                                </Group>
+                              )}
+
+                              {/* Show total loss cost */}
+                              <Divider />
+                              <Group justify="space-between">
+                                <Text size="sm" fw={600}>Total Loss Cost:</Text>
+                                <Text size="sm" fw={600}>
+                                  {formatCurrency(displayedComponents.length * 2000.00)}
+                                </Text>
+                              </Group>
+                            </>
                           );
-                        }).filter(Boolean)}
-
-                        {/* Show labor and transport costs */}
-                        {accident.costBreakdown?.labor && (
-                          <Group justify="space-between">
-                            <Text size="sm">Labor Cost:</Text>
-                            <Text size="sm" fw={500}>{formatCurrency(accident.costBreakdown.labor)}</Text>
-                          </Group>
-                        )}
-
-                        {accident.costBreakdown?.transport && (
-                          <Group justify="space-between">
-                            <Text size="sm">Transport Cost:</Text>
-                            <Text size="sm" fw={500}>{formatCurrency(accident.costBreakdown.transport)}</Text>
-                          </Group>
-                        )}
-
-                        {/* Show total loss cost */}
-                        <Divider />
-                        <Group justify="space-between">
-                          <Text size="sm" fw={600}>Total Loss Cost:</Text>
-                          <Text size="sm" fw={600}>
-                            {formatCurrency((accident.damagedComponents?.length || 0) * 2000.00)}
-                          </Text>
-                        </Group>
+                        })()}
                       </Stack>
                     </Card>
                   )}
