@@ -442,7 +442,7 @@ export default function MaintenanceDetailPage() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Request ID</Table.Th>
+                    <Table.Th>Code</Table.Th>
                     <Table.Th>Items Count</Table.Th>
                     <Table.Th>Status</Table.Th>
                     <Table.Th>Request Date</Table.Th>
@@ -457,7 +457,7 @@ export default function MaintenanceDetailPage() {
                   ) : (
                     materialRequests?.map((request: any) => (
                       <Table.Tr key={request.id}>
-                        <Table.Td>{request.id.substring(0, 8)}...</Table.Td>
+                        <Table.Td>{request.code ?? '—'}</Table.Td>
                         <Table.Td>{request.items?.length || 0} items</Table.Td>
                         <Table.Td>
                           <Badge color={getStatusColor(request.status)}>{request.status}</Badge>

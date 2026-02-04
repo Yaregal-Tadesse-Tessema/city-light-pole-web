@@ -216,8 +216,8 @@ export default function MaterialRequestDetailPage() {
                       <IconTools size={14} />
                     </ThemeIcon>
                     <div>
-                      <Text size="sm" c="dimmed">Request ID</Text>
-                      <Text size="sm" fw={500}>{materialRequest.id}</Text>
+                      <Text size="sm" c="dimmed">Code</Text>
+                      <Text size="sm" fw={500}>{materialRequest.code ?? '—'}</Text>
                     </div>
                   </Group>
                 </Grid.Col>

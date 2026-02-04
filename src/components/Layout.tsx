@@ -27,6 +27,7 @@ import {
   IconReport,
   IconReplace,
   IconCarCrash,
+  IconBox,
 } from '@tabler/icons-react';
 
 export default function Layout() {
@@ -280,6 +281,18 @@ export default function Layout() {
             label="Replace Pole"
             leftSection={<IconReplace size={16} />}
             active={location.pathname.startsWith('/replacements')}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
+          />
+          <NavLink
+            component={Link}
+            to="/components"
+            label="Components"
+            leftSection={<IconBox size={16} />}
+            active={location.pathname.startsWith('/components')}
             onClick={() => {
               if (isMobile) {
                 close();

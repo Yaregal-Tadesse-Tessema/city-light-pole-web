@@ -21,9 +21,12 @@ import {
   ActionIcon,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconEye, IconCheck, IconX, IconTrash, IconPackage, IconEdit, IconFilter, IconArrowsUpDown, IconSortAscending, IconSortDescending } from '@tabler/icons-react';
+import { IconEye, IconCheck, IconX, IconTrash, IconPackage, IconEdit, IconFilter, IconArrowsUpDown, IconSortAscending, IconSortDescending, IconPlus } from '@tabler/icons-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+
+const getRequestCode = (request: any) => request.code ?? '—';
 
 const STATUSES = [
   { value: 'PENDING', label: 'Pending' },
@@ -34,6 +37,7 @@ const STATUSES = [
 ];
 
 export default function MaterialRequestsPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -51,7 +55,7 @@ export default function MaterialRequestsPage() {
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
   // Filtering state
-  const [requestIdFilter, setRequestIdFilter] = useState('');
+  const [codeFilter, setCodeFilter] = useState('');
   const [requestedByFilter, setRequestedByFilter] = useState('');
   const [itemsCountFilter, setItemsCountFilter] = useState('');
 
@@ -99,8 +103,11 @@ export default function MaterialRequestsPage() {
       // Status filter
       if (statusFilter && request.status !== statusFilter) return false;
 
-      // Request ID filter
-      if (requestIdFilter && !request.id.toLowerCase().includes(requestIdFilter.toLowerCase())) return false;
+      // Code filter (search by code)
+      if (codeFilter && request.code) {
+        const searchLower = codeFilter.toLowerCase();
+        if (!request.code.toLowerCase().includes(searchLower)) return false;
+      }
 
       // Requested By filter
       if (requestedByFilter && !request.requestedBy?.fullName.toLowerCase().includes(requestedByFilter.toLowerCase())) return false;
@@ -116,6 +123,10 @@ export default function MaterialRequestsPage() {
       let aValue: any, bValue: any;
 
       switch (sortBy) {
+        case 'code':
+          aValue = getRequestCode(a);
+          bValue = getRequestCode(b);
+          break;
         case 'id':
           aValue = a.id || '';
           bValue = b.id || '';
@@ -152,7 +163,7 @@ export default function MaterialRequestsPage() {
     });
 
     return filtered;
-  }, [allRequests, statusFilter, requestIdFilter, requestedByFilter, itemsCountFilter, sortBy, sortOrder]);
+  }, [allRequests, statusFilter, codeFilter, requestedByFilter, itemsCountFilter, sortBy, sortOrder]);
 
   // For backward compatibility, keep requests as filteredAndSortedRequests
   const requests = filteredAndSortedRequests;
@@ -394,6 +405,12 @@ export default function MaterialRequestsPage() {
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
         <Title order={1}>Material Requests</Title>
         <Group gap="md">
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => navigate('/maintenance')}
+          >
+            Add Material Request
+          </Button>
           <Select
             placeholder="Filter by status"
             data={STATUSES}
@@ -402,13 +419,13 @@ export default function MaterialRequestsPage() {
             clearable
             style={{ width: 200 }}
           />
-          {(requestIdFilter || requestedByFilter || itemsCountFilter) && (
+          {(codeFilter || requestedByFilter || itemsCountFilter) && (
             <Button
               variant="light"
               color="red"
               size="sm"
               onClick={() => {
-                setRequestIdFilter('');
+                setCodeFilter('');
                 setRequestedByFilter('');
                 setItemsCountFilter('');
               }}
@@ -426,7 +443,7 @@ export default function MaterialRequestsPage() {
               <Table.Tr>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('id')}>Request ID</Text>
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('code')}>Code</Text>
                     <Popover position="bottom" withArrow shadow="md">
                       <Popover.Target>
                         <ActionIcon variant="subtle" color="gray" size="sm">
@@ -435,9 +452,9 @@ export default function MaterialRequestsPage() {
                       </Popover.Target>
                       <Popover.Dropdown>
                         <TextInput
-                          placeholder="Filter by Request ID..."
-                          value={requestIdFilter}
-                          onChange={(event) => setRequestIdFilter(event.currentTarget.value)}
+                          placeholder="Filter by Code..."
+                          value={codeFilter}
+                          onChange={(event) => setCodeFilter(event.currentTarget.value)}
                           size="sm"
                         />
                       </Popover.Dropdown>
@@ -446,9 +463,9 @@ export default function MaterialRequestsPage() {
                       variant="subtle"
                       color="gray"
                       size="sm"
-                      onClick={() => handleSort('id')}
+                      onClick={() => handleSort('code')}
                     >
-                      {getSortIcon('id')}
+                      {getSortIcon('code')}
                     </ActionIcon>
                   </Group>
                 </Table.Th>
@@ -541,7 +558,7 @@ export default function MaterialRequestsPage() {
                         c="blue"
                         onClick={() => navigate(`/material-requests/${request.id}`)}
                       >
-                        {request.id.substring(0, 8)}...
+                        {getRequestCode(request)}
                       </Text>
                     </Table.Td>
                     <Table.Td>
@@ -650,8 +667,8 @@ export default function MaterialRequestsPage() {
         {selectedRequest && (
           <Stack>
             <Group justify="space-between">
-              <Text fw={600}>Request ID:</Text>
-              <Text size="sm">{selectedRequest.id}</Text>
+              <Text fw={600}>Code:</Text>
+              <Text size="sm">{getRequestCode(selectedRequest)}</Text>
             </Group>
             <Group justify="space-between">
               <Text fw={600}>Maintenance Schedule:</Text>
@@ -921,8 +938,8 @@ export default function MaterialRequestsPage() {
           </Text>
           {selectedRequest && (
             <Paper p="sm" withBorder bg="gray.0">
-              <Text size="sm" fw={600}>Request ID:</Text>
-              <Text size="sm">{selectedRequest.id.substring(0, 8)}...</Text>
+              <Text size="sm" fw={600}>Code:</Text>
+              <Text size="sm">{getRequestCode(selectedRequest)}</Text>
               <Text size="sm" fw={600} mt="xs">Pole Code:</Text>
               <Text size="sm">{selectedRequest.maintenanceSchedule?.poleCode || 'N/A'}</Text>
               <Text size="sm" fw={600} mt="xs">Items:</Text>
@@ -974,8 +991,8 @@ export default function MaterialRequestsPage() {
           </Text>
           {selectedRequest && (
             <Paper p="sm" withBorder bg="gray.0">
-              <Text size="sm" fw={700}>Request ID:</Text>
-              <Text size="sm">{selectedRequest.id.substring(0, 8)}...</Text>
+              <Text size="sm" fw={700}>Code:</Text>
+              <Text size="sm">{getRequestCode(selectedRequest)}</Text>
               <Text size="sm" fw={700} mt="xs">Description:</Text>
               <Text size="sm">{selectedRequest.description || 'No description'}</Text>
               <Text size="sm" fw={700} mt="xs">Status:</Text>

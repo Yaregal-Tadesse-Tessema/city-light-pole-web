@@ -33,17 +33,38 @@ const LAMP_TYPES = [
   { value: 'HALOGEN', label: 'Halogen' },
 ];
 
-const LED_STATUSES = [
-  { value: 'OPERATIONAL', label: 'Operational' },
-  { value: 'ON_MAINTENANCE', label: 'On Maintenance' },
-  { value: 'FAILED_DAMAGED', label: 'Failed/Damaged' },
-];
-
 const POLE_STATUSES = [
   { value: 'OPERATIONAL', label: 'Operational' },
   { value: 'FAULT_DAMAGED', label: 'Fault/Damaged' },
   { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
   { value: 'REPLACED', label: 'Replaced' },
+];
+
+const STRUCTURE_OPTIONS = [
+  { value: 'Steel', label: 'Steel' },
+  { value: 'Concrete', label: 'Concrete' },
+];
+
+const POSITION_OPTIONS = [
+  { value: 'Up', label: 'Up' },
+  { value: 'Down', label: 'Down' },
+  { value: 'Middle', label: 'Middle' },
+];
+
+const CONDITION_OPTIONS = [
+  { value: 'Not in Place', label: 'Not in Place' },
+  { value: 'Good', label: 'Good' },
+  { value: 'Bend', label: 'Bend' },
+  { value: 'Broken Lamp', label: 'Broken Lamp' },
+  { value: 'Both Pole & Lamp Broken', label: 'Both Pole & Lamp Broken' },
+];
+
+const DISTRICT_OPTIONS = [
+  { value: 'west', label: 'West' },
+  { value: 'north', label: 'North' },
+  { value: 'south', label: 'South' },
+  { value: 'east', label: 'East' },
+  { value: 'center', label: 'Center' },
 ];
 
 const STREETS = [
@@ -229,17 +250,13 @@ export default function CreatePolePage() {
       heightMeters: 0,
       lampType: 'LED',
       powerRatingWatt: 0,
-      hasLedDisplay: false,
-      ledModel: '',
-      ledInstallationDate: '' as string,
-      ledStatus: '' as string,
       numberOfPoles: undefined as number | undefined,
-      hasCamera: false,
-      cameraInstallationDate: '' as string,
-      hasPhoneCharger: false,
-      phoneChargerInstallationDate: '' as string,
       poleInstallationDate: '' as string,
       status: 'OPERATIONAL',
+      structure: '' as string,
+      polePosition: '' as string,
+      condition: '' as string,
+      district: '' as string,
     },
     validate: {
       code: (value) => (!value ? 'Code is required' : null),
@@ -259,36 +276,7 @@ export default function CreatePolePage() {
       },
       heightMeters: (value) => (value <= 0 ? 'Height must be greater than 0' : null),
       powerRatingWatt: (value) => (value <= 0 ? 'Power rating must be greater than 0' : null),
-      ledModel: (value, values) => {
-        if (values.hasLedDisplay && !value) {
-          return 'LED Model is required when LED Display is enabled';
-        }
-        return null;
-      },
-      ledInstallationDate: (value, values) => {
-        if (values.hasLedDisplay && !value) {
-          return 'LED installation date is required when LED Display is enabled';
-        }
-        return null;
-      },
-      ledStatus: (value, values) => {
-        if (values.hasLedDisplay && !value) {
-          return 'LED status is required when LED Display is enabled';
-        }
-        return null;
-      },
-      cameraInstallationDate: (value, values) => {
-        if (values.hasCamera && !value) {
-          return 'Camera installation date is required when Camera is enabled';
-        }
-        return null;
-      },
-      phoneChargerInstallationDate: (value, values) => {
-        if (values.hasPhoneCharger && !value) {
-          return 'Phone charger installation date is required when Phone Charger is enabled';
-        }
-        return null;
-      },
+      structure: (value) => (!value ? 'Structure is required' : null),
     },
   });
 
@@ -303,7 +291,10 @@ export default function CreatePolePage() {
         powerRatingWatt: data.powerRatingWatt,
         poleType: data.poleType,
         lampType: data.lampType,
-        hasLedDisplay: data.hasLedDisplay,
+        structure: data.structure,
+        polePosition: data.polePosition,
+        condition: data.condition,
+        district: data.district,
         status: data.status,
       };
 
@@ -315,30 +306,8 @@ export default function CreatePolePage() {
         apiData.gpsLng = Number(data.gpsLng);
       }
 
-      // Add LED fields only if hasLedDisplay is true
-      if (data.hasLedDisplay) {
-        if (data.ledModel) {
-          apiData.ledModel = data.ledModel;
-        }
-        if (data.ledInstallationDate) {
-          apiData.ledInstallationDate = data.ledInstallationDate;
-        }
-        if (data.ledStatus) {
-          apiData.ledStatus = data.ledStatus;
-        }
-      }
-
-      // Add new fields
       if (data.numberOfPoles !== undefined && data.numberOfPoles !== null) {
         apiData.numberOfPoles = data.numberOfPoles;
-      }
-      apiData.hasCamera = data.hasCamera || false;
-      if (data.hasCamera && data.cameraInstallationDate) {
-        apiData.cameraInstallationDate = data.cameraInstallationDate;
-      }
-      apiData.hasPhoneCharger = data.hasPhoneCharger || false;
-      if (data.hasPhoneCharger && data.phoneChargerInstallationDate) {
-        apiData.phoneChargerInstallationDate = data.phoneChargerInstallationDate;
       }
       if (data.poleInstallationDate) {
         apiData.poleInstallationDate = data.poleInstallationDate;
@@ -435,6 +404,87 @@ export default function CreatePolePage() {
               />
             </Group>
 
+            <Group grow>
+              <Select
+                label="Pole Type"
+                data={POLE_TYPES}
+                {...form.getInputProps('poleType')}
+              />
+              <Select
+                label="Structure"
+                placeholder="Select structure"
+                required
+                data={STRUCTURE_OPTIONS}
+                {...form.getInputProps('structure')}
+              />
+            </Group>
+
+            <Group grow>
+              <NumberInput
+                label="Height (meters)"
+                placeholder="8.5"
+                required
+                min={0}
+                precision={2}
+                {...form.getInputProps('heightMeters')}
+              />
+            </Group>
+
+            <Group grow>
+              <Select
+                label="Lamp Type"
+                data={LAMP_TYPES}
+                {...form.getInputProps('lampType')}
+              />
+              <NumberInput
+                label="Power Rating (Watt)"
+                placeholder="150"
+                required
+                min={0}
+                {...form.getInputProps('powerRatingWatt')}
+              />
+            </Group>
+
+            <Group grow>
+              <Select
+                label="Status (Up/Down/Middle)"
+                placeholder="Select position"
+                data={POSITION_OPTIONS}
+                {...form.getInputProps('polePosition')}
+              />
+              <Select
+                label="Condition"
+                placeholder="Select condition"
+                data={CONDITION_OPTIONS}
+                {...form.getInputProps('condition')}
+              />
+              <Select
+                label="District"
+                placeholder="Select district"
+                data={DISTRICT_OPTIONS}
+                {...form.getInputProps('district')}
+              />
+            </Group>
+
+            <NumberInput
+              label="Number of Bulbs"
+              placeholder="1"
+              min={1}
+              {...form.getInputProps('numberOfPoles')}
+            />
+
+            <TextInput
+              type="date"
+              label="Pole Installation Date"
+              {...form.getInputProps('poleInstallationDate')}
+            />
+
+            <Select
+              label="Status"
+              data={POLE_STATUSES}
+              {...form.getInputProps('status')}
+            />
+
             <Stack gap="xs">
               <Group grow>
                 <NumberInput
@@ -467,112 +517,6 @@ export default function CreatePolePage() {
                 }}
               />
             </Stack>
-
-            <Group grow>
-              <Select
-                label="Pole Type"
-                data={POLE_TYPES}
-                {...form.getInputProps('poleType')}
-              />
-              <NumberInput
-                label="Height (meters)"
-                placeholder="8.5"
-                required
-                min={0}
-                precision={2}
-                {...form.getInputProps('heightMeters')}
-              />
-            </Group>
-
-            <Group grow>
-              <Select
-                label="Lamp Type"
-                data={LAMP_TYPES}
-                {...form.getInputProps('lampType')}
-              />
-              <NumberInput
-                label="Power Rating (Watt)"
-                placeholder="150"
-                required
-                min={0}
-                {...form.getInputProps('powerRatingWatt')}
-              />
-            </Group>
-
-            <Switch
-              label="Has LED Display"
-              {...form.getInputProps('hasLedDisplay', { type: 'checkbox' })}
-            />
-
-            {form.values.hasLedDisplay && (
-              <>
-                <TextInput
-                  label="LED Model"
-                  placeholder="LED-3000"
-                  required
-                  {...form.getInputProps('ledModel')}
-                />
-                <TextInput
-                  type="date"
-                  label="LED Installation Date"
-                  required
-                  {...form.getInputProps('ledInstallationDate')}
-                />
-                <Select
-                  label="LED Status"
-                  data={LED_STATUSES}
-                  required
-                  {...form.getInputProps('ledStatus')}
-                />
-              </>
-            )}
-
-            <NumberInput
-              label="Number of Bulbs"
-              placeholder="1"
-              min={1}
-              {...form.getInputProps('numberOfPoles')}
-            />
-
-            <TextInput
-              type="date"
-              label="Pole Installation Date"
-              {...form.getInputProps('poleInstallationDate')}
-            />
-
-            <Switch
-              label="Has Camera"
-              {...form.getInputProps('hasCamera', { type: 'checkbox' })}
-            />
-
-            {form.values.hasCamera && (
-              <TextInput
-                type="date"
-                label="Camera Installation Date"
-                required
-                {...form.getInputProps('cameraInstallationDate')}
-              />
-            )}
-
-            <Switch
-              label="Has Phone Charger"
-              {...form.getInputProps('hasPhoneCharger', { type: 'checkbox' })}
-            />
-
-            {form.values.hasPhoneCharger && (
-              <TextInput
-                type="date"
-                label="Phone Charger Installation Date"
-                required
-                {...form.getInputProps('phoneChargerInstallationDate')}
-              />
-            )}
-
-            <Select
-              label="Status"
-              data={POLE_STATUSES}
-              {...form.getInputProps('status')}
-            />
 
             <Group justify="flex-end" mt="xl">
               <Button variant="outline" onClick={() => navigate('/poles')}>

@@ -14,11 +14,18 @@ import {
   Table,
   Tabs,
   Modal,
+  ActionIcon,
+  Loader,
+  Center,
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { IconPlus, IconEdit, IconTrash } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 import { MapPicker } from '../components/MapPicker';
+import PoleComponentModal from '../components/PoleComponentModal';
+import { poleComponentsApi } from '../api/components';
 
 export default function PoleDetailPage() {
   const { code } = useParams();
@@ -26,7 +33,19 @@ export default function PoleDetailPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const isAdmin = user?.role === 'ADMIN';
+  const canManageComponents = user?.role === 'ADMIN' || user?.role === 'MAINTENANCE_ENGINEER';
   const [mapOpen, setMapOpen] = useState(false);
+  const [componentModalOpened, { open: openComponentModal, close: closeComponentModal }] = useDisclosure(false);
+  const [componentModalMode, setComponentModalMode] = useState<'add' | 'addBulk' | 'edit' | 'remove'>('add');
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+
+  const { data: poleComponents, isLoading: componentsLoading } = useQuery({
+    queryKey: ['pole-components', code],
+    queryFn: () => poleComponentsApi.list(code!, { includeRemoved: true }),
+    enabled: !!code,
+  });
+
+  const components = Array.isArray(poleComponents) ? poleComponents : poleComponents?.items ?? poleComponents ?? [];
 
   const { data: pole, isLoading } = useQuery({
     queryKey: ['pole', code],
@@ -104,6 +123,9 @@ export default function PoleDetailPage() {
       <Tabs defaultValue="details">
         <Tabs.List>
           <Tabs.Tab value="details">Details</Tabs.Tab>
+          <Tabs.Tab value="components">
+            Components {components.length > 0 ? `(${components.length})` : '(Add/Manage)'}
+          </Tabs.Tab>
           <Tabs.Tab value="qr">QR Code</Tabs.Tab>
           <Tabs.Tab value="issues">
             Recent Issues {pole?.counts?.openIssues > 0 && `(${pole.counts.openIssues} open)`}
@@ -148,6 +170,30 @@ export default function PoleDetailPage() {
                 <Text fw={700}>Lamp Type:</Text>
                 <Text>{pole.lampType}</Text>
               </Group>
+              {pole.structure && (
+                <Group>
+                  <Text fw={700}>Structure:</Text>
+                  <Text>{pole.structure}</Text>
+                </Group>
+              )}
+              {pole.polePosition && (
+                <Group>
+                  <Text fw={700}>Status (Up/Down/Middle):</Text>
+                  <Text>{pole.polePosition}</Text>
+                </Group>
+              )}
+              {pole.condition && (
+                <Group>
+                  <Text fw={700}>Condition:</Text>
+                  <Text>{pole.condition}</Text>
+                </Group>
+              )}
+              {pole.district && (
+                <Group>
+                  <Text fw={700}>District:</Text>
+                  <Text>{pole.district}</Text>
+                </Group>
+              )}
               <Group>
                 <Text fw={700}>Power Rating:</Text>
                 <Text>{pole.powerRatingWatt}W</Text>
@@ -164,63 +210,156 @@ export default function PoleDetailPage() {
                   <Text>{new Date(pole.poleInstallationDate).toLocaleDateString()}</Text>
                 </Group>
               )}
-              {pole.hasLedDisplay && (
-                <>
-                  <Group>
-                    <Text fw={700}>LED Model:</Text>
-                    <Text>{pole.ledModel}</Text>
-                  </Group>
-                  {pole.ledInstallationDate && (
-                    <Group>
-                      <Text fw={700}>LED Installation Date:</Text>
-                      <Text>{new Date(pole.ledInstallationDate).toLocaleDateString()}</Text>
-                    </Group>
-                  )}
-                  {pole.ledStatus && (
-                    <Group>
-                      <Text fw={700}>LED Status:</Text>
-                      <Badge color={
-                        pole.ledStatus === 'OPERATIONAL' ? 'green' :
-                        pole.ledStatus === 'ON_MAINTENANCE' ? 'yellow' :
-                        'red'
-                      }>
-                        {pole.ledStatus === 'OPERATIONAL' ? 'Operational' :
-                         pole.ledStatus === 'ON_MAINTENANCE' ? 'On Maintenance' :
-                         'Failed/Damaged'}
-                      </Badge>
-                    </Group>
-                  )}
-                </>
-              )}
-              {pole.hasCamera && (
-                <>
-                  <Group>
-                    <Text fw={700}>Has Camera:</Text>
-                    <Text>Yes</Text>
-                  </Group>
-                  {pole.cameraInstallationDate && (
-                    <Group>
-                      <Text fw={700}>Camera Installation Date:</Text>
-                      <Text>{new Date(pole.cameraInstallationDate).toLocaleDateString()}</Text>
-                    </Group>
-                  )}
-                </>
-              )}
-              {pole.hasPhoneCharger && (
-                <>
-                  <Group>
-                    <Text fw={700}>Has Phone Charger:</Text>
-                    <Text>Yes</Text>
-                  </Group>
-                  {pole.phoneChargerInstallationDate && (
-                    <Group>
-                      <Text fw={700}>Phone Charger Installation Date:</Text>
-                      <Text>{new Date(pole.phoneChargerInstallationDate).toLocaleDateString()}</Text>
-                    </Group>
-                  )}
-                </>
-              )}
             </Stack>
+          </Paper>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="components" pt="xl">
+          <Paper p="md" withBorder>
+            <Group justify="space-between" mb="md">
+              <Title order={4}>Installed Components</Title>
+              {canManageComponents && (
+                <Group>
+                  <Button
+                    size="xs"
+                    variant="light"
+                    leftSection={<IconPlus size={14} />}
+                    onClick={() => {
+                      setComponentModalMode('add');
+                      setSelectedAssignment(null);
+                      openComponentModal();
+                    }}
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="light"
+                    leftSection={<IconPlus size={14} />}
+                    onClick={() => {
+                      setComponentModalMode('addBulk');
+                      setSelectedAssignment(null);
+                      openComponentModal();
+                    }}
+                  >
+                    Bulk Add
+                  </Button>
+                </Group>
+              )}
+            </Group>
+            {componentsLoading ? (
+              <Center py="xl">
+                <Loader size="sm" />
+              </Center>
+            ) : components.length === 0 ? (
+              <Stack gap="md" py="md">
+                <Text c="dimmed">No components installed on this pole.</Text>
+                {canManageComponents && (
+                  <Group>
+                    <Button
+                      leftSection={<IconPlus size={16} />}
+                      onClick={() => {
+                        setComponentModalMode('add');
+                        setSelectedAssignment(null);
+                        openComponentModal();
+                      }}
+                    >
+                      Add Component
+                    </Button>
+                    <Button
+                      variant="light"
+                      leftSection={<IconPlus size={16} />}
+                      onClick={() => {
+                        setComponentModalMode('addBulk');
+                        setSelectedAssignment(null);
+                        openComponentModal();
+                      }}
+                    >
+                      Bulk Add Components
+                    </Button>
+                  </Group>
+                )}
+              </Stack>
+            ) : (
+              <Table>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Component</Table.Th>
+                    <Table.Th>Type</Table.Th>
+                    <Table.Th>Quantity</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                    <Table.Th>Installed</Table.Th>
+                    {canManageComponents && <Table.Th>Actions</Table.Th>}
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {components.map((a: any) => (
+                    <Table.Tr key={a.id}>
+                      <Table.Td>
+                        <Button
+                          variant="subtle"
+                          size="xs"
+                          onClick={() => navigate(`/components/${a.component?.id || a.componentId}`)}
+                        >
+                          {a.component?.name || '—'}
+                        </Button>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge variant="light" size="sm">
+                          {a.component?.type?.replace(/_/g, ' ') || '—'}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>{a.quantity}</Table.Td>
+                      <Table.Td>
+                        <Badge
+                          color={
+                            a.status === 'INSTALLED' ? 'green' :
+                            a.status === 'REMOVED' ? 'gray' :
+                            a.status === 'UNDER_MAINTENANCE' ? 'yellow' :
+                            a.status === 'DAMAGED' ? 'red' : 'gray'
+                          }
+                          size="sm"
+                        >
+                          {a.status}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        {a.installationDate ? new Date(a.installationDate).toLocaleDateString() : '—'}
+                      </Table.Td>
+                      {canManageComponents && (
+                        <Table.Td>
+                          <Group gap="xs">
+                            <ActionIcon
+                              variant="light"
+                              size="sm"
+                              onClick={() => {
+                                setComponentModalMode('edit');
+                                setSelectedAssignment(a);
+                                openComponentModal();
+                              }}
+                            >
+                              <IconEdit size={14} />
+                            </ActionIcon>
+                            <ActionIcon
+                              variant="light"
+                              color="red"
+                              size="sm"
+                              onClick={() => {
+                                setComponentModalMode('remove');
+                                setSelectedAssignment(a);
+                                openComponentModal();
+                              }}
+                            >
+                              <IconTrash size={14} />
+                            </ActionIcon>
+                          </Group>
+                        </Table.Td>
+                      )}
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            )}
           </Paper>
         </Tabs.Panel>
 
@@ -383,6 +522,18 @@ export default function PoleDetailPage() {
           />
         </Stack>
       </Modal>
+
+      <PoleComponentModal
+        opened={componentModalOpened}
+        onClose={closeComponentModal}
+        poleCode={code!}
+        mode={componentModalMode}
+        assignment={selectedAssignment}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['pole-components', code] });
+          queryClient.invalidateQueries({ queryKey: ['pole', code] });
+        }}
+      />
     </Container>
   );
 }

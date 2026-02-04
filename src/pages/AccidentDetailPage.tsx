@@ -48,6 +48,7 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
+import jsPDF from 'jspdf';
 import { useDisclosure } from '@mantine/hooks';
 import { useAuth } from '../hooks/useAuth';
 
@@ -570,11 +571,410 @@ export default function AccidentDetailPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const formatCurrency = (amount: number) => {
+  const downloadComprehensiveReport = async () => {
+    if (!accident) {
+      console.error('❌ No accident data available');
+      notifications.show({
+        title: 'Error',
+        message: 'No accident data available for report generation.',
+        color: 'red',
+      });
+      return;
+    }
+
+    // Show loading notification
+    const loadingNotification = notifications.show({
+      title: 'Generating Report',
+      message: 'Creating PDF report with images...',
+      color: 'blue',
+      loading: true,
+      autoClose: false,
+    });
+
+    try {
+      // Create PDF document
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Add content
+      doc.setFontSize(20);
+      doc.text('Accident Comprehensive Report', 20, 20);
+
+      doc.setFontSize(12);
+      doc.text(`Report Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 20, 30);
+      doc.text(`Incident ID: ${accident.id}`, 20, 35);
+
+      let yPosition = 50;
+
+      // Section 1: Incident Information
+      doc.setFontSize(16);
+      doc.text('1. Incident Information', 20, yPosition);
+      yPosition += 15;
+
+      doc.setFontSize(10);
+      // Debug: Log all accident properties
+      console.log('PDF Generation - Accident object:', accident);
+
+      doc.text(`Status: ${accident.status?.replace(/_/g, ' ') || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Type: ${accident.type?.replace(/_/g, ' ') || accident.accidentType || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Reported Date: ${accident.createdAt ? formatDate(accident.createdAt) : accident.accidentDate ? formatDate(accident.accidentDate) : 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Incident Date: ${accident.accidentDate ? formatDate(accident.accidentDate) : 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Incident Time: ${accident.accidentTime || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Location: ${typeof accident.latitude === 'number' ? accident.latitude.toFixed(6) : 'N/A'}, ${typeof accident.longitude === 'number' ? accident.longitude.toFixed(6) : 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Street: ${accident.street || accident.locationDescription || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Subcity: ${accident.subcity || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Pole ID: ${accident.poleId || accident.pole?.code || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Vehicle Plate: ${accident.vehiclePlateNumber || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Driver Name: ${accident.driverName || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Insurance Company: ${accident.insuranceCompany || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Claim Reference: ${accident.claimReferenceNumber || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+
+      // Handle long descriptions
+      const description = accident.description || accident.locationDescription || 'N/A';
+      if (description !== 'N/A' && description.length > 80) {
+        const lines = doc.splitTextToSize(`Description: ${description}`, 150);
+        doc.text(lines, 20, yPosition);
+        yPosition += lines.length * 5 + 5;
+      } else {
+        doc.text(`Description: ${description}`, 20, yPosition);
+        yPosition += 8;
+      }
+
+      // Section 2: Damage Assessment
+      if (accident.damageLevel || accident.damageDescription || accident.damagedComponents?.length) {
+        doc.setFontSize(16);
+        doc.text('2. Damage Assessment', 20, yPosition);
+        yPosition += 15;
+
+        doc.setFontSize(10);
+
+        if (accident.damageLevel && typeof accident.damageLevel === 'string') {
+          doc.text(`Damage Level: ${accident.damageLevel.replace(/_/g, ' ')}`, 20, yPosition);
+          yPosition += 8;
+        } else {
+          doc.text('Damage Level: N/A', 20, yPosition);
+          yPosition += 8;
+        }
+
+        if (accident.damageDescription) {
+          if (accident.damageDescription.length > 80) {
+            const lines = doc.splitTextToSize(`Description: ${accident.damageDescription}`, 150);
+            doc.text(lines, 20, yPosition);
+            yPosition += lines.length * 5 + 5;
+          } else {
+            doc.text(`Description: ${accident.damageDescription}`, 20, yPosition);
+            yPosition += 8;
+          }
+        }
+
+        if (accident.safetyRisk !== undefined) {
+          doc.text(`Safety Risk: ${accident.safetyRisk ? 'High Risk' : 'Safe'}`, 20, yPosition);
+          yPosition += 8;
+        }
+
+        if (accident.damagedComponents?.length) {
+          const componentNames = accident.damagedComponents
+            .map(dc => componentNameMap[dc.damagedComponentId] || dc.damagedComponentId || 'Unknown Component')
+            .join(', ');
+          if (componentNames.length > 80) {
+            const lines = doc.splitTextToSize(`Damaged Components: ${componentNames}`, 150);
+            doc.text(lines, 20, yPosition);
+            yPosition += lines.length * 5 + 5;
+          } else {
+            doc.text(`Damaged Components: ${componentNames}`, 20, yPosition);
+            yPosition += 8;
+          }
+        }
+      }
+
+      // Section 3: Cost Estimation
+      if (accident.costBreakdown || accident.estimatedCost) {
+        doc.setFontSize(16);
+        doc.text('3. Cost Estimation', 20, yPosition);
+        yPosition += 15;
+
+        doc.setFontSize(10);
+
+        if (accident.estimatedCost) {
+          doc.text(`Estimated Total Cost: ${formatCurrency(accident.estimatedCost)}`, 20, yPosition);
+          yPosition += 10;
+        }
+
+        if (accident.costBreakdown) {
+          // Add component costs (excluding labor and transport)
+          const displayedComponents = accident.damagedComponents?.filter((damagedComponent) => {
+            const componentName = componentNameMap[damagedComponent.damagedComponentId];
+            return componentName !== 'Labour Cost' && componentName !== 'Transport Cost';
+          }) || [];
+
+          displayedComponents.forEach(component => {
+            const componentName = componentNameMap[component.damagedComponentId] || component.damagedComponentId;
+            doc.text(`${componentName}: ${formatCurrency(2000.00)}`, 20, yPosition);
+            yPosition += 8;
+          });
+
+          if (accident.costBreakdown.labor) {
+            doc.text(`Labor Cost: ${formatCurrency(accident.costBreakdown.labor)}`, 20, yPosition);
+            yPosition += 8;
+          }
+
+          if (accident.costBreakdown.transport) {
+            doc.text(`Transport Cost: ${formatCurrency(accident.costBreakdown.transport)}`, 20, yPosition);
+            yPosition += 8;
+          }
+
+          // Calculate and display total
+          const componentCost = displayedComponents.length * 2000.00;
+          const laborCost = typeof accident.costBreakdown.labor === 'number' || typeof accident.costBreakdown.labor === 'string'
+            ? (typeof accident.costBreakdown.labor === 'string' ? parseFloat(accident.costBreakdown.labor) : accident.costBreakdown.labor)
+            : 0;
+          const transportCost = typeof accident.costBreakdown.transport === 'number' || typeof accident.costBreakdown.transport === 'string'
+            ? (typeof accident.costBreakdown.transport === 'string' ? parseFloat(accident.costBreakdown.transport) : accident.costBreakdown.transport)
+            : 0;
+          const totalCost = componentCost + laborCost + transportCost;
+
+          yPosition += 5; // Add some space before total
+          doc.setFontSize(12);
+          doc.text(`Total Loss Cost: ${formatCurrency(totalCost)}`, 20, yPosition);
+          yPosition += 15;
+          doc.setFontSize(10);
+        }
+      }
+
+      // Section 4: Evidence Summary
+      if (accident.photos?.length || accident.attachments?.length) {
+        doc.setFontSize(16);
+        doc.text('4. Evidence Summary', 20, yPosition);
+        yPosition += 15;
+
+        doc.setFontSize(10);
+
+        if (accident.photos?.length) {
+          doc.text(`Photos: ${accident.photos.length} photo(s) available`, 20, yPosition);
+          yPosition += 10;
+
+          // Add photo URLs (for reference)
+          doc.setFontSize(8);
+          accident.photos.forEach((photo: any, index: number) => {
+            const photoUrl = photo.url || photo.path || `Photo ${index + 1}`;
+            if (yPosition > 250) { // Check if we need a new page
+              doc.addPage();
+              yPosition = 20;
+            }
+            doc.text(`• ${photoUrl}`, 25, yPosition);
+            yPosition += 6;
+          });
+          doc.setFontSize(10);
+          yPosition += 5;
+        }
+
+        if (accident.attachments?.length) {
+          doc.text(`Attachments: ${accident.attachments.length} document(s) attached`, 20, yPosition);
+          yPosition += 8;
+        }
+      }
+
+      // Section 5: Images (if available)
+      if (accident.photos?.length) {
+        // Check if we need a new page
+        if (yPosition > 150) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(16);
+        doc.text('5. Accident Images', 20, yPosition);
+        yPosition += 15;
+
+        doc.setFontSize(10);
+        doc.text('Embedded accident photographs:', 20, yPosition);
+        yPosition += 10;
+
+        // Process images asynchronously
+        const imagePromises = accident.photos.map(async (photo: any, index: number) => {
+          try {
+            console.log(`Processing photo ${index + 1}:`, photo);
+            const imageUrl = photo.url || photo.path || photo.filename;
+            if (!imageUrl) {
+              console.log(`No URL found for photo ${index + 1}`);
+              return null;
+            }
+
+            // Convert relative URL to full URL - try MinIO first for accident photos
+            let fullUrl: string;
+            if (imageUrl.startsWith('http')) {
+              fullUrl = imageUrl;
+            } else {
+              // For accident photos, try MinIO URL first
+              fullUrl = `http://localhost:9000/lightpoles/${imageUrl}`;
+            }
+
+            console.log(`Loading image ${index + 1} from:`, fullUrl, 'original path:', imageUrl);
+
+            // Try multiple URL formats if the first one fails
+            let response: Response;
+            let finalUrl = fullUrl;
+
+            try {
+              response = await fetch(fullUrl);
+              if (!response.ok) {
+                // Try alternative URL format
+                const altUrl = `http://localhost:3011/${imageUrl}`;
+                console.log(`First URL failed, trying alternative:`, altUrl);
+                response = await fetch(altUrl);
+                finalUrl = altUrl;
+              }
+            } catch (firstError) {
+              // Try alternative URL format
+              try {
+                const altUrl = `http://localhost:3011/${imageUrl}`;
+                console.log(`Primary URL failed, trying alternative:`, altUrl);
+                response = await fetch(altUrl);
+                finalUrl = altUrl;
+              } catch (secondError) {
+                throw new Error(`Failed to load image from both URLs: ${firstError} | ${secondError}`);
+              }
+            }
+
+            if (!response.ok) {
+              throw new Error(`Failed to load image: ${response.status} from ${finalUrl}`);
+            }
+
+            const blob = await response.blob();
+            return new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = () => reject(new Error('Failed to read image file'));
+              reader.readAsDataURL(blob);
+            });
+          } catch (error) {
+            console.error(`Failed to load image ${index + 1}:`, error);
+            return null;
+          }
+        });
+
+        // Wait for all images to load, then add them to PDF
+        try {
+          const imageDataArray = await Promise.all(imagePromises);
+
+          imageDataArray.forEach((imageData, index) => {
+            const photo = accident.photos[index];
+
+            // Check if we need a new page
+            if (yPosition > 180) {
+              doc.addPage();
+              yPosition = 20;
+            }
+
+            // Add image title
+            doc.setFontSize(10);
+            doc.text(`Image ${index + 1}:`, 20, yPosition);
+            yPosition += 8;
+
+            if (imageData) {
+              try {
+                // Add the image (resize to fit)
+                const imgWidth = 80; // mm
+                const imgHeight = 60; // mm
+                const imgX = 20;
+                const imgY = yPosition;
+
+                doc.addImage(imageData, 'JPEG', imgX, imgY, imgWidth, imgHeight);
+                yPosition += imgHeight + 10; // Space after image
+
+                console.log(`Successfully added image ${index + 1} to PDF`);
+              } catch (imageError) {
+                console.error(`Failed to add image ${index + 1} to PDF:`, imageError);
+                doc.text(`[Image failed to load]`, 25, yPosition);
+                yPosition += 8;
+              }
+            } else {
+              // Image failed to load
+              doc.text(`[Image failed to load from server]`, 25, yPosition);
+              yPosition += 8;
+            }
+
+            // Add image description if available
+            if (photo.description) {
+              doc.text(`Description: ${photo.description}`, 25, yPosition);
+              yPosition += 8;
+            }
+
+            // Add filename if available
+            if (photo.filename || photo.name) {
+              doc.setFontSize(8);
+              doc.text(`File: ${photo.filename || photo.name}`, 25, yPosition);
+              yPosition += 6;
+              doc.setFontSize(10);
+            }
+
+            yPosition += 10; // Extra space between images
+          });
+        } catch (error) {
+          console.error('Error processing images:', error);
+          doc.text('Error loading images for PDF.', 20, yPosition);
+          yPosition += 8;
+        }
+      }
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(`Generated by Addis Ababa Light Poles Management System - Page ${i} of ${pageCount}`, 20, 280);
+      }
+
+      // Save the PDF
+      const fileName = `accident-report-${accident.id}-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+
+      // Close loading notification and show success
+      notifications.update({
+        id: loadingNotification,
+        title: 'Report Downloaded',
+        message: 'Comprehensive accident report with images has been downloaded successfully.',
+        color: 'green',
+        loading: false,
+        autoClose: 3000,
+      });
+    } catch (error) {
+      console.error('❌ Error generating PDF report:', error);
+
+      // Close loading notification and show error
+      notifications.update({
+        id: loadingNotification,
+        title: 'Error',
+        message: 'Failed to generate PDF report. Please try again.',
+        color: 'red',
+        loading: false,
+        autoClose: 5000,
+      });
+    }
+  };
+
+  const formatCurrency = (amount: number | string) => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'ETB',
-    }).format(amount);
+    }).format(numAmount);
   };
 
   // Admin users can do all actions
@@ -795,6 +1195,15 @@ export default function AccidentDetailPage() {
                     </Button>
                   )}
 
+                  <Button
+                    fullWidth
+                    variant="outline"
+                    leftSection={<IconFileDownload size={16} />}
+                    onClick={() => downloadComprehensiveReport()}
+                  >
+                    Download Full Report (PDF)
+                  </Button>
+
                   {(canApproveSupervisor || canApproveFinance) && accident?.status === 'APPROVED' && (
                     <Button
                       fullWidth
@@ -979,7 +1388,11 @@ export default function AccidentDetailPage() {
                               <Group justify="space-between">
                                 <Text size="sm" fw={600}>Total Loss Cost:</Text>
                                 <Text size="sm" fw={600}>
-                                  {formatCurrency(displayedComponents.length * 2000.00)}
+                                  {formatCurrency(
+                                    (displayedComponents.length * 2000.00) +
+                                    (accident.costBreakdown?.labor || 0) +
+                                    (accident.costBreakdown?.transport || 0)
+                                  )}
                                 </Text>
                               </Group>
                             </>
@@ -1340,26 +1753,57 @@ export default function AccidentDetailPage() {
                     <Divider my="md" />
                     <Text fw={500} mb="md">Detailed Cost Breakdown</Text>
                     <Stack gap="xs">
-                      {/* Show costs for damaged components only */}
-                      {accident.damagedComponents?.map((damagedComponent, index) => {
-                        const componentName = componentNameMap[damagedComponent.damagedComponentId];
+                      {/* Calculate displayed components count for total */}
+                      {(() => {
+                        const displayedComponents = accident.damagedComponents?.filter((damagedComponent) => {
+                          const componentName = componentNameMap[damagedComponent.damagedComponentId];
+                          return componentName !== 'Labour Cost' && componentName !== 'Transport Cost';
+                        }) || [];
 
                         return (
-                          <Group key={index} justify="space-between">
-                            <Text size="sm">{componentName || damagedComponent.damagedComponentId}:</Text>
-                            <Text size="sm" fw={500}>{formatCurrency(2000.00)}</Text>
-                          </Group>
-                        );
-                      }).filter(Boolean)}
+                          <>
+                            {/* Show costs for damaged components (excluding Labour and Transport) */}
+                            {displayedComponents.map((damagedComponent, index) => {
+                              const componentName = componentNameMap[damagedComponent.damagedComponentId];
 
-                      {/* Show total loss cost */}
-                      <Divider />
-                      <Group justify="space-between">
-                        <Text size="sm" fw={600}>Total Loss Cost:</Text>
-                        <Text size="sm" fw={600}>
-                          {formatCurrency((accident.damagedComponents?.length || 0) * 2000.00)}
-                        </Text>
-                      </Group>
+                              return (
+                                <Group key={index} justify="space-between">
+                                  <Text size="sm">{componentName || damagedComponent.damagedComponentId}:</Text>
+                                  <Text size="sm" fw={500}>{formatCurrency(2000.00)}</Text>
+                                </Group>
+                              );
+                            })}
+
+                            {/* Show labor and transport costs */}
+                            {accident.costBreakdown?.labor && (
+                              <Group justify="space-between">
+                                <Text size="sm">Labor Cost:</Text>
+                                <Text size="sm" fw={500}>{formatCurrency(accident.costBreakdown.labor)}</Text>
+                              </Group>
+                            )}
+
+                            {accident.costBreakdown?.transport && (
+                              <Group justify="space-between">
+                                <Text size="sm">Transport Cost:</Text>
+                                <Text size="sm" fw={500}>{formatCurrency(accident.costBreakdown.transport)}</Text>
+                              </Group>
+                            )}
+
+                            {/* Show total loss cost */}
+                            <Divider />
+                            <Group justify="space-between">
+                              <Text size="sm" fw={600}>Total Loss Cost:</Text>
+                              <Text size="sm" fw={600}>
+                                {formatCurrency(
+                                  (displayedComponents.length * 2000.00) +
+                                  (accident.costBreakdown?.labor || 0) +
+                                  (accident.costBreakdown?.transport || 0)
+                                )}
+                              </Text>
+                            </Group>
+                          </>
+                        );
+                      })()}
                     </Stack>
                   </div>
                 )}

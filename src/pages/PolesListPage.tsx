@@ -23,7 +23,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconEdit, IconTrash, IconHistory, IconFilter, IconArrowUp, IconArrowDown, IconArrowsSort } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconHistory, IconEye, IconFilter, IconArrowUp, IconArrowDown, IconArrowsSort } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import axios from 'axios';
@@ -34,11 +34,11 @@ export default function PolesListPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
   const [subcity, setSubcity] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [streetFilter, setStreetFilter] = useState<string | null>(null);
-  const [ledDisplayFilter, setLedDisplayFilter] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'subcity' | 'street' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
@@ -58,7 +58,7 @@ export default function PolesListPage() {
   }, [searchParams]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['poles', page, search, subcity, status, streetFilter, ledDisplayFilter, sortBy, sortDirection],
+    queryKey: ['poles', page, limit, search, subcity, status, streetFilter, sortBy, sortDirection],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
 
@@ -66,7 +66,7 @@ export default function PolesListPage() {
       if (status === 'REPLACED') {
         const params = new URLSearchParams({
           page: page.toString(),
-          limit: '10',
+          limit: limit.toString(),
         });
 
         const res = await axios.get(`http://localhost:3011/api/v1/pole-replacements?${params.toString()}`, {
@@ -121,15 +121,12 @@ export default function PolesListPage() {
       // Normal poles query for other statuses
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '10',
+        limit: limit.toString(),
       });
       if (search) params.append('search', search);
       if (subcity) params.append('subcity', subcity);
       if (status && status !== 'REPLACED') params.append('status', status);
       if (streetFilter) params.append('street', streetFilter);
-      if (ledDisplayFilter !== null) {
-        params.append('hasLedDisplay', ledDisplayFilter === 'yes' ? 'true' : 'false');
-      }
       if (sortBy) params.append('sortBy', sortBy);
       if (sortDirection) params.append('sortDirection', sortDirection);
 
@@ -142,20 +139,20 @@ export default function PolesListPage() {
     },
   });
 
-  // Get unique subcities for filter dropdown (fetch all for dropdown options)
-  const { data: allPolesData } = useQuery({
-    queryKey: ['poles-all-for-subcities'],
-    queryFn: async () => {
-      const token = localStorage.getItem('access_token');
-      const res = await axios.get(`http://localhost:3011/api/v1/poles?page=1&limit=1000`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      return res.data;
-    },
-  });
-  const uniqueSubcities = Array.from(new Set((allPolesData?.items || []).map((p: any) => p.subcity).filter(Boolean))).sort();
+  // Hardcoded list of subcities for filter dropdown
+  const SUBCITIES = [
+    'Addis Ketema',
+    'Akaky Kaliti',
+    'Arada',
+    'Bole',
+    'Gullele',
+    'Kirkos',
+    'Kolfe Keranio',
+    'Lideta',
+    'Nifas Silk-Lafto',
+    'Yeka',
+    'Lemi Kura',
+  ];
 
   const STREETS = [
     'Africa Avenue',
@@ -327,8 +324,7 @@ export default function PolesListPage() {
   // Use server-side paginated data directly
   const paginatedPoles = data?.items || [];
   const totalItems = data?.total || 0;
-  const itemsPerPage = data?.limit || 10;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages = Math.ceil(totalItems / limit);
 
   // Handle sort click
   const handleSort = (column: 'subcity' | 'street') => {
@@ -439,19 +435,7 @@ export default function PolesListPage() {
           <Group grow>
             <Select
               placeholder="Subcity"
-              data={[
-                'Addis Ketema',
-                'Akaky Kaliti',
-                'Arada',
-                'Bole',
-                'Gullele',
-                'Kirkos',
-                'Kolfe Keranio',
-                'Lideta',
-                'Nifas Silk-Lafto',
-                'Yeka',
-                'Lemi Kura',
-              ]}
+              data={SUBCITIES}
               value={subcity}
               onChange={(value) => {
                 setSubcity(value);
@@ -498,7 +482,7 @@ export default function PolesListPage() {
                         <Text size="sm" fw={600}>Filter by Subcity</Text>
                         <Select
                           placeholder="Select subcity"
-                          data={uniqueSubcities}
+                          data={SUBCITIES}
                           value={subcity}
                           onChange={(value) => {
                             setSubcity(value);
@@ -615,40 +599,6 @@ export default function PolesListPage() {
                   </Popover>
                 </Group>
               </Table.Th>
-              <Table.Th onClick={(e) => e.stopPropagation()}>
-                <Group gap="xs" wrap="nowrap">
-                  <Text>LED Display</Text>
-                  <Popover position="bottom" withArrow shadow="md" withinPortal>
-                    <Popover.Target>
-                      <ActionIcon
-                        size="sm"
-                        variant={ledDisplayFilter ? 'filled' : 'subtle'}
-                        color={ledDisplayFilter ? 'blue' : 'gray'}
-                      >
-                        <IconFilter size={14} />
-                      </ActionIcon>
-                    </Popover.Target>
-                    <Popover.Dropdown>
-                      <Stack gap="xs">
-                        <Text size="sm" fw={600}>Filter by LED Display</Text>
-                        <Select
-                          placeholder="Select option"
-                          data={[
-                            { value: 'yes', label: 'Yes' },
-                            { value: 'no', label: 'No' },
-                          ]}
-                          value={ledDisplayFilter}
-                          onChange={(value) => {
-                            setLedDisplayFilter(value);
-                            setPage(1);
-                          }}
-                          clearable
-                        />
-                      </Stack>
-                    </Popover.Dropdown>
-                  </Popover>
-                </Group>
-              </Table.Th>
               <Table.Th>Actions</Table.Th>
               {status === 'REPLACED' && (
                 <>
@@ -662,11 +612,11 @@ export default function PolesListPage() {
           <Table.Tbody>
             {isLoading ? (
               <Table.Tr>
-                <Table.Td colSpan={status === 'REPLACED' ? 10 : 7}>Loading...</Table.Td>
+                <Table.Td colSpan={status === 'REPLACED' ? 9 : 6}>Loading...</Table.Td>
               </Table.Tr>
             ) : paginatedPoles.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={status === 'REPLACED' ? 10 : 7}>No poles found</Table.Td>
+                <Table.Td colSpan={status === 'REPLACED' ? 9 : 6}>No poles found</Table.Td>
               </Table.Tr>
             ) : (
               paginatedPoles.map((pole: any) => (
@@ -684,30 +634,26 @@ export default function PolesListPage() {
                       {pole.status}
                     </Badge>
                   </Table.Td>
-                  <Table.Td>
-                    {pole.hasLedDisplay ? (
-                      <Badge color="blue" variant="light">Yes</Badge>
-                    ) : (
-                      <Badge color="gray" variant="light">No</Badge>
-                    )}
-                  </Table.Td>
                   <Table.Td onClick={(e) => e.stopPropagation()}>
                     <Group gap="xs">
-                      <Button
-                        size="xs"
+                      <ActionIcon
                         variant="light"
+                        color="blue"
+                        size="sm"
+                        title="View"
                         onClick={() => navigate(`/poles/${pole.code}`)}
                       >
-                        View
-                      </Button>
-                      <Button
-                        size="xs"
+                        <IconEye size={16} />
+                      </ActionIcon>
+                      <ActionIcon
                         variant="light"
-                        leftSection={<IconHistory size={14} />}
+                        color="blue"
+                        size="sm"
+                        title="Show History"
                         onClick={() => handleShowHistory(pole.code)}
                       >
-                        Show History
-                      </Button>
+                        <IconHistory size={16} />
+                      </ActionIcon>
                       {isAdmin && (
                         <>
                           <ActionIcon
@@ -752,7 +698,7 @@ export default function PolesListPage() {
       {totalPages > 0 && (
         <Group justify="space-between" align="center" mt="md">
           <Text size="sm" c="dimmed">
-            Showing {paginatedPoles.length > 0 ? ((page - 1) * itemsPerPage + 1) : 0} - {Math.min(page * itemsPerPage, totalItems)} of {totalItems} poles
+            Showing {paginatedPoles.length > 0 ? ((page - 1) * limit + 1) : 0} - {Math.min(page * limit, totalItems)} of {totalItems} poles
           </Text>
           <Pagination
             value={page}

@@ -4,7 +4,7 @@ import { Container, Grid, Paper, Text, Title, Table, Badge, Select, Stack, Group
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { IconPackage, IconShoppingCart, IconAlertTriangle, IconCarCrash } from '@tabler/icons-react';
+import { IconPackage, IconShoppingCart, IconAlertTriangle, IconCarCrash, IconMapPin } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
 
 const SUBCITIES = [
@@ -393,6 +393,20 @@ export default function DashboardPage() {
     },
   });
 
+  // Fetch all poles for map display
+  const { data: allPoles } = useQuery({
+    queryKey: ['poles', 'all'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get('http://localhost:3011/api/v1/poles?limit=10000', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data.items || [];
+    },
+  });
+
   // Reset pagination when data changes
   useEffect(() => {
     setOperationalPage(1);
@@ -537,6 +551,7 @@ export default function DashboardPage() {
           icon={<IconAlertTriangle size={16} />}
           title="Low Stock Alert"
           color="red"
+          mt="xl"
           mb="md"
           withCloseButton
         >
@@ -560,7 +575,7 @@ export default function DashboardPage() {
             <Stack gap="md">
               <Group justify="space-between" wrap="wrap">
                 <Title order={3}>
-                  {selectedStatus === 'Faulty' ? 'Faulty Assets by Subcity' :
+                  {selectedStatus === 'Faulty' ? 'Light Pole Assessment By Subcity' :
                    selectedStatus === 'Working' ? 'Working Light Poles by Subcity' :
                    'In Progress Maintenances by Subcity'}
                 </Title>
@@ -801,7 +816,7 @@ export default function DashboardPage() {
         <Grid.Col span={{ base: 12, md: 12 }} mt="xl">
           <Paper p="md" withBorder>
             <Title order={3} mb="md">
-              Faulty Assets by Street
+              Light Pole Assessment By Street
             </Title>
             {failedByStreet && failedByStreet.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -824,6 +839,82 @@ export default function DashboardPage() {
                 No faulty assets by street found
               </Text>
             )}
+          </Paper>
+        </Grid.Col>
+      </Grid>
+
+      {/* Geographical Map Section */}
+      <Grid mt="xl">
+        <Grid.Col span={{ base: 12, md: 12 }}>
+          <Paper p="md" withBorder>
+            <Group justify="space-between" align="center" mb="md">
+              <Group align="center">
+                <IconMapPin size={24} color="var(--mantine-color-blue-6)" />
+                <Title order={3}>
+                  Addis Ababa Light Pole Distribution Map
+                </Title>
+              </Group>
+              <Text size="sm" c="dimmed">
+                Interactive geographical overview
+              </Text>
+            </Group>
+
+            <Grid>
+              {SUBCITIES.map((subcity) => {
+                const polesInSubcity = allPoles?.filter((pole: any) => pole.subcity === subcity) || [];
+                const operationalCount = polesInSubcity.filter((pole: any) => pole.status === 'OPERATIONAL').length;
+                const faultyCount = polesInSubcity.filter((pole: any) => pole.status === 'FAULT_DAMAGED').length;
+                const maintenanceCount = polesInSubcity.filter((pole: any) => pole.status === 'UNDER_MAINTENANCE').length;
+
+                return (
+                  <Grid.Col key={subcity} span={{ base: 12, sm: 6, lg: 3 }}>
+                    <Paper
+                      p="md"
+                      withBorder
+                      style={{
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        backgroundColor: operationalCount > 0 ? 'var(--mantine-color-green-0)' : 'var(--mantine-color-gray-0)',
+                        border: operationalCount === polesInSubcity.length ? '2px solid var(--mantine-color-green-6)' : '1px solid var(--mantine-color-gray-3)',
+                      }}
+                      onClick={() => navigate(`/poles?subcity=${encodeURIComponent(subcity)}`)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = 'var(--mantine-shadow-md)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      <Stack gap="xs" align="center">
+                        <Text fw={600} size="md" ta="center">
+                          {subcity}
+                        </Text>
+                        <Group gap="xs" wrap="wrap" justify="center">
+                          <Badge color="green" size="sm">
+                            {operationalCount} Working
+                          </Badge>
+                          <Badge color="red" size="sm">
+                            {faultyCount} Faulty
+                          </Badge>
+                          <Badge color="yellow" size="sm">
+                            {maintenanceCount} Maintenance
+                          </Badge>
+                        </Group>
+                        <Text size="sm" c="dimmed" ta="center">
+                          Total: {polesInSubcity.length} poles
+                        </Text>
+                      </Stack>
+                    </Paper>
+                  </Grid.Col>
+                );
+              })}
+            </Grid>
+
+            <Text size="xs" c="dimmed" ta="center" mt="md">
+              Click on any subcity to view detailed pole information
+            </Text>
           </Paper>
         </Grid.Col>
       </Grid>

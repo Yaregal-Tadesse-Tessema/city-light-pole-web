@@ -62,6 +62,10 @@ import AccidentDetailPage from './pages/AccidentDetailPage';
 import AccidentReportsPage from './pages/AccidentReportsPage';
 import DamagedComponentsPage from './pages/DamagedComponentsPage';
 import CreateAccidentPage from './pages/CreateAccidentPage';
+import ComponentsListPage from './pages/ComponentsListPage';
+import ComponentDetailPage from './pages/ComponentDetailPage';
+import CreateComponentPage from './pages/CreateComponentPage';
+import UpdateComponentPage from './pages/UpdateComponentPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFoundPage from './pages/NotFoundPage';
@@ -85,6 +89,10 @@ function App() {
           <Route path="/poles/new" element={<CreatePolePage />} />
           <Route path="/replacements" element={<PoleReplacementsListPage />} />
           <Route path="/replacements/new" element={<CreatePoleReplacementPage />} />
+          <Route path="/components" element={<ComponentsListPage />} />
+          <Route path="/components/new" element={<CreateComponentPage />} />
+          <Route path="/components/:id" element={<ComponentDetailPage />} />
+          <Route path="/components/:id/edit" element={<UpdateComponentPage />} />
           <Route path="/poles/:code" element={<PoleDetailPage />} />
           <Route path="/poles/:code/edit" element={<UpdatePolePage />} />
           <Route path="/parks" element={<ParksListPage />} />

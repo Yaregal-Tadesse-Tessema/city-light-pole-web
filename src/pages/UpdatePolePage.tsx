@@ -33,17 +33,38 @@ const LAMP_TYPES = [
   { value: 'HALOGEN', label: 'Halogen' },
 ];
 
-const LED_STATUSES = [
-  { value: 'OPERATIONAL', label: 'Operational' },
-  { value: 'ON_MAINTENANCE', label: 'On Maintenance' },
-  { value: 'FAILED_DAMAGED', label: 'Failed/Damaged' },
-];
-
 const POLE_STATUSES = [
   { value: 'OPERATIONAL', label: 'Operational' },
   { value: 'FAULT_DAMAGED', label: 'Fault/Damaged' },
   { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
   { value: 'REPLACED', label: 'Replaced' },
+];
+
+const STRUCTURE_OPTIONS = [
+  { value: 'Steel', label: 'Steel' },
+  { value: 'Concrete', label: 'Concrete' },
+];
+
+const POSITION_OPTIONS = [
+  { value: 'Up', label: 'Up' },
+  { value: 'Down', label: 'Down' },
+  { value: 'Middle', label: 'Middle' },
+];
+
+const CONDITION_OPTIONS = [
+  { value: 'Not in Place', label: 'Not in Place' },
+  { value: 'Good', label: 'Good' },
+  { value: 'Bend', label: 'Bend' },
+  { value: 'Broken Lamp', label: 'Broken Lamp' },
+  { value: 'Both Pole & Lamp Broken', label: 'Both Pole & Lamp Broken' },
+];
+
+const DISTRICT_OPTIONS = [
+  { value: 'west', label: 'West' },
+  { value: 'north', label: 'North' },
+  { value: 'south', label: 'South' },
+  { value: 'east', label: 'East' },
+  { value: 'center', label: 'Center' },
 ];
 
 const STREETS = [
@@ -227,17 +248,13 @@ export default function UpdatePolePage() {
     heightMeters: 0,
     lampType: 'LED',
     powerRatingWatt: 0,
-    hasLedDisplay: false,
-    ledModel: '',
-    ledInstallationDate: '' as string,
-    ledStatus: '' as string,
     numberOfPoles: undefined as number | undefined,
-    hasCamera: false,
-    cameraInstallationDate: '' as string,
-    hasPhoneCharger: false,
-    phoneChargerInstallationDate: '' as string,
     poleInstallationDate: '' as string,
     status: 'OPERATIONAL',
+    structure: '' as string,
+    polePosition: '' as string,
+    condition: '' as string,
+    district: '' as string,
   });
 
   const { data: pole, isLoading } = useQuery({
@@ -266,17 +283,13 @@ export default function UpdatePolePage() {
         heightMeters: pole.heightMeters || 0,
         lampType: pole.lampType || 'LED',
         powerRatingWatt: pole.powerRatingWatt || 0,
-        hasLedDisplay: pole.hasLedDisplay || false,
-        ledModel: pole.ledModel || '',
-        ledInstallationDate: pole.ledInstallationDate ? new Date(pole.ledInstallationDate).toISOString().split('T')[0] : '',
-        ledStatus: pole.ledStatus || '',
         numberOfPoles: pole.numberOfPoles !== undefined && pole.numberOfPoles !== null ? Number(pole.numberOfPoles) : undefined,
-        hasCamera: pole.hasCamera || false,
-        cameraInstallationDate: pole.cameraInstallationDate ? new Date(pole.cameraInstallationDate).toISOString().split('T')[0] : '',
-        hasPhoneCharger: pole.hasPhoneCharger || false,
-        phoneChargerInstallationDate: pole.phoneChargerInstallationDate ? new Date(pole.phoneChargerInstallationDate).toISOString().split('T')[0] : '',
         poleInstallationDate: pole.poleInstallationDate ? new Date(pole.poleInstallationDate).toISOString().split('T')[0] : '',
         status: pole.status || 'OPERATIONAL',
+        structure: pole.structure || '',
+        polePosition: pole.polePosition || '',
+        condition: pole.condition || '',
+        district: pole.district || '',
       });
     }
   }, [pole]);
@@ -322,7 +335,10 @@ export default function UpdatePolePage() {
       powerRatingWatt: formData.powerRatingWatt,
       poleType: formData.poleType,
       lampType: formData.lampType,
-      hasLedDisplay: formData.hasLedDisplay,
+      structure: formData.structure,
+      polePosition: formData.polePosition,
+      condition: formData.condition,
+      district: formData.district,
       status: formData.status,
     };
 
@@ -334,30 +350,8 @@ export default function UpdatePolePage() {
       apiData.gpsLng = Number(formData.gpsLng);
     }
 
-    // Add LED fields only if hasLedDisplay is true
-    if (formData.hasLedDisplay) {
-      if (formData.ledModel) {
-        apiData.ledModel = formData.ledModel;
-      }
-      if (formData.ledInstallationDate) {
-        apiData.ledInstallationDate = formData.ledInstallationDate;
-      }
-      if (formData.ledStatus) {
-        apiData.ledStatus = formData.ledStatus;
-      }
-    }
-
-    // Add new fields
     if (formData.numberOfPoles !== undefined && formData.numberOfPoles !== null) {
       apiData.numberOfPoles = formData.numberOfPoles;
-    }
-    apiData.hasCamera = formData.hasCamera || false;
-    if (formData.hasCamera && formData.cameraInstallationDate) {
-      apiData.cameraInstallationDate = formData.cameraInstallationDate;
-    }
-    apiData.hasPhoneCharger = formData.hasPhoneCharger || false;
-    if (formData.hasPhoneCharger && formData.phoneChargerInstallationDate) {
-      apiData.phoneChargerInstallationDate = formData.phoneChargerInstallationDate;
     }
     if (formData.poleInstallationDate) {
       apiData.poleInstallationDate = formData.poleInstallationDate;
@@ -424,6 +418,98 @@ export default function UpdatePolePage() {
               />
             </Group>
 
+            <Group grow>
+              <Select
+                label="Pole Type"
+                data={POLE_TYPES}
+                value={formData.poleType}
+                onChange={(value) => setFormData({ ...formData, poleType: value || 'STANDARD' })}
+              />
+              <Select
+                label="Structure"
+                placeholder="Select structure"
+                required
+                data={STRUCTURE_OPTIONS}
+                value={formData.structure}
+                onChange={(value) => setFormData({ ...formData, structure: value || '' })}
+              />
+            </Group>
+
+            <Group grow>
+              <NumberInput
+                label="Height (meters)"
+                placeholder="8.5"
+                required
+                min={0}
+                precision={2}
+                value={formData.heightMeters}
+                onChange={(value) => setFormData({ ...formData, heightMeters: Number(value) || 0 })}
+              />
+            </Group>
+
+            <Group grow>
+              <Select
+                label="Lamp Type"
+                data={LAMP_TYPES}
+                value={formData.lampType}
+                onChange={(value) => setFormData({ ...formData, lampType: value || 'LED' })}
+              />
+              <NumberInput
+                label="Power Rating (Watt)"
+                placeholder="150"
+                required
+                min={0}
+                value={formData.powerRatingWatt}
+                onChange={(value) => setFormData({ ...formData, powerRatingWatt: Number(value) || 0 })}
+              />
+            </Group>
+
+            <Group grow>
+              <Select
+                label="Status (Up/Down/Middle)"
+                placeholder="Select position"
+                data={POSITION_OPTIONS}
+                value={formData.polePosition}
+                onChange={(value) => setFormData({ ...formData, polePosition: value || '' })}
+              />
+              <Select
+                label="Condition"
+                placeholder="Select condition"
+                data={CONDITION_OPTIONS}
+                value={formData.condition}
+                onChange={(value) => setFormData({ ...formData, condition: value || '' })}
+              />
+              <Select
+                label="District"
+                placeholder="Select district"
+                data={DISTRICT_OPTIONS}
+                value={formData.district}
+                onChange={(value) => setFormData({ ...formData, district: value || '' })}
+              />
+            </Group>
+
+            <NumberInput
+              label="Number of Bulbs"
+              placeholder="1"
+              min={1}
+              value={formData.numberOfPoles}
+              onChange={(value) => setFormData({ ...formData, numberOfPoles: value ? Number(value) : undefined })}
+            />
+
+            <TextInput
+              type="date"
+              label="Pole Installation Date"
+              value={formData.poleInstallationDate}
+              onChange={(e) => setFormData({ ...formData, poleInstallationDate: e.target.value })}
+            />
+
+            <Select
+              label="Status"
+              data={POLE_STATUSES}
+              value={formData.status}
+              onChange={(value) => setFormData({ ...formData, status: value || 'OPERATIONAL' })}
+            />
+
             <Stack gap="xs">
               <Group grow>
                 <NumberInput
@@ -456,126 +542,6 @@ export default function UpdatePolePage() {
                 showAllPoles={true}
               />
             </Stack>
-
-            <Group grow>
-              <Select
-                label="Pole Type"
-                data={POLE_TYPES}
-                value={formData.poleType}
-                onChange={(value) => setFormData({ ...formData, poleType: value || 'STANDARD' })}
-              />
-              <NumberInput
-                label="Height (meters)"
-                placeholder="8.5"
-                required
-                min={0}
-                precision={2}
-                value={formData.heightMeters}
-                onChange={(value) => setFormData({ ...formData, heightMeters: Number(value) || 0 })}
-              />
-            </Group>
-
-            <Group grow>
-              <Select
-                label="Lamp Type"
-                data={LAMP_TYPES}
-                value={formData.lampType}
-                onChange={(value) => setFormData({ ...formData, lampType: value || 'LED' })}
-              />
-              <NumberInput
-                label="Power Rating (Watt)"
-                placeholder="150"
-                required
-                min={0}
-                value={formData.powerRatingWatt}
-                onChange={(value) => setFormData({ ...formData, powerRatingWatt: Number(value) || 0 })}
-              />
-            </Group>
-
-            <Switch
-              label="Has LED Display"
-              checked={formData.hasLedDisplay}
-              onChange={(e) => setFormData({ ...formData, hasLedDisplay: e.currentTarget.checked })}
-            />
-
-            {formData.hasLedDisplay && (
-              <>
-                <TextInput
-                  label="LED Model"
-                  placeholder="LED-3000"
-                  value={formData.ledModel}
-                  onChange={(e) => setFormData({ ...formData, ledModel: e.target.value })}
-                />
-                <TextInput
-                  type="date"
-                  label="LED Installation Date"
-                  required
-                  value={formData.ledInstallationDate}
-                  onChange={(e) => setFormData({ ...formData, ledInstallationDate: e.target.value })}
-                />
-                <Select
-                  label="LED Status"
-                  data={LED_STATUSES}
-                  required
-                  value={formData.ledStatus}
-                  onChange={(value) => setFormData({ ...formData, ledStatus: value || '' })}
-                />
-              </>
-            )}
-
-            <NumberInput
-              label="Number of Bulbs"
-              placeholder="1"
-              min={1}
-              value={formData.numberOfPoles}
-              onChange={(value) => setFormData({ ...formData, numberOfPoles: value ? Number(value) : undefined })}
-            />
-
-            <TextInput
-              type="date"
-              label="Pole Installation Date"
-              value={formData.poleInstallationDate}
-              onChange={(e) => setFormData({ ...formData, poleInstallationDate: e.target.value })}
-            />
-
-            <Switch
-              label="Has Camera"
-              checked={formData.hasCamera}
-              onChange={(e) => setFormData({ ...formData, hasCamera: e.currentTarget.checked })}
-            />
-
-            {formData.hasCamera && (
-              <TextInput
-                type="date"
-                label="Camera Installation Date"
-                required
-                value={formData.cameraInstallationDate}
-                onChange={(e) => setFormData({ ...formData, cameraInstallationDate: e.target.value })}
-              />
-            )}
-
-            <Switch
-              label="Has Phone Charger"
-              checked={formData.hasPhoneCharger}
-              onChange={(e) => setFormData({ ...formData, hasPhoneCharger: e.currentTarget.checked })}
-            />
-
-            {formData.hasPhoneCharger && (
-              <TextInput
-                type="date"
-                label="Phone Charger Installation Date"
-                required
-                value={formData.phoneChargerInstallationDate}
-                onChange={(e) => setFormData({ ...formData, phoneChargerInstallationDate: e.target.value })}
-              />
-            )}
-
-            <Select
-              label="Status"
-              data={POLE_STATUSES}
-              value={formData.status}
-              onChange={(value) => setFormData({ ...formData, status: value || 'OPERATIONAL' })}
-            />
 
             <Group justify="flex-end" mt="xl">
               <Button variant="outline" onClick={() => navigate('/poles')}>

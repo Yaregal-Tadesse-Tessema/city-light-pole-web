@@ -690,7 +690,7 @@ export default function PurchaseRequestsPage() {
                     <Table.Td>
                       <Text size="sm">
                         {request.materialRequestId
-                          ? `MR-${request.materialRequestId.substring(0, 8)}...`
+                          ? (request.materialRequest?.code ?? '—')
                           : 'Direct Purchase'}
                       </Text>
                     </Table.Td>
@@ -808,7 +808,7 @@ export default function PurchaseRequestsPage() {
               <Group justify="space-between">
                 <Text fw={600}>Material Request:</Text>
                 <Text size="sm">
-                  {selectedRequest.materialRequestId.substring(0, 8)}...
+                  {selectedRequest.materialRequest?.code ?? '—'}
                 </Text>
               </Group>
             )}
