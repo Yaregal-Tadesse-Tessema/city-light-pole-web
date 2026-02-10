@@ -9,6 +9,7 @@ interface User {
   fullName: string;
   role: string;
   status: string;
+  profilePicture?: string;
 }
 
 export function useAuth() {
@@ -77,5 +78,4 @@ export function useAuth() {
 
   return { user, loading, login, signup, logout };
 }
-
 

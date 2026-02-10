@@ -142,7 +142,7 @@ export default function FootballFieldsListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title size={{ base: 'h2', sm: 'h1' }}>Football Fields</Title>
+        <Title size="h2">Football Fields</Title>
         {isAdmin && (
           <Button 
             onClick={() => navigate('/football-fields/new')}
@@ -374,4 +374,3 @@ export default function FootballFieldsListPage() {
     </Container>
   );
 }
-

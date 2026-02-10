@@ -142,7 +142,7 @@ export default function MuseumsListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title size={{ base: 'h2', sm: 'h1' }}>Museums</Title>
+        <Title size="h2">Museums</Title>
         {isAdmin && (
           <Button 
             onClick={() => navigate('/museums/new')}
@@ -374,4 +374,3 @@ export default function MuseumsListPage() {
     </Container>
   );
 }
-

@@ -28,7 +28,6 @@ import {
   IconTree,
   IconToiletPaper,
   IconBallBasketball,
-  IconRiver,
   IconCamera,
   IconBulb,
   IconGauge,
@@ -93,14 +92,14 @@ export default function LandingPage() {
           display: 'flex',
           alignItems: 'center',
         }}
-        p={{ base: 40, sm: 60 }}
+        p={60}
       >
-        <Container size="lg" px={{ base: 'xs', sm: 'md' }}>
-          <Stack align="center" gap={{ base: 'lg', sm: 'xl' }}>
+        <Container size="lg" px="md">
+          <Stack align="center" gap="xl">
             <Stack align="center" gap="md">
               <Title
                 order={1}
-                size={{ base: 32, sm: 48, lg: 56 }}
+                size={48}
                 ta="center"
                 c="white"
                 style={{
@@ -122,7 +121,7 @@ export default function LandingPage() {
               </Title>
 
               <Text
-                size={{ base: 'md', sm: 'lg', lg: 'xl' }}
+                size="lg"
                 ta="center"
                 c="white"
                 maw={900}
@@ -175,7 +174,7 @@ export default function LandingPage() {
         <Container size="lg">
           <Stack align="center" gap="xl">
             <Stack align="center" gap="md">
-              <Title order={2} ta="center" size={{ base: 'h2', sm: 'h1' }}>
+              <Title order={2} ta="center" size="h2">
                 Powerful Features
               </Title>
               <Text c="dimmed" ta="center" maw={600} size="lg">
@@ -225,7 +224,7 @@ export default function LandingPage() {
         <Container size="lg">
           <Stack align="center" gap="xl">
             <Stack align="center" gap="md">
-              <Title order={2} ta="center" c="white" size={{ base: 'h2', sm: 'h1' }}>
+              <Title order={2} ta="center" c="white" size="h2">
                 Ready to Get Started?
               </Title>
               <Text c="white" ta="center" maw={600} size="lg" opacity={0.9}>

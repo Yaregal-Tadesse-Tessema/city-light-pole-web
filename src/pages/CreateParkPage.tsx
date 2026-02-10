@@ -74,14 +74,14 @@ export default function CreateParkPage() {
         return null;
       },
       areaHectares: (value) => {
-        if (value === undefined || value === null || value === '') {
+        if (value === undefined || value === null) {
           return 'Area is required';
         }
         if (value <= 0) return 'Area must be greater than 0';
         return null;
       },
       entranceFee: (value, values) => {
-        if (values.hasPaidEntrance && (value === undefined || value === null || value === '')) {
+        if (values.hasPaidEntrance && (value === undefined || value === null)) {
           return 'Entrance fee is required when paid entrance is enabled';
         }
         if (values.hasPaidEntrance && value !== undefined && value !== null && value <= 0) {
@@ -114,10 +114,10 @@ export default function CreateParkPage() {
         apiData.description = data.description;
       }
 
-      if (data.gpsLat !== undefined && data.gpsLat !== null && data.gpsLat !== '' && !isNaN(Number(data.gpsLat))) {
+      if (data.gpsLat !== undefined && data.gpsLat !== null && !Number.isNaN(Number(data.gpsLat))) {
         apiData.gpsLat = Number(data.gpsLat);
       }
-      if (data.gpsLng !== undefined && data.gpsLng !== null && data.gpsLng !== '' && !isNaN(Number(data.gpsLng))) {
+      if (data.gpsLng !== undefined && data.gpsLng !== null && !Number.isNaN(Number(data.gpsLng))) {
         apiData.gpsLng = Number(data.gpsLng);
       }
 
@@ -163,7 +163,7 @@ export default function CreateParkPage() {
   return (
     <ErrorBoundary>
       <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-        <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Create New Public Park</Title>
+        <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">Create New Public Park</Title>
 
         <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
           <form onSubmit={handleSubmit}>
@@ -265,7 +265,8 @@ export default function CreateParkPage() {
                 placeholder="5.5"
                 required
                 min={0.01}
-                precision={2}
+                decimalScale={2}
+                fixedDecimalScale
                 value={form.values.areaHectares ?? undefined}
                 onChange={(value) => {
                   const numValue = value === '' || value === null || value === undefined ? undefined : Number(value);
@@ -286,7 +287,8 @@ export default function CreateParkPage() {
                 placeholder="50.00"
                 required
                 min={0.01}
-                precision={2}
+                decimalScale={2}
+                fixedDecimalScale
                 value={form.values.entranceFee ?? undefined}
                 onChange={(value) => {
                   const numValue = value === '' || value === null || value === undefined ? undefined : Number(value);
@@ -324,4 +326,3 @@ export default function CreateParkPage() {
     </ErrorBoundary>
   );
 }
-

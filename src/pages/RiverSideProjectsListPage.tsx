@@ -133,7 +133,7 @@ export default function RiverSideProjectsListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title size={{ base: 'h2', sm: 'h1' }}>River Side Projects</Title>
+        <Title size="h2">River Side Projects</Title>
         {isAdmin && (
           <Button onClick={() => navigate('/river-side-projects/new')} size="md">
             Register River Project

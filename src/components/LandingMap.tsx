@@ -131,18 +131,18 @@ const LandingMap = () => {
           });
 
           // Convert coordinates to numbers for poles with valid coords
-          const processedPoles = polesWithCoords.map((pole: any) => ({
+          const processedPoles: Pole[] = polesWithCoords.map((pole: any) => ({
             ...pole,
             gpsLat: typeof pole.gpsLat === 'string' ? parseFloat(pole.gpsLat) : pole.gpsLat,
             gpsLng: typeof pole.gpsLng === 'string' ? parseFloat(pole.gpsLng) : pole.gpsLng,
-          }));
+          })) as Pole[];
 
           setPoles(processedPoles);
           setFilteredPoles(processedPoles);
 
           // Extract unique subcities and streets for filter dropdowns
-          const uniqueSubcities = [...new Set(processedPoles.map(pole => pole.subcity))].sort() as string[];
-          const uniqueStreets = [...new Set(processedPoles.map(pole => pole.street))].sort() as string[];
+          const uniqueSubcities = [...new Set(processedPoles.map((pole) => pole.subcity))].sort() as string[];
+          const uniqueStreets = [...new Set(processedPoles.map((pole) => pole.street))].sort() as string[];
 
           setSubcities(uniqueSubcities);
           setStreets(uniqueStreets);
@@ -220,7 +220,7 @@ const LandingMap = () => {
 
     // Add markers for each filtered pole
     console.log('Adding markers for', filteredPoles.length, 'filtered poles');
-    filteredPoles.forEach((pole, index) => {
+    filteredPoles.forEach((pole: Pole, index) => {
       console.log(`Adding marker ${index + 1}:`, pole.code, [pole.gpsLat, pole.gpsLng]);
       const icon = createStatusIcon(pole.status);
 
@@ -249,15 +249,15 @@ const LandingMap = () => {
       console.log('Marker added for pole:', pole.code);
 
       // Add hover effects
-      marker.on('mouseover', function() {
-        const tooltip = this.getElement()?.querySelector('.status-tooltip') as HTMLElement;
+      marker.on('mouseover', () => {
+        const tooltip = marker.getElement()?.querySelector('.status-tooltip') as HTMLElement;
         if (tooltip) {
           tooltip.style.opacity = '1';
         }
       });
 
-      marker.on('mouseout', function() {
-        const tooltip = this.getElement()?.querySelector('.status-tooltip') as HTMLElement;
+      marker.on('mouseout', () => {
+        const tooltip = marker.getElement()?.querySelector('.status-tooltip') as HTMLElement;
         if (tooltip) {
           tooltip.style.opacity = '0';
         }
@@ -268,7 +268,7 @@ const LandingMap = () => {
 
     // Fit map to show all markers if there are any
     if (filteredPoles.length > 0) {
-      const group = new L.featureGroup(filteredPoles.map(pole => L.marker([pole.gpsLat, pole.gpsLng])));
+      const group = L.featureGroup(filteredPoles.map((pole) => L.marker([pole.gpsLat, pole.gpsLng])));
       map.fitBounds(group.getBounds().pad(0.1));
     }
 

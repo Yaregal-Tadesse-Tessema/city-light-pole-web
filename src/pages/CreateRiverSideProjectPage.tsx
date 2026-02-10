@@ -72,10 +72,10 @@ export default function CreateRiverSideProjectPage() {
 
       if (data.description) apiData.description = data.description;
 
-      if (data.gpsLat !== undefined && data.gpsLat !== null && data.gpsLat !== '' && !isNaN(Number(data.gpsLat))) {
+      if (data.gpsLat !== undefined && data.gpsLat !== null && !Number.isNaN(Number(data.gpsLat))) {
         apiData.gpsLat = Number(data.gpsLat);
       }
-      if (data.gpsLng !== undefined && data.gpsLng !== null && data.gpsLng !== '' && !isNaN(Number(data.gpsLng))) {
+      if (data.gpsLng !== undefined && data.gpsLng !== null && !Number.isNaN(Number(data.gpsLng))) {
         apiData.gpsLng = Number(data.gpsLng);
       }
 
@@ -107,7 +107,7 @@ export default function CreateRiverSideProjectPage() {
 
   return (
     <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>
+      <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">
         Create New River Side Project
       </Title>
 

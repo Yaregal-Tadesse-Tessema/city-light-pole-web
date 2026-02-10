@@ -142,10 +142,10 @@ export default function UpdateParkPage() {
       apiData.description = formData.description;
     }
 
-    if (formData.gpsLat !== undefined && formData.gpsLat !== null && formData.gpsLat !== '' && !isNaN(Number(formData.gpsLat))) {
+    if (formData.gpsLat !== undefined && formData.gpsLat !== null && !Number.isNaN(Number(formData.gpsLat))) {
       apiData.gpsLat = Number(formData.gpsLat);
     }
-    if (formData.gpsLng !== undefined && formData.gpsLng !== null && formData.gpsLng !== '' && !isNaN(Number(formData.gpsLng))) {
+    if (formData.gpsLng !== undefined && formData.gpsLng !== null && !Number.isNaN(Number(formData.gpsLng))) {
       apiData.gpsLng = Number(formData.gpsLng);
     }
 
@@ -165,7 +165,7 @@ export default function UpdateParkPage() {
   return (
     <ErrorBoundary>
       <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-        <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Update Public Park</Title>
+        <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">Update Public Park</Title>
 
         <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
           <form onSubmit={handleSubmit}>
@@ -264,7 +264,8 @@ export default function UpdateParkPage() {
                 placeholder="5.5"
                 required
                 min={0}
-                precision={2}
+                decimalScale={2}
+                fixedDecimalScale
                 value={formData.areaHectares}
                 onChange={(value) => setFormData({ ...formData, areaHectares: Number(value) || 0 })}
               />
@@ -282,7 +283,8 @@ export default function UpdateParkPage() {
                 placeholder="50.00"
                 required
                 min={0.01}
-                precision={2}
+                decimalScale={2}
+                fixedDecimalScale
                 value={formData.entranceFee}
                 onChange={(value) => setFormData({ ...formData, entranceFee: Number(value) || 0 })}
               />
@@ -318,4 +320,3 @@ export default function UpdateParkPage() {
     </ErrorBoundary>
   );
 }
-

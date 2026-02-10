@@ -143,7 +143,7 @@ export default function ParksListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title size={{ base: 'h2', sm: 'h1' }}>Public Parks</Title>
+        <Title size="h2">Public Parks</Title>
         {isAdmin && (
           <Button 
             onClick={() => navigate('/parks/new')}
@@ -377,5 +377,4 @@ export default function ParksListPage() {
     </Container>
   );
 }
-
 

@@ -299,10 +299,10 @@ export default function CreatePolePage() {
       };
 
       // Add GPS coordinates only if provided (completely optional)
-      if (data.gpsLat !== undefined && data.gpsLat !== null && data.gpsLat !== '' && !isNaN(Number(data.gpsLat))) {
+      if (data.gpsLat !== undefined && data.gpsLat !== null && !Number.isNaN(Number(data.gpsLat))) {
         apiData.gpsLat = Number(data.gpsLat);
       }
-      if (data.gpsLng !== undefined && data.gpsLng !== null && data.gpsLng !== '' && !isNaN(Number(data.gpsLng))) {
+      if (data.gpsLng !== undefined && data.gpsLng !== null && !Number.isNaN(Number(data.gpsLng))) {
         apiData.gpsLng = Number(data.gpsLng);
       }
 
@@ -355,7 +355,7 @@ export default function CreatePolePage() {
 
   return (
     <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Create New Light Pole</Title>
+      <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">Create New Light Pole</Title>
 
       <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
         <form onSubmit={handleSubmit}>
@@ -425,7 +425,8 @@ export default function CreatePolePage() {
                 placeholder="8.5"
                 required
                 min={0}
-                precision={2}
+                decimalScale={2}
+                fixedDecimalScale
                 {...form.getInputProps('heightMeters')}
               />
             </Group>
@@ -532,4 +533,3 @@ export default function CreatePolePage() {
     </Container>
   );
 }
-

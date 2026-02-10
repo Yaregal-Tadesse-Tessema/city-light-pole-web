@@ -111,10 +111,10 @@ export default function UpdateRiverSideProjectPage() {
 
     if (formData.description) apiData.description = formData.description;
 
-    if (formData.gpsLat !== undefined && formData.gpsLat !== null && formData.gpsLat !== '' && !isNaN(Number(formData.gpsLat))) {
+    if (formData.gpsLat !== undefined && formData.gpsLat !== null && !Number.isNaN(Number(formData.gpsLat))) {
       apiData.gpsLat = Number(formData.gpsLat);
     }
-    if (formData.gpsLng !== undefined && formData.gpsLng !== null && formData.gpsLng !== '' && !isNaN(Number(formData.gpsLng))) {
+    if (formData.gpsLng !== undefined && formData.gpsLng !== null && !Number.isNaN(Number(formData.gpsLng))) {
       apiData.gpsLng = Number(formData.gpsLng);
     }
 
@@ -133,7 +133,7 @@ export default function UpdateRiverSideProjectPage() {
 
   return (
     <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>
+      <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">
         Update River Side Project
       </Title>
 

@@ -61,14 +61,14 @@ export default function CreateParkingLotPage() {
       district: (value) => (!value ? 'Subcity is required' : null),
       street: (value) => (!value ? 'Street is required' : null),
       capacity: (value) => {
-        if (value === undefined || value === null || value === '') {
+        if (value === undefined || value === null) {
           return 'Capacity is required';
         }
         if (value <= 0) return 'Capacity must be greater than 0';
         return null;
       },
       hourlyRate: (value, values) => {
-        if (values.hasPaidParking && (value === undefined || value === null || value === '')) {
+        if (values.hasPaidParking && (value === undefined || value === null)) {
           return 'Hourly rate is required when paid parking is enabled';
         }
         if (values.hasPaidParking && value !== undefined && value !== null && value <= 0) {
@@ -100,10 +100,10 @@ export default function CreateParkingLotPage() {
         apiData.description = data.description;
       }
 
-      if (data.gpsLat !== undefined && data.gpsLat !== null && data.gpsLat !== '' && !isNaN(Number(data.gpsLat))) {
+      if (data.gpsLat !== undefined && data.gpsLat !== null && !Number.isNaN(Number(data.gpsLat))) {
         apiData.gpsLat = Number(data.gpsLat);
       }
-      if (data.gpsLng !== undefined && data.gpsLng !== null && data.gpsLng !== '' && !isNaN(Number(data.gpsLng))) {
+      if (data.gpsLng !== undefined && data.gpsLng !== null && !Number.isNaN(Number(data.gpsLng))) {
         apiData.gpsLng = Number(data.gpsLng);
       }
 
@@ -148,7 +148,7 @@ export default function CreateParkingLotPage() {
 
   return (
     <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Create New Parking Lot</Title>
+      <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">Create New Parking Lot</Title>
 
       <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
         <form onSubmit={handleSubmit}>
@@ -268,7 +268,8 @@ export default function CreateParkingLotPage() {
                 placeholder="20.00"
                 required
                 min={0.01}
-                precision={2}
+                decimalScale={2}
+                fixedDecimalScale
                 value={form.values.hourlyRate ?? undefined}
                 onChange={(value) => {
                   const numValue = value === '' || value === null || value === undefined ? undefined : Number(value);

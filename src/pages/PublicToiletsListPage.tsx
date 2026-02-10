@@ -142,7 +142,7 @@ export default function PublicToiletsListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title size={{ base: 'h2', sm: 'h1' }}>Public Toilets</Title>
+        <Title size="h2">Public Toilets</Title>
         {isAdmin && (
           <Button 
             onClick={() => navigate('/public-toilets/new')}
@@ -372,4 +372,3 @@ export default function PublicToiletsListPage() {
     </Container>
   );
 }
-

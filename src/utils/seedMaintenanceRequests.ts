@@ -37,11 +37,11 @@ export const seedMaintenanceRequests = async () => {
     console.log(`📊 Found ${existingSchedules.length} existing maintenance schedules`);
 
     // Create a set of pole codes that already have maintenance schedules
-    const polesWithSchedules = new Set(existingSchedules.map(schedule => schedule.poleCode));
+    const polesWithSchedules = new Set(existingSchedules.map((schedule: any) => schedule.poleCode));
     console.log(`📊 ${polesWithSchedules.size} poles already have maintenance schedules`);
 
     // Find poles that need maintenance schedules
-    const polesNeedingSchedules = polesUnderMaintenance.filter(pole => !polesWithSchedules.has(pole.code));
+    const polesNeedingSchedules = polesUnderMaintenance.filter((pole: any) => !polesWithSchedules.has(pole.code));
     console.log(`🎯 Found ${polesNeedingSchedules.length} poles that need maintenance schedules`);
 
     if (polesNeedingSchedules.length === 0) {
@@ -134,7 +134,7 @@ export const checkMaintenanceStatus = async () => {
     console.log(`📊 Poles with UNDER_MAINTENANCE status: ${polesUnderMaintenance.length}`);
 
     if (polesUnderMaintenance.length > 0) {
-      console.log('🔍 Sample poles under maintenance:', polesUnderMaintenance.slice(0, 5).map(p => `${p.code} (${p.street}, ${p.subcity})`));
+      console.log('🔍 Sample poles under maintenance:', polesUnderMaintenance.slice(0, 5).map((p: any) => `${p.code} (${p.street}, ${p.subcity})`));
     }
 
     // Get all maintenance schedules
@@ -146,19 +146,19 @@ export const checkMaintenanceStatus = async () => {
     console.log(`📊 Total maintenance schedules: ${existingSchedules.length}`);
 
     // Check how many schedules are not completed
-    const inProgressSchedules = existingSchedules.filter(schedule => schedule.status !== 'COMPLETED');
+    const inProgressSchedules = existingSchedules.filter((schedule: any) => schedule.status !== 'COMPLETED');
     console.log(`📊 In-progress maintenance schedules: ${inProgressSchedules.length}`);
 
     // Find poles that have maintenance schedules
-    const polesWithSchedules = new Set(existingSchedules.map(schedule => schedule.poleCode));
+    const polesWithSchedules = new Set(existingSchedules.map((schedule: any) => schedule.poleCode));
     console.log(`📊 Poles with maintenance schedules: ${polesWithSchedules.size}`);
 
     // Find poles that need schedules
-    const polesNeedingSchedules = polesUnderMaintenance.filter(pole => !polesWithSchedules.has(pole.code));
+    const polesNeedingSchedules = polesUnderMaintenance.filter((pole: any) => !polesWithSchedules.has(pole.code));
     console.log(`🎯 Poles needing maintenance schedules: ${polesNeedingSchedules.length}`);
 
     if (polesNeedingSchedules.length > 0) {
-      console.log('🔍 Poles that need schedules:', polesNeedingSchedules.map(p => p.code));
+      console.log('🔍 Poles that need schedules:', polesNeedingSchedules.map((p: any) => p.code));
     }
 
     return {
@@ -217,11 +217,11 @@ export const seedMaintenanceDirect = async () => {
     console.log(`📊 Found ${existingSchedules.length} existing maintenance schedules`);
 
     // Create a set of pole codes that already have maintenance schedules
-    const polesWithSchedules = new Set(existingSchedules.map(schedule => schedule.poleCode));
+    const polesWithSchedules = new Set(existingSchedules.map((schedule: any) => schedule.poleCode));
     console.log(`📊 ${polesWithSchedules.size} poles already have maintenance schedules`);
 
     // Find poles that need maintenance schedules
-    const polesNeedingSchedules = polesUnderMaintenance.filter(pole => !polesWithSchedules.has(pole.code));
+    const polesNeedingSchedules = polesUnderMaintenance.filter((pole: any) => !polesWithSchedules.has(pole.code));
     console.log(`🎯 Found ${polesNeedingSchedules.length} poles that need maintenance schedules`);
 
     if (polesNeedingSchedules.length === 0) {

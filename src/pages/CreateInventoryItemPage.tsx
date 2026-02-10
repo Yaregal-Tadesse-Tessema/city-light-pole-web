@@ -215,7 +215,8 @@ export default function CreateInventoryItemPage() {
               label="Unit Cost (Optional)"
               placeholder="25.50"
               min={0}
-              precision={2}
+              decimalScale={2}
+              fixedDecimalScale
               {...form.getInputProps('unitCost')}
             />
 
@@ -247,5 +248,4 @@ export default function CreateInventoryItemPage() {
     </Container>
   );
 }
-
 

@@ -57,7 +57,7 @@ export default function CreateFootballFieldPage() {
       district: (value) => (!value ? 'Subcity is required' : null),
       street: (value) => (!value ? 'Street is required' : null),
       capacity: (value) => {
-        if (value === undefined || value === null || value === '') return null;
+        if (value === undefined || value === null) return null;
         if (value < 0) return 'Capacity cannot be negative';
         return null;
       },
@@ -75,15 +75,15 @@ export default function CreateFootballFieldPage() {
         status: data.status,
       };
 
-      if (data.capacity !== undefined && data.capacity !== null && data.capacity !== '') {
+      if (data.capacity !== undefined && data.capacity !== null) {
         apiData.capacity = Number(data.capacity);
       }
       if (data.description) apiData.description = data.description;
 
-      if (data.gpsLat !== undefined && data.gpsLat !== null && data.gpsLat !== '' && !isNaN(Number(data.gpsLat))) {
+      if (data.gpsLat !== undefined && data.gpsLat !== null && !Number.isNaN(Number(data.gpsLat))) {
         apiData.gpsLat = Number(data.gpsLat);
       }
-      if (data.gpsLng !== undefined && data.gpsLng !== null && data.gpsLng !== '' && !isNaN(Number(data.gpsLng))) {
+      if (data.gpsLng !== undefined && data.gpsLng !== null && !Number.isNaN(Number(data.gpsLng))) {
         apiData.gpsLng = Number(data.gpsLng);
       }
 
@@ -118,7 +118,7 @@ export default function CreateFootballFieldPage() {
 
   return (
     <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>
+      <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">
         Create New Football Field
       </Title>
 

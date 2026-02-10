@@ -52,11 +52,11 @@ export default function SignupPage() {
   };
 
   return (
-    <Container size={{ base: '100%', xs: 420 }} my={{ base: 20, sm: 40 }} px={{ base: 'xs', sm: 'md' }}>
-      <Title ta="center" mb="md" size={{ base: 'h2', sm: 'h1' }}>
+    <Container size={420} my={{ base: 20, sm: 40 }} px={{ base: 'xs', sm: 'md' }}>
+      <Title ta="center" mb="md" size="h2">
         Coredor Assets Management System
       </Title>
-      <Text c="dimmed" size={{ base: 'xs', sm: 'sm' }} ta="center" mt={5} mb={{ base: 'md', sm: 'xl' }}>
+      <Text c="dimmed" size="sm" ta="center" mt={5} mb={{ base: 'md', sm: 'xl' }}>
         Create a new account
       </Text>
 
@@ -108,4 +108,3 @@ export default function SignupPage() {
     </Container>
   );
 }
-

@@ -216,7 +216,8 @@ export default function UpdateInventoryItemPage() {
               label="Unit Cost (Optional)"
               placeholder="25.50"
               min={0}
-              precision={2}
+              decimalScale={2}
+              fixedDecimalScale
               value={formData.unitCost}
               onChange={(value) => setFormData({ ...formData, unitCost: value ? Number(value) : undefined })}
             />
@@ -251,5 +252,4 @@ export default function UpdateInventoryItemPage() {
     </Container>
   );
 }
-
 

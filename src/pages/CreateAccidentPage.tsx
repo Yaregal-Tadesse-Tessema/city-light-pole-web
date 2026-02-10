@@ -293,7 +293,8 @@ export default function CreateAccidentPage() {
                         <NumberInput
                           label="Latitude"
                           placeholder="-9.1450 to 38.8942"
-                          precision={8}
+                          decimalScale={8}
+                          fixedDecimalScale
                           {...form.getInputProps('latitude')}
                         />
                       </Grid.Col>
@@ -301,7 +302,8 @@ export default function CreateAccidentPage() {
                         <NumberInput
                           label="Longitude"
                           placeholder="-176.6597 to 179.4500"
-                          precision={8}
+                          decimalScale={8}
+                          fixedDecimalScale
                           {...form.getInputProps('longitude')}
                         />
                       </Grid.Col>

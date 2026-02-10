@@ -343,10 +343,10 @@ export default function UpdatePolePage() {
     };
 
     // Convert GPS coordinates to numbers if they exist
-    if (formData.gpsLat !== undefined && formData.gpsLat !== null && formData.gpsLat !== '' && !isNaN(Number(formData.gpsLat))) {
+    if (formData.gpsLat !== undefined && formData.gpsLat !== null && !Number.isNaN(Number(formData.gpsLat))) {
       apiData.gpsLat = Number(formData.gpsLat);
     }
-    if (formData.gpsLng !== undefined && formData.gpsLng !== null && formData.gpsLng !== '' && !isNaN(Number(formData.gpsLng))) {
+    if (formData.gpsLng !== undefined && formData.gpsLng !== null && !Number.isNaN(Number(formData.gpsLng))) {
       apiData.gpsLng = Number(formData.gpsLng);
     }
 
@@ -372,7 +372,7 @@ export default function UpdatePolePage() {
 
   return (
     <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Update Light Pole</Title>
+      <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">Update Light Pole</Title>
 
       <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
         <form onSubmit={handleSubmit}>
@@ -441,7 +441,8 @@ export default function UpdatePolePage() {
                 placeholder="8.5"
                 required
                 min={0}
-                precision={2}
+                decimalScale={2}
+                fixedDecimalScale
                 value={formData.heightMeters}
                 onChange={(value) => setFormData({ ...formData, heightMeters: Number(value) || 0 })}
               />
@@ -557,4 +558,3 @@ export default function UpdatePolePage() {
     </Container>
   );
 }
-

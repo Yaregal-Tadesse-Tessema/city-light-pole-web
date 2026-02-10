@@ -142,7 +142,7 @@ export default function ParkingLotsListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title size={{ base: 'h2', sm: 'h1' }}>Car Parking Lots</Title>
+        <Title size="h2">Car Parking Lots</Title>
         {isAdmin && (
           <Button 
             onClick={() => navigate('/parking-lots/new')}
@@ -376,4 +376,3 @@ export default function ParkingLotsListPage() {
     </Container>
   );
 }
-

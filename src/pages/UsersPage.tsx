@@ -170,7 +170,7 @@ export default function UsersPage() {
 
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} size={{ base: 'h2', sm: 'h1' }}>Users</Title>
+      <Title mb={{ base: 'md', sm: 'xl' }} size="h2">Users</Title>
 
       <Paper withBorder>
         <Table.ScrollContainer minWidth={800}>
@@ -301,5 +301,4 @@ export default function UsersPage() {
     </Container>
   );
 }
-
 
