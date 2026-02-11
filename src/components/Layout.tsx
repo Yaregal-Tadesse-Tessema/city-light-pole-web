@@ -49,8 +49,12 @@ export default function Layout() {
   const [inventoryMenuOpened, setInventoryMenuOpened] = useState(false);
   const [accidentMenuOpened, setAccidentMenuOpened] = useState(false);
 
-  // Some backends return "SYSTEM_ADMIN" instead of "ADMIN"
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SYSTEM_ADMIN';
+  // Admin role strings vary by backend
+  const isAdmin =
+    user?.role === 'ADMIN' ||
+    user?.role === 'SYSTEM_ADMIN' ||
+    user?.role === 'SYSTEM_ADMINISTRATOR';
+  const canSeeInventory = isAdmin || user?.role === 'SUPERVISOR_VIEWER';
   
   // Check if any light pole related route is active
   const isLightPoleRouteActive = 
@@ -258,7 +262,7 @@ export default function Layout() {
             }}
           />
         </NavLink>
-        {isAdmin && (
+        {canSeeInventory && (
           <NavLink
             label="Inventory Management"
             leftSection={<IconPackage size={16} />}
