@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import apiClient from '../api/client';
 
 interface User {
@@ -34,7 +33,7 @@ export function useAuth() {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post('http://localhost:3011/api/v1/auth/login', { email, password });
+      const response = await apiClient.post('/auth/login', { email, password });
       const { access_token, user: userData } = response.data;
       
       localStorage.setItem('access_token', access_token);
@@ -57,7 +56,7 @@ export function useAuth() {
     phone?: string;
   }) => {
     try {
-      const response = await axios.post('http://localhost:3011/api/v1/auth/signup', data);
+      const response = await apiClient.post('/auth/signup', data);
       const userData = response.data;
       
       return { success: true, data: userData };

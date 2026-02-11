@@ -1,0 +1,26 @@
+{
+  "apiBaseUrl": "http://196.189.124.228:3011/api/v1",
+  "users": [
+    {
+      "role": "ADMIN",
+      "email": "admin@city.gov",
+      "password": "admin123",
+      "fullName": "System Admin",
+      "phone": "0900000000"
+    },
+    {
+      "role": "MAINTENANCE_ENGINEER",
+      "email": "engineer@city.gov",
+      "password": "engineer123",
+      "fullName": "Maintenance Engineer",
+      "phone": "0911111111"
+    },
+    {
+      "role": "SUPERVISOR_VIEWER",
+      "email": "viewer@city.gov",
+      "password": "viewer123",
+      "fullName": "Supervisor Viewer",
+      "phone": "0922222222"
+    }
+  ]
+}

@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "start": "vite preview --port 5173 --host",
     "serve": "serve -s dist -l 5173",
+    "seed:users": "tsx scripts/seed-users.ts",
     "api:types": "tsx scripts/generate-api-types.ts",
     "dev-run": "tsx scripts/dev-run.ts"
   },
