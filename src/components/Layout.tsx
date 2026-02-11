@@ -49,7 +49,8 @@ export default function Layout() {
   const [inventoryMenuOpened, setInventoryMenuOpened] = useState(false);
   const [accidentMenuOpened, setAccidentMenuOpened] = useState(false);
 
-  const isAdmin = user?.role === 'ADMIN';
+  // Some backends return "SYSTEM_ADMIN" instead of "ADMIN"
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SYSTEM_ADMIN';
   
   // Check if any light pole related route is active
   const isLightPoleRouteActive = 
@@ -322,32 +323,6 @@ export default function Layout() {
             />
           </NavLink>
         )}
-        {isAdmin && (
-          <NavLink
-            component={Link}
-            to="/users"
-            label="Users"
-            leftSection={<IconUsers size={16} />}
-            active={location.pathname === '/users'}
-            onClick={() => {
-              if (isMobile) {
-                close();
-              }
-            }}
-          />
-        )}
-        <NavLink
-          component={Link}
-          to="/reports"
-          label="Reports"
-          leftSection={<IconReport size={16} />}
-          active={location.pathname === '/reports'}
-          onClick={() => {
-            if (isMobile) {
-              close();
-            }
-          }}
-        />
         <NavLink
           label="Accident Management"
           leftSection={<IconCarCrash size={16} />}
@@ -401,6 +376,34 @@ export default function Layout() {
             />
           )}
         </NavLink>
+
+        {/* Last items in the scrollable sidebar */}
+        {isAdmin && (
+          <NavLink
+            component={Link}
+            to="/users"
+            label="Users"
+            leftSection={<IconUsers size={16} />}
+            active={location.pathname === '/users'}
+            onClick={() => {
+              if (isMobile) {
+                close();
+              }
+            }}
+          />
+        )}
+        <NavLink
+          component={Link}
+          to="/reports"
+          label="Reports"
+          leftSection={<IconReport size={16} />}
+          active={location.pathname === '/reports'}
+          onClick={() => {
+            if (isMobile) {
+              close();
+            }
+          }}
+        />
           </Stack>
         </ScrollArea>
         <Box mt="md" style={{ marginTop: 'auto' }}>
