@@ -69,6 +69,11 @@ const CLAIM_STATUSES = [
   'PAID',
 ];
 
+const REPORTER_TYPES = [
+  { value: 'INTERNAL', label: 'Internal' },
+  { value: 'EXTERNAL', label: 'External' },
+];
+
 function getAccidentStatusColor(status: string): string {
   switch (status?.toUpperCase()) {
     case 'REPORTED':
@@ -124,6 +129,7 @@ export default function AccidentsListPage() {
     accidentType: '',
     status: '',
     claimStatus: '',
+    reporterType: '',
     poleId: '',
     page: 1,
     limit: 10,
@@ -231,6 +237,7 @@ export default function AccidentsListPage() {
       accidentType: null,
       status: null,
       claimStatus: null,
+      reporterType: null,
       poleId: '',
       page: 1,
       limit: 10,
@@ -238,7 +245,7 @@ export default function AccidentsListPage() {
   };
 
   const hasActiveFilters = () => {
-    return filters.search || filters.accidentType || filters.status || filters.claimStatus || filters.poleId;
+    return filters.search || filters.accidentType || filters.status || filters.claimStatus || filters.reporterType || filters.poleId;
   };
 
   // Export functions
@@ -541,6 +548,13 @@ export default function AccidentsListPage() {
             onChange={(value) => setFilters({ ...filters, claimStatus: value || null, page: 1 })}
             clearable
           />
+          <Select
+            placeholder="Reporter Type"
+            data={REPORTER_TYPES}
+            value={filters.reporterType}
+            onChange={(value) => setFilters({ ...filters, reporterType: value || null, page: 1 })}
+            clearable
+          />
           <TextInput
             placeholder="Pole ID"
             value={filters.poleId}
@@ -560,6 +574,7 @@ export default function AccidentsListPage() {
               <Table.Th>Pole ID</Table.Th>
               <Table.Th>Status</Table.Th>
               <Table.Th>Claim Status</Table.Th>
+              <Table.Th>Reporter Type</Table.Th>
               <Table.Th>Estimated Cost</Table.Th>
               <Table.Th>Actions</Table.Th>
             </Table.Tr>
@@ -567,7 +582,7 @@ export default function AccidentsListPage() {
           <Table.Tbody>
             {isLoading ? (
               <Table.Tr>
-                <Table.Td colSpan={8} style={{ textAlign: 'center', padding: '2rem' }}>
+                <Table.Td colSpan={9} style={{ textAlign: 'center', padding: '2rem' }}>
                   <Center>
                     <Loader size="lg" />
                   </Center>
@@ -575,7 +590,7 @@ export default function AccidentsListPage() {
               </Table.Tr>
             ) : accidentsData?.data?.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={8} style={{ textAlign: 'center', padding: '2rem' }}>
+                <Table.Td colSpan={9} style={{ textAlign: 'center', padding: '2rem' }}>
                   <Text c="dimmed">No accident reports found</Text>
                 </Table.Td>
               </Table.Tr>
@@ -602,6 +617,11 @@ export default function AccidentsListPage() {
                   <Table.Td>
                     <Badge color={getClaimStatusColor(accident.claimStatus)}>
                       {accident.claimStatus.replace(/_/g, ' ')}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge color={(accident.reporterType || accident.reportedByType || (accident.reportedBy ? 'INTERNAL' : 'EXTERNAL')) === 'EXTERNAL' ? 'orange' : 'blue'}>
+                      {accident.reporterType || accident.reportedByType || (accident.reportedBy ? 'INTERNAL' : 'EXTERNAL')}
                     </Badge>
                   </Table.Td>
                   <Table.Td>

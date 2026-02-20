@@ -15,7 +15,7 @@ function normalizeApiBase(raw: string): string {
   return base.endsWith('/api/v1') ? base : `${base}/api/v1`;
 }
 
-const RAW_BASE_URL = process.env.VITE_API_BASE_URL || 'http://196.189.124.228:3011';
+const RAW_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:3011';
 const API_BASE_URL = normalizeApiBase(RAW_BASE_URL);
 
 const usersToSeed: SeedUser[] = [

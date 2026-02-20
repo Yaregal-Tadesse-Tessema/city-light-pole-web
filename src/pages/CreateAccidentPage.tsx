@@ -126,7 +126,10 @@ export default function CreateAccidentPage() {
   const createMutation = useMutation({
     mutationFn: async (data: AccidentFormData) => {
       const token = localStorage.getItem('access_token');
-      const response = await axios.post('http://localhost:3011/api/v1/accidents', data, {
+      const response = await axios.post('http://localhost:3011/api/v1/accidents', {
+        ...data,
+        reporterType: 'INTERNAL',
+      }, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -194,10 +197,10 @@ export default function CreateAccidentPage() {
 
   const handleSubmit = (values: AccidentFormData) => {
     // Validate mandatory photos
-    if (photos.length < 3) {
+    if (photos.length < 1) {
       notifications.show({
         title: 'Validation Error',
-        message: 'Please upload at least 3 photos of the incident',
+        message: 'Please upload at least 1 photo of the incident',
         color: 'red',
       });
       return;
@@ -215,7 +218,7 @@ export default function CreateAccidentPage() {
 
         <Alert color="blue" mb="lg">
           <Text fw={500}>Important:</Text>
-          <Text>Please provide accurate information and upload at least 3 clear photos of the incident.</Text>
+          <Text>Please provide accurate information and upload 1 to 3 clear photos of the incident.</Text>
         </Alert>
 
         <form onSubmit={form.onSubmit(handleSubmit)}>
@@ -364,18 +367,29 @@ export default function CreateAccidentPage() {
               <Card.Section withBorder inheritPadding py="sm">
                 <Title order={4}>
                   <IconUpload size={16} style={{ marginRight: 8 }} />
-                  Incident Photos (Mandatory - Minimum 3)
+                  Incident Photos (Mandatory - 1 to 3)
                 </Title>
               </Card.Section>
 
               <Stack p="md" gap="md">
                 <FileInput
-                  label="Upload Photos"
+                  label="Upload Photos (Required)"
+                  required
                   placeholder="Select photos of the incident"
                   multiple
-                  accept="image/*,video/*"
+                  accept="image/*"
                   leftSection={<IconUpload size={14} />}
-                  onChange={(files) => setPhotos(files || [])}
+                  onChange={(files) => {
+                    const selected = files || [];
+                    if (selected.length > 3) {
+                      notifications.show({
+                        title: 'Photo Limit',
+                        message: 'You can upload a maximum of 3 photos',
+                        color: 'orange',
+                      });
+                    }
+                    setPhotos(selected.slice(0, 3));
+                  }}
                 />
 
                 {photos.length > 0 && (
@@ -386,8 +400,7 @@ export default function CreateAccidentPage() {
 
                 <Alert color="blue">
                   <Text size="sm">
-                    Please upload at least 3 clear photos showing the damage, surrounding area, and any relevant details.
-                    Videos are also accepted but not mandatory.
+                    Please upload 1 to 3 clear photos showing the damage, surrounding area, and any relevant details.
                   </Text>
                 </Alert>
               </Stack>
@@ -428,7 +441,7 @@ export default function CreateAccidentPage() {
               <Button
                 type="submit"
                 loading={createMutation.isPending}
-                disabled={photos.length < 3}
+                disabled={photos.length < 1}
               >
                 Submit Accident Report
               </Button>

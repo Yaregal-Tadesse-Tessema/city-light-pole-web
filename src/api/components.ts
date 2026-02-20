@@ -4,7 +4,7 @@ import axios from 'axios';
 // Accepts either:
 // - http://host:port              (we'll append /api/v1)
 // - http://host:port/api/v1       (used as-is)
-const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://196.189.124.228:3011';
+const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3011';
 const normalizedBaseURL = RAW_BASE_URL.replace(/\/$/, '');
 const COMPONENTS_BASE = normalizedBaseURL.endsWith('/api/v1')
   ? normalizedBaseURL

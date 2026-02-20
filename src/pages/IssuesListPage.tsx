@@ -36,6 +36,11 @@ const ISSUE_STATUSES = [
   { value: 'CLOSED', label: 'Closed' },
 ];
 
+const REPORTER_TYPES = [
+  { value: 'INTERNAL', label: 'Internal' },
+  { value: 'EXTERNAL', label: 'External' },
+];
+
 export default function IssuesListPage() {
   const { user } = useAuth();
   const [createModalOpened, setCreateModalOpened] = useState(false);
@@ -57,6 +62,7 @@ export default function IssuesListPage() {
   const [poleCodeFilter, setPoleCodeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
+  const [reporterTypeFilter, setReporterTypeFilter] = useState('');
   const [createdAtFrom, setCreatedAtFrom] = useState<Date | null>(null);
   const [createdAtTo, setCreatedAtTo] = useState<Date | null>(null);
   const [updatedAtFrom, setUpdatedAtFrom] = useState<Date | null>(null);
@@ -71,6 +77,7 @@ export default function IssuesListPage() {
     setPoleCodeFilter('');
     setStatusFilter('');
     setSeverityFilter('');
+    setReporterTypeFilter('');
     setCreatedAtFrom(null);
     setCreatedAtTo(null);
     setUpdatedAtFrom(null);
@@ -79,7 +86,7 @@ export default function IssuesListPage() {
   };
 
   // Check if any filters are active
-  const hasActiveFilters = poleCodeFilter || statusFilter || severityFilter || createdAtFrom || createdAtTo || updatedAtFrom || updatedAtTo;
+  const hasActiveFilters = poleCodeFilter || statusFilter || severityFilter || reporterTypeFilter || createdAtFrom || createdAtTo || updatedAtFrom || updatedAtTo;
 
   // Sorting handler
   const handleSort = (field: string) => {
@@ -102,7 +109,7 @@ export default function IssuesListPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [poleCodeFilter, statusFilter, severityFilter, createdAtFrom, createdAtTo, updatedAtFrom, updatedAtTo]);
+  }, [poleCodeFilter, statusFilter, severityFilter, reporterTypeFilter, createdAtFrom, createdAtTo, updatedAtFrom, updatedAtTo]);
   
   const canCreate = user?.role === 'ADMIN' || user?.role === 'MAINTENANCE_ENGINEER';
   const canUpdate = user?.role === 'ADMIN' || user?.role === 'MAINTENANCE_ENGINEER';
@@ -128,7 +135,7 @@ export default function IssuesListPage() {
   };
 
   const { data: issuesData, isLoading, refetch } = useQuery({
-    queryKey: ['issues', currentPage, pageSize, poleCodeFilter, statusFilter, severityFilter, createdAtFrom, createdAtTo, updatedAtFrom, updatedAtTo, sortBy, sortOrder],
+    queryKey: ['issues', currentPage, pageSize, poleCodeFilter, statusFilter, severityFilter, reporterTypeFilter, createdAtFrom, createdAtTo, updatedAtFrom, updatedAtTo, sortBy, sortOrder],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
       const res = await axios.get('http://localhost:3011/api/v1/issues', {
@@ -141,6 +148,7 @@ export default function IssuesListPage() {
           ...(poleCodeFilter && { poleCode: poleCodeFilter }),
           ...(statusFilter && { status: statusFilter }),
           ...(severityFilter && { severity: severityFilter }),
+          ...(reporterTypeFilter && { reporterType: reporterTypeFilter }),
           ...(createdAtFrom && { createdAtFrom: createdAtFrom.toISOString() }),
           ...(createdAtTo && { createdAtTo: createdAtTo.toISOString() }),
           ...(updatedAtFrom && { updatedAtFrom: updatedAtFrom.toISOString() }),
@@ -153,9 +161,16 @@ export default function IssuesListPage() {
     },
   });
 
-  const issues = issuesData?.items || [];
-  const totalIssues = issuesData?.total || 0;
+  const allIssues = issuesData?.items || [];
+  const issues = reporterTypeFilter
+    ? allIssues.filter((issue: any) => {
+        const derivedType = issue.reporterType || issue.reportedByType || (issue.reportedBy ? 'INTERNAL' : 'EXTERNAL');
+        return derivedType === reporterTypeFilter;
+      })
+    : allIssues;
+  const totalIssues = reporterTypeFilter ? issues.length : (issuesData?.total || 0);
   const totalPages = Math.ceil(totalIssues / pageSize);
+  const totalColumnCount = canUpdate ? 11 : 10;
 
   const { data: polesData } = useQuery({
     queryKey: ['poles', 'dropdown'],
@@ -217,6 +232,7 @@ export default function IssuesListPage() {
       const token = localStorage.getItem('access_token');
       const response = await axios.post('http://localhost:3011/api/v1/issues', {
         ...values,
+        reporterType: 'INTERNAL',
         attachments: uploadedFileUrls, // Include uploaded file URLs
       }, {
         headers: {
@@ -598,6 +614,45 @@ export default function IssuesListPage() {
               </Table.Th>
               <Table.Th>
                 <Group gap="xs" wrap="nowrap">
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('reporterType')}>Reporter Type</Text>
+                  <Group gap="xs">
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      onClick={() => handleSort('reporterType')}
+                    >
+                      {getSortIcon('reporterType')}
+                    </ActionIcon>
+                    <Popover width={200} trapFocus position="bottom" withArrow shadow="md">
+                      <Popover.Target>
+                        <ActionIcon
+                          variant="subtle"
+                          color={reporterTypeFilter ? 'blue' : 'gray'}
+                          size="sm"
+                        >
+                          <IconFilter size={16} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="sm">
+                          <Text size="sm" fw={500}>Filter by Reporter Type</Text>
+                          <Select
+                            placeholder="Select type"
+                            data={REPORTER_TYPES}
+                            value={reporterTypeFilter}
+                            onChange={(value) => setReporterTypeFilter(value || '')}
+                            clearable
+                            size="sm"
+                          />
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Group>
+                </Group>
+              </Table.Th>
+              <Table.Th>
+                <Group gap="xs" wrap="nowrap">
                   <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('createdAt')}>Created</Text>
                   <Group gap="xs">
                     <ActionIcon
@@ -721,11 +776,11 @@ export default function IssuesListPage() {
           <Table.Tbody>
             {isLoading ? (
               <Table.Tr>
-                <Table.Td colSpan={10}>Loading...</Table.Td>
+                <Table.Td colSpan={totalColumnCount}>Loading...</Table.Td>
               </Table.Tr>
             ) : issues?.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={10}>No issues found</Table.Td>
+                <Table.Td colSpan={totalColumnCount}>No issues found</Table.Td>
               </Table.Tr>
             ) : (
               issues?.map((issue: any) => (
@@ -755,6 +810,11 @@ export default function IssuesListPage() {
                     <Badge color={getSeverityColor(issue.severity)}>{issue.severity}</Badge>
                   </Table.Td>
                   <Table.Td>{issue.reportedBy?.fullName || 'N/A'}</Table.Td>
+                  <Table.Td>
+                    <Badge color={(issue.reporterType || issue.reportedByType || (issue.reportedBy ? 'INTERNAL' : 'EXTERNAL')) === 'EXTERNAL' ? 'orange' : 'blue'}>
+                      {issue.reporterType || issue.reportedByType || (issue.reportedBy ? 'INTERNAL' : 'EXTERNAL')}
+                    </Badge>
+                  </Table.Td>
                   <Table.Td>
                     {new Date(issue.createdAt).toLocaleDateString()}
                   </Table.Td>

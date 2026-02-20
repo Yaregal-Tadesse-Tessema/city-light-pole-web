@@ -7,7 +7,7 @@ import axios from 'axios';
 //   axios.get('http://localhost:3011/api/v1/...')
 // working when the backend is hosted remotely.
 
-const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://196.189.124.228:3011';
+const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3011';
 const normalizedBaseURL = RAW_BASE_URL.replace(/\/$/, '');
 const apiV1BaseURL = normalizedBaseURL.endsWith('/api/v1')
   ? normalizedBaseURL

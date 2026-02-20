@@ -7,7 +7,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://196.189.124.228:3011/api/v1',
+        target: 'http://localhost:3011/api/v1',
         changeOrigin: true,
         secure: false,
         // Don't rewrite, backend already has /api/v1 prefix

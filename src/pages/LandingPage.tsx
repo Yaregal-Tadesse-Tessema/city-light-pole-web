@@ -17,26 +17,24 @@ import {
 } from '@mantine/core';
 import {
   IconBolt,
-  IconMapPin,
   IconChartBar,
   IconShieldCheck,
-  IconUsers,
-  IconBuilding,
-  IconRoad,
-  IconCar,
-  IconHome,
-  IconTree,
-  IconToiletPaper,
-  IconBallBasketball,
   IconCamera,
   IconBulb,
   IconGauge,
-  IconCheck,
   IconArrowRight,
+  IconAlertTriangle,
 } from '@tabler/icons-react';
+import PublicAccidentReportForm from '../components/PublicAccidentReportForm';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const scrollToAccidentReport = () => {
+    const section = document.getElementById('public-accident-report');
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const features = [
     {
@@ -164,6 +162,20 @@ export default function LandingPage() {
               >
                 Sign In
               </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                color="red"
+                leftSection={<IconAlertTriangle size={18} />}
+                onClick={scrollToAccidentReport}
+                style={{
+                  boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
+                  fontWeight: 600,
+                  border: '2px solid rgba(255, 255, 255, 0.5)',
+                }}
+              >
+                Report Accident
+              </Button>
             </Group>
           </Stack>
         </Container>
@@ -217,6 +229,10 @@ export default function LandingPage() {
             ))}
           </SimpleGrid>
         </Container>
+      </Box>
+
+      <Box py={{ base: 40, sm: 60 }} style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
+        <PublicAccidentReportForm />
       </Box>
 
       {/* CTA Section */}

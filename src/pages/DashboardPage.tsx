@@ -8,6 +8,30 @@ import { useNavigate } from 'react-router-dom';
 import { IconPackage, IconShoppingCart, IconAlertTriangle, IconCarCrash, IconMapPin } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
 
+function useCountUp(targetValue: number, durationMs = 800) {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    const target = Number.isFinite(targetValue) ? targetValue : 0;
+    const start = performance.now();
+    let raf = 0;
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(Math.round(eased * target));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+
+    setValue(0);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [targetValue, durationMs]);
+
+  return value;
+}
+
 const SUBCITIES = [
   'Addis Ketema',
   'Akaky Kaliti',
@@ -450,48 +474,54 @@ export default function DashboardPage() {
       })) || []
     : inProgressBySubcity;
 
+  // Animated “indicator” numbers (top summary cards)
+  const totalPolesAnimated = useCountUp(summary?.poles?.total || 0);
+  const faultyPolesAnimated = useCountUp(summary?.poles?.faulty || 0);
+  const inProgressMaintAnimated = useCountUp(inProgressMaintenanceCount || 0);
+  const completedMaintAnimated = useCountUp(summary?.maintenance?.completed || 0);
+
   return (
     <Container size="xl" pt={{ base: 'xl', sm: 'xl' }} pb={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Title mb={{ base: 'md', sm: 'xl' }} order={1} mt={{ base: 'md', sm: 0 }}>Dashboard</Title>
 
       <Grid>
         <Grid.Col span={{ base: 12, md: 3 }}>
-          <Paper p="md" withBorder>
+          <Paper p="md" withBorder style={{ animation: 'dashFadeUp 420ms ease-out both' }}>
             <Text size="sm" c="dimmed">
               Total Poles
             </Text>
-            <Text size="xl" fw={700}>
-              {summary?.poles?.total || 0}
+            <Text size="xl" fw={700} style={{ animation: 'dashPopIn 520ms ease-out both' }}>
+              {totalPolesAnimated}
             </Text>
           </Paper>
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 3 }}>
-          <Paper p="md" withBorder>
+          <Paper p="md" withBorder style={{ animation: 'dashFadeUp 480ms ease-out both' }}>
             <Text size="sm" c="dimmed">
               Faulty Poles
             </Text>
-            <Text size="xl" fw={700} c="red">
-              {summary?.poles?.faulty || 0}
+            <Text size="xl" fw={700} c="red" style={{ animation: 'dashPopIn 560ms ease-out both' }}>
+              {faultyPolesAnimated}
             </Text>
           </Paper>
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 3 }}>
-          <Paper p="md" withBorder>
+          <Paper p="md" withBorder style={{ animation: 'dashFadeUp 540ms ease-out both' }}>
             <Text size="sm" c="dimmed">
               In Progress Maintenances
             </Text>
-            <Text size="xl" fw={700} c="orange">
-              {inProgressMaintenanceCount}
+            <Text size="xl" fw={700} c="orange" style={{ animation: 'dashPopIn 600ms ease-out both' }}>
+              {inProgressMaintAnimated}
             </Text>
           </Paper>
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 3 }}>
-          <Paper p="md" withBorder>
+          <Paper p="md" withBorder style={{ animation: 'dashFadeUp 600ms ease-out both' }}>
             <Text size="sm" c="dimmed">
               Completed Maintenance
             </Text>
-            <Text size="xl" fw={700} c="green">
-              {summary?.maintenance?.completed || 0}
+            <Text size="xl" fw={700} c="green" style={{ animation: 'dashPopIn 640ms ease-out both' }}>
+              {completedMaintAnimated}
             </Text>
           </Paper>
         </Grid.Col>
@@ -604,7 +634,13 @@ export default function DashboardPage() {
                     />
                     <YAxis fontSize={12} />
                     <Tooltip />
-                    <Bar dataKey="count" fill={selectedStatus === 'Faulty' ? '#dc3545' : selectedStatus === 'Working' ? '#28a745' : '#ffa500'} />
+                    <Bar
+                      dataKey="count"
+                      fill={selectedStatus === 'Faulty' ? '#dc3545' : selectedStatus === 'Working' ? '#28a745' : '#ffa500'}
+                      isAnimationActive
+                      animationDuration={900}
+                      animationEasing="ease-out"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -832,7 +868,13 @@ export default function DashboardPage() {
                   />
                   <YAxis fontSize={12} />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#dc3545" />
+                  <Bar
+                    dataKey="count"
+                    fill="#dc3545"
+                    isAnimationActive
+                    animationDuration={900}
+                    animationEasing="ease-out"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -1245,6 +1287,20 @@ export default function DashboardPage() {
           </Paper>
         </Grid.Col>
       </Grid>
+
+      <style>{`
+        @keyframes dashFadeUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes dashPopIn {
+          0% { transform: scale(0.98); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+        }
+      `}</style>
     </Container>
   );
 }
