@@ -39,7 +39,9 @@ export default function PolesListPage() {
   const [subcity, setSubcity] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [streetFilter, setStreetFilter] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'subcity' | 'street' | null>(null);
+  const [localAreaNameFilter, setLocalAreaNameFilter] = useState('');
+  const [localAreaNameAmFilter, setLocalAreaNameAmFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'subcity' | 'street' | 'localAreaName' | 'localAreaNameAm' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [poleToDelete, setPoleToDelete] = useState<string | null>(null);
@@ -58,7 +60,19 @@ export default function PolesListPage() {
   }, [searchParams]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['poles', page, limit, search, subcity, status, streetFilter, sortBy, sortDirection],
+    queryKey: [
+      'poles',
+      page,
+      limit,
+      search,
+      subcity,
+      status,
+      streetFilter,
+      localAreaNameFilter,
+      localAreaNameAmFilter,
+      sortBy,
+      sortDirection,
+    ],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
 
@@ -127,6 +141,8 @@ export default function PolesListPage() {
       if (subcity) params.append('subcity', subcity);
       if (status && status !== 'REPLACED') params.append('status', status);
       if (streetFilter) params.append('street', streetFilter);
+      if (localAreaNameFilter.trim()) params.append('localAreaName', localAreaNameFilter.trim());
+      if (localAreaNameAmFilter.trim()) params.append('localAreaNameAm', localAreaNameAmFilter.trim());
       if (sortBy) params.append('sortBy', sortBy);
       if (sortDirection) params.append('sortDirection', sortDirection);
 
@@ -327,7 +343,7 @@ export default function PolesListPage() {
   const totalPages = Math.ceil(totalItems / limit);
 
   // Handle sort click
-  const handleSort = (column: 'subcity' | 'street') => {
+  const handleSort = (column: 'subcity' | 'street' | 'localAreaName' | 'localAreaNameAm') => {
     if (sortBy === column) {
       // Toggle direction if same column
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -425,7 +441,7 @@ export default function PolesListPage() {
       <Paper p={{ base: 'xs', sm: 'md' }} withBorder mb="md">
         <Stack gap="md">
           <TextInput
-            placeholder="Search by code, street, or subcity"
+            placeholder="Search by code, street, subcity, or local area"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -453,6 +469,24 @@ export default function PolesListPage() {
                 setPage(1);
               }}
               clearable
+            />
+          </Group>
+          <Group grow>
+            <TextInput
+              placeholder="Filter local area (English)"
+              value={localAreaNameFilter}
+              onChange={(e) => {
+                setLocalAreaNameFilter(e.target.value);
+                setPage(1);
+              }}
+            />
+            <TextInput
+              placeholder="Filter local area (Amharic)"
+              value={localAreaNameAmFilter}
+              onChange={(e) => {
+                setLocalAreaNameAmFilter(e.target.value);
+                setPage(1);
+              }}
             />
           </Group>
         </Stack>
@@ -567,6 +601,30 @@ export default function PolesListPage() {
                   </ActionIcon>
                 </Group>
               </Table.Th>
+              <Table.Th onClick={(e) => e.stopPropagation()}>
+                <Group gap="xs" wrap="nowrap">
+                  <Text>Local Area</Text>
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    color={sortBy === 'localAreaName' ? 'blue' : 'gray'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSort('localAreaName');
+                    }}
+                  >
+                    {sortBy === 'localAreaName' ? (
+                      sortDirection === 'asc' ? (
+                        <IconArrowUp size={14} />
+                      ) : (
+                        <IconArrowDown size={14} />
+                      )
+                    ) : (
+                      <IconArrowsSort size={14} />
+                    )}
+                  </ActionIcon>
+                </Group>
+              </Table.Th>
               <Table.Th>Power Rating</Table.Th>
               <Table.Th onClick={(e) => e.stopPropagation()}>
                 <Group gap="xs" wrap="nowrap">
@@ -612,11 +670,11 @@ export default function PolesListPage() {
           <Table.Tbody>
             {isLoading ? (
               <Table.Tr>
-                <Table.Td colSpan={status === 'REPLACED' ? 9 : 6}>Loading...</Table.Td>
+                <Table.Td colSpan={status === 'REPLACED' ? 10 : 7}>Loading...</Table.Td>
               </Table.Tr>
             ) : paginatedPoles.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={status === 'REPLACED' ? 9 : 6}>No poles found</Table.Td>
+                <Table.Td colSpan={status === 'REPLACED' ? 10 : 7}>No poles found</Table.Td>
               </Table.Tr>
             ) : (
               paginatedPoles.map((pole: any) => (
@@ -628,6 +686,9 @@ export default function PolesListPage() {
                   <Table.Td>{pole.code}</Table.Td>
                   <Table.Td>{pole.subcity}</Table.Td>
                   <Table.Td>{pole.street}</Table.Td>
+                  <Table.Td>
+                    {[pole.localAreaName, pole.localAreaNameAm].filter(Boolean).join(' / ') || '-'}
+                  </Table.Td>
                   <Table.Td>{pole.powerRatingWatt ? `${pole.powerRatingWatt}W` : '-'}</Table.Td>
                   <Table.Td>
                     <Badge color={getStatusColor(pole.status)}>
@@ -789,5 +850,3 @@ export default function PolesListPage() {
     </Container>
   );
 }
-
-

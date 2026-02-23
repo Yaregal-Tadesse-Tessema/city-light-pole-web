@@ -52,6 +52,14 @@ import axios from 'axios';
 import jsPDF from 'jspdf';
 import { useDisclosure } from '@mantine/hooks';
 import { useAuth } from '../hooks/useAuth';
+import EthiopianPhoneInput from '../components/EthiopianPhoneInput';
+import VehiclePlateInput from '../components/VehiclePlateInput';
+import {
+  fromStoredPhoneToLocal,
+  isValidEthiopianLocalPhone,
+  toEthiopianInternationalPhone,
+} from '../utils/ethiopianPhone';
+import { ETHIOPIAN_INSURANCE_COMPANY_OPTIONS } from '../utils/ethiopianInsuranceCompanies';
 
 const DAMAGE_LEVELS = [
   { value: 'MINOR', label: 'Minor Damage' },
@@ -134,6 +142,9 @@ export default function AccidentDetailPage() {
         locationDescription: accident.locationDescription || '',
         vehiclePlateNumber: accident.vehiclePlateNumber || '',
         driverName: accident.driverName || '',
+        driverPhoneNumber: fromStoredPhoneToLocal(accident.driverPhoneNumber),
+        driverLicenseNumber: accident.driverLicenseNumber || '',
+        driverNationalIdNumber: accident.driverNationalIdNumber || '',
         insuranceCompany: accident.insuranceCompany || '',
         claimReferenceNumber: accident.claimReferenceNumber || '',
       });
@@ -217,6 +228,9 @@ export default function AccidentDetailPage() {
       locationDescription: '',
       vehiclePlateNumber: '',
       driverName: '',
+      driverPhoneNumber: '',
+      driverLicenseNumber: '',
+      driverNationalIdNumber: '',
       insuranceCompany: '',
       claimReferenceNumber: '',
     },
@@ -225,6 +239,10 @@ export default function AccidentDetailPage() {
       accidentDate: (value) => !value && 'Accident date is required',
       accidentTime: (value) => !value && 'Accident time is required',
       locationDescription: (value) => !value && 'Location description is required',
+      driverPhoneNumber: (value) =>
+        isValidEthiopianLocalPhone(value)
+          ? null
+          : 'Phone must be 9 digits and cannot start with 0',
       latitude: (value) => {
         if (value !== null && value !== undefined && value !== '') {
           const num = Number(value);
@@ -532,6 +550,7 @@ export default function AccidentDetailPage() {
     // Clean up the data before sending
     const cleanedValues = {
       ...values,
+      driverPhoneNumber: toEthiopianInternationalPhone(values.driverPhoneNumber),
       latitude: values.latitude === '' || values.latitude === null ? undefined : Number(values.latitude),
       longitude: values.longitude === '' || values.longitude === null ? undefined : Number(values.longitude),
     };
@@ -640,6 +659,12 @@ export default function AccidentDetailPage() {
       doc.text(`Vehicle Plate: ${accident.vehiclePlateNumber || 'N/A'}`, 20, yPosition);
       yPosition += 8;
       doc.text(`Driver Name: ${accident.driverName || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Driver Phone: ${accident.driverPhoneNumber || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Driver License No: ${accident.driverLicenseNumber || 'N/A'}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Driver National ID: ${accident.driverNationalIdNumber || 'N/A'}`, 20, yPosition);
       yPosition += 8;
       doc.text(`Insurance Company: ${accident.insuranceCompany || 'N/A'}`, 20, yPosition);
       yPosition += 8;
@@ -1879,6 +1904,28 @@ export default function AccidentDetailPage() {
                     <Text>{accident.claimReferenceNumber || 'Not provided'}</Text>
                   </Grid.Col>
                 </Grid>
+
+                <Grid>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <Text fw={500}>Driver Phone Number</Text>
+                    <Text>{accident.driverPhoneNumber || 'Not provided'}</Text>
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <Text fw={500}>Driver License Number</Text>
+                    <Text>{accident.driverLicenseNumber || 'Not provided'}</Text>
+                  </Grid.Col>
+                </Grid>
+
+                <Grid>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <Text fw={500}>Driver National ID Number</Text>
+                    <Text>{accident.driverNationalIdNumber || 'Not provided'}</Text>
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <Text fw={500}>Driver License File</Text>
+                    <Text>{accident.driverLicenseFileName || accident.driverLicenseFileUrl || 'Not provided'}</Text>
+                  </Grid.Col>
+                </Grid>
               </Stack>
             </Card>
 
@@ -1974,10 +2021,12 @@ export default function AccidentDetailPage() {
             <Title order={4}>Vehicle & Insurance Information</Title>
 
             <Group grow>
-              <TextInput
+              <VehiclePlateInput
                 label="Vehicle Plate Number"
+                value={editForm.values.vehiclePlateNumber}
+                onChange={(value) => editForm.setFieldValue('vehiclePlateNumber', value)}
+                error={editForm.errors.vehiclePlateNumber}
                 placeholder="Enter plate number"
-                {...editForm.getInputProps('vehiclePlateNumber')}
               />
               <TextInput
                 label="Driver Name"
@@ -1987,9 +2036,12 @@ export default function AccidentDetailPage() {
             </Group>
 
             <Group grow>
-              <TextInput
+              <Select
                 label="Insurance Company"
-                placeholder="Enter insurance company"
+                placeholder="Select insurance company"
+                data={ETHIOPIAN_INSURANCE_COMPANY_OPTIONS}
+                searchable
+                clearable
                 {...editForm.getInputProps('insuranceCompany')}
               />
               <TextInput
@@ -1997,6 +2049,41 @@ export default function AccidentDetailPage() {
                 placeholder="Enter claim reference"
                 {...editForm.getInputProps('claimReferenceNumber')}
               />
+            </Group>
+
+            <Group grow>
+              <EthiopianPhoneInput
+                label="Driver Phone Number"
+                value={editForm.values.driverPhoneNumber}
+                onChange={(value) => editForm.setFieldValue('driverPhoneNumber', value)}
+                error={editForm.errors.driverPhoneNumber}
+              />
+              <TextInput
+                label="Driver License Number"
+                placeholder="Enter driver license number"
+                {...editForm.getInputProps('driverLicenseNumber')}
+              />
+            </Group>
+
+            <Group grow align="end">
+              <TextInput
+                label="Driver National ID Number"
+                placeholder="Enter driver national ID number"
+                {...editForm.getInputProps('driverNationalIdNumber')}
+              />
+              <Button
+                type="button"
+                variant="light"
+                onClick={() =>
+                  notifications.show({
+                    title: 'Coming Soon',
+                    message: 'National ID verification will be added in a future update.',
+                    color: 'blue',
+                  })
+                }
+              >
+                Verify National ID
+              </Button>
             </Group>
 
             <Group justify="flex-end" mt="md">

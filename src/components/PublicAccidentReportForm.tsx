@@ -20,6 +20,13 @@ import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { IconUpload, IconMapPin, IconCar, IconFileText } from '@tabler/icons-react';
 import axios from 'axios';
+import EthiopianPhoneInput from './EthiopianPhoneInput';
+import VehiclePlateInput from './VehiclePlateInput';
+import {
+  isValidEthiopianLocalPhone,
+  toEthiopianInternationalPhone,
+} from '../utils/ethiopianPhone';
+import { ETHIOPIAN_INSURANCE_COMPANY_OPTIONS } from '../utils/ethiopianInsuranceCompanies';
 
 const ACCIDENT_TYPES = [
   { value: 'VEHICLE_COLLISION', label: 'Vehicle Collision' },
@@ -40,6 +47,9 @@ interface AccidentFormData {
   locationDescription: string;
   vehiclePlateNumber: string;
   driverName: string;
+  driverPhoneNumber: string;
+  driverLicenseNumber: string;
+  driverNationalIdNumber: string;
   insuranceCompany: string;
   claimReferenceNumber: string;
 }
@@ -66,6 +76,7 @@ export default function PublicAccidentReportForm() {
   const { date: currentDate, time: currentTime } = getNowDateTime();
   const [photos, setPhotos] = useState<File[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [driverLicenseFile, setDriverLicenseFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [poleOptions, setPoleOptions] = useState<PoleOption[]>([]);
   const [isLoadingPoles, setIsLoadingPoles] = useState(false);
@@ -82,6 +93,9 @@ export default function PublicAccidentReportForm() {
       locationDescription: '',
       vehiclePlateNumber: '',
       driverName: '',
+      driverPhoneNumber: '',
+      driverLicenseNumber: '',
+      driverNationalIdNumber: '',
       insuranceCompany: '',
       claimReferenceNumber: '',
     },
@@ -90,6 +104,10 @@ export default function PublicAccidentReportForm() {
       accidentDate: (value) => (!value ? 'Accident date is required' : null),
       accidentTime: (value) => (!value ? 'Accident time is required' : null),
       locationDescription: (value) => (!value ? 'Location description is required' : null),
+      driverPhoneNumber: (value) =>
+        isValidEthiopianLocalPhone(value)
+          ? null
+          : 'Phone must be 9 digits and cannot start with 0',
     },
   });
 
@@ -216,6 +234,7 @@ export default function PublicAccidentReportForm() {
       // Public submission must avoid guarded endpoints.
       const payload = {
         ...values,
+        driverPhoneNumber: toEthiopianInternationalPhone(values.driverPhoneNumber),
         reporterType: 'EXTERNAL',
       };
       const publicCreateCandidates = [
@@ -294,6 +313,37 @@ export default function PublicAccidentReportForm() {
         }
       }
 
+      if (driverLicenseFile) {
+        const licenseData = new FormData();
+        licenseData.append('file', driverLicenseFile);
+        const publicLicenseCandidates = [
+          `${apiBaseUrl}/accidents/${accident.id}/driver-license`,
+          `/api/v1/accidents/${accident.id}/driver-license`,
+          `${apiBaseUrl}/public/accidents/${accident.id}/driver-license`,
+        ];
+
+        let uploaded = false;
+        for (const url of publicLicenseCandidates) {
+          try {
+            await axios.post(url, licenseData, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            uploaded = true;
+            break;
+          } catch {
+            // Try next candidate.
+          }
+        }
+
+        if (!uploaded) {
+          notifications.show({
+            title: 'License File Not Uploaded',
+            message: 'Accident was created, but driver license file upload is unavailable right now.',
+            color: 'orange',
+          });
+        }
+      }
+
       notifications.show({
         title: 'Submitted',
         message: 'Your accident report has been submitted successfully.',
@@ -303,6 +353,7 @@ export default function PublicAccidentReportForm() {
       form.reset();
       setPhotos([]);
       setAttachments([]);
+      setDriverLicenseFile(null);
     } catch (error: any) {
       notifications.show({
         title: 'Submission Failed',
@@ -459,7 +510,13 @@ export default function PublicAccidentReportForm() {
               <Stack p="md" gap="md">
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <TextInput label="Vehicle Plate Number" {...form.getInputProps('vehiclePlateNumber')} />
+                    <VehiclePlateInput
+                      label="Vehicle Plate Number"
+                      value={form.values.vehiclePlateNumber}
+                      onChange={(value) => form.setFieldValue('vehiclePlateNumber', value)}
+                      error={form.errors.vehiclePlateNumber}
+                      placeholder="Enter vehicle plate number"
+                    />
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
                     <TextInput label="Driver Name" {...form.getInputProps('driverName')} />
@@ -468,12 +525,72 @@ export default function PublicAccidentReportForm() {
 
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <TextInput label="Insurance Company" {...form.getInputProps('insuranceCompany')} />
+                    <Select
+                      label="Insurance Company"
+                      placeholder="Select insurance company"
+                      data={ETHIOPIAN_INSURANCE_COMPANY_OPTIONS}
+                      searchable
+                      clearable
+                      {...form.getInputProps('insuranceCompany')}
+                    />
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
                     <TextInput label="Claim Reference Number" {...form.getInputProps('claimReferenceNumber')} />
                   </Grid.Col>
                 </Grid>
+
+                <Grid>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <EthiopianPhoneInput
+                      label="Driver Phone Number"
+                      value={form.values.driverPhoneNumber}
+                      onChange={(value) => form.setFieldValue('driverPhoneNumber', value)}
+                      error={form.errors.driverPhoneNumber}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <TextInput
+                      label="Driver License Number"
+                      placeholder="Enter driver license number"
+                      {...form.getInputProps('driverLicenseNumber')}
+                    />
+                  </Grid.Col>
+                </Grid>
+
+                <Grid align="end">
+                  <Grid.Col span={{ base: 12, md: 8 }}>
+                    <TextInput
+                      label="Driver National ID Number"
+                      placeholder="Enter driver national ID number"
+                      {...form.getInputProps('driverNationalIdNumber')}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 4 }}>
+                    <Button
+                      type="button"
+                      variant="light"
+                      fullWidth
+                      onClick={() =>
+                        notifications.show({
+                          title: 'Coming Soon',
+                          message: 'National ID verification will be added in a future update.',
+                          color: 'blue',
+                        })
+                      }
+                    >
+                      Verify National ID
+                    </Button>
+                  </Grid.Col>
+                </Grid>
+
+                <FileInput
+                  label="Driver License File"
+                  placeholder="Upload driver license file (PDF or image)"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  leftSection={<IconUpload size={14} />}
+                  value={driverLicenseFile}
+                  onChange={setDriverLicenseFile}
+                />
               </Stack>
             </Card>
 

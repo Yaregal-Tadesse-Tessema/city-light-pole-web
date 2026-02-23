@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import L, { Map as LeafletMap, Marker, Icon } from 'leaflet';
+import L, { Map as LeafletMap, Marker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { TextInput, Button, Stack, Group } from '@mantine/core';
 import { IconSearch } from '@tabler/icons-react';
@@ -14,39 +14,25 @@ type MapPickerProps = {
 
 const DEFAULT_CENTER: [number, number] = [9.0108, 38.7613]; // Addis Ababa
 
-// Create custom colored icons
-const createColoredIcon = (color: string) => {
-  return L.divIcon({
-    className: 'custom-pin-icon',
-    html: `<div style="
-      width: 30px;
-      height: 30px;
-      background-color: ${color};
-      border: 3px solid white;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-      position: relative;
-    ">
-      <div style="
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(45deg);
-        width: 12px;
-        height: 12px;
-        background-color: white;
-        border-radius: 50%;
-      "></div>
-    </div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
-    popupAnchor: [0, -30],
-  });
+const POLE_ICON_WIDTH = 56;
+const POLE_ICON_HEIGHT = 70;
+
+const getIconUrlByStatus = (status?: string) => {
+  if (status === 'OPERATIONAL') return '/Green.svg';
+  if (status === 'FAULT_DAMAGED') return '/Red.svg';
+  if (status === 'UNDER_MAINTENANCE') return '/Orange.svg';
+  return '/Grey.svg';
 };
 
-const blueIcon = createColoredIcon('#3388ff');
-const redIcon = createColoredIcon('#ff0000');
+const createPoleIcon = (status?: string) =>
+  L.icon({
+    iconUrl: getIconUrlByStatus(status),
+    iconSize: [POLE_ICON_WIDTH, POLE_ICON_HEIGHT],
+    iconAnchor: [POLE_ICON_WIDTH / 2, POLE_ICON_HEIGHT],
+    popupAnchor: [0, -POLE_ICON_HEIGHT],
+  });
+
+const selectedLocationIcon = createPoleIcon('OPERATIONAL');
 
 export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = false }: MapPickerProps) {
   const mapRef = useRef<LeafletMap | null>(null);
@@ -116,14 +102,14 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
         if (markerRef.current) {
           markerRef.current.setLatLng([lat, lng]);
         } else {
-          markerRef.current = L.marker([lat, lng], { icon: blueIcon }).addTo(mapRef.current as LeafletMap);
+          markerRef.current = L.marker([lat, lng], { icon: selectedLocationIcon }).addTo(mapRef.current as LeafletMap);
         }
         onChange(lat, lng);
       });
 
       // Set initial marker if value exists
       if (value.lat && value.lng) {
-        markerRef.current = L.marker([value.lat, value.lng], { icon: blueIcon }).addTo(mapRef.current);
+        markerRef.current = L.marker([value.lat, value.lng], { icon: selectedLocationIcon }).addTo(mapRef.current);
         // Prevent marker clicks from triggering map clicks
         markerRef.current.on('click', (e: any) => {
           e.originalEvent?.stopPropagation();
@@ -155,7 +141,7 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
       if (markerRef.current) {
         markerRef.current.setLatLng(pos);
       } else if (mapRef.current) {
-        markerRef.current = L.marker(pos, { icon: blueIcon }).addTo(mapRef.current);
+        markerRef.current = L.marker(pos, { icon: selectedLocationIcon }).addTo(mapRef.current);
       }
     }
   }, [value.lat, value.lng]);
@@ -174,7 +160,7 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
     allPoles.forEach((pole: any) => {
       if (pole.gpsLat && pole.gpsLng && pole.code !== currentPoleCode) {
         const marker = L.marker([Number(pole.gpsLat), Number(pole.gpsLng)], {
-          icon: redIcon
+          icon: createPoleIcon(pole.status),
         }).addTo(mapRef.current!);
         
         // Add popup with pole code
@@ -218,7 +204,7 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
         if (markerRef.current) {
           markerRef.current.setLatLng([lat, lng]);
         } else {
-          markerRef.current = L.marker([lat, lng]).addTo(mapRef.current);
+          markerRef.current = L.marker([lat, lng], { icon: selectedLocationIcon }).addTo(mapRef.current);
         }
 
         // Update parent component

@@ -1,5 +1,6 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import {
   Container,
   Title,
@@ -9,11 +10,8 @@ import {
   Box,
   Stack,
   Card,
-  Grid,
-  Badge,
   ThemeIcon,
   SimpleGrid,
-  Center,
 } from '@mantine/core';
 import {
   IconBolt,
@@ -24,6 +22,11 @@ import {
   IconGauge,
   IconArrowRight,
   IconAlertTriangle,
+  IconMapPin,
+  IconClockHour4,
+  IconListDetails,
+  IconTool,
+  IconCheck,
 } from '@tabler/icons-react';
 import PublicAccidentReportForm from '../components/PublicAccidentReportForm';
 
@@ -69,11 +72,60 @@ export default function LandingPage() {
     },
   ];
 
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3011').replace(/\/$/, '');
+  const apiV1BaseUrl = apiBaseUrl.endsWith('/api/v1') ? apiBaseUrl : `${apiBaseUrl}/api/v1`;
+
+  const { data: incidentsTotal = 0 } = useQuery({
+    queryKey: ['landing', 'public-accidents-total'],
+    queryFn: async () => {
+      const res = await axios.get(`${apiV1BaseUrl}/public/accidents?page=1&limit=1`);
+      return Number(res.data?.total || 0);
+    },
+  });
+
+  const { data: issuesTotal = 0 } = useQuery({
+    queryKey: ['landing', 'public-issues-total'],
+    queryFn: async () => {
+      const res = await axios.get(`${apiV1BaseUrl}/public/issues?page=1&limit=1`);
+      return Number(res.data?.total || 0);
+    },
+  });
+
+  const { data: inProgressMaintenance = 0 } = useQuery({
+    queryKey: ['landing', 'in-progress-maintenance'],
+    queryFn: async () => {
+      const res = await axios.get(`${apiV1BaseUrl}/poles?status=UNDER_MAINTENANCE&page=1&limit=1`);
+      return Number(res.data?.total || 0);
+    },
+  });
+
+  const { data: completedMaintenance = 0 } = useQuery({
+    queryKey: ['landing', 'completed-maintenance'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) return 0;
+
+      const res = await axios.get(`${apiV1BaseUrl}/reports/summary`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      return Number(res.data?.maintenance?.completed || 0);
+    },
+  });
+
+  const formatCount = (value: number) => value.toLocaleString();
+
   const stats = [
-    { value: '5,000+', label: 'Light Poles Managed' },
-    { value: '50+', label: 'Subcities Covered' },
-    { value: '24/7', label: 'Monitoring' },
-    { value: '99.9%', label: 'Uptime' },
+    { value: '5,000+', label: 'Light Poles Managed', icon: IconBulb, color: 'yellow' as const },
+    { value: '50+', label: 'Subcities Covered', icon: IconMapPin, color: 'grape' as const },
+    { value: '24/7', label: 'Monitoring', icon: IconClockHour4, color: 'blue' as const },
+    { value: '99.9%', label: 'Uptime', icon: IconShieldCheck, color: 'teal' as const },
+    { value: formatCount(incidentsTotal), label: 'Incidents Reported', icon: IconAlertTriangle, color: 'red' as const },
+    { value: formatCount(issuesTotal), label: 'Issues Reported', icon: IconListDetails, color: 'orange' as const },
+    { value: formatCount(inProgressMaintenance), label: 'In Progress Maintenances', icon: IconTool, color: 'indigo' as const },
+    { value: formatCount(completedMaintenance), label: 'Completed Maintenances', icon: IconCheck, color: 'green' as const },
   ];
 
   return (
@@ -141,26 +193,13 @@ export default function LandingPage() {
                 variant="filled"
                 color="white"
                 c="blue.9"
-                onClick={() => navigate('/signup')}
+                onClick={() => navigate('/login')}
                 style={{
                   boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
                   fontWeight: 600,
                 }}
               >
-                Get Started
-              </Button>
-              <Button
-                size="lg"
-                variant="filled"
-                color="blue"
-                onClick={() => navigate('/login')}
-                style={{
-                  boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
-                  fontWeight: 600,
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
-                Sign In
+                Login to Continue
               </Button>
               <Button
                 size="lg"
@@ -216,16 +255,39 @@ export default function LandingPage() {
       {/* Stats Section */}
       <Box py={{ base: 40, sm: 60 }}>
         <Container size="lg">
-          <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xl">
+          <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} spacing="md">
             {stats.map((stat, index) => (
-              <Stack key={index} align="center" gap="xs">
-                <Text size="3xl" fw={900} c="blue">
-                  {stat.value}
-                </Text>
-                <Text size="sm" c="dimmed" ta="center">
-                  {stat.label}
-                </Text>
-              </Stack>
+              <Card
+                key={index}
+                withBorder
+                radius="md"
+                p="md"
+                style={{
+                  background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                  borderColor: 'var(--mantine-color-gray-3)',
+                  transition: 'transform 180ms ease, box-shadow 180ms ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = 'var(--mantine-shadow-sm)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <Stack align="center" gap="xs">
+                  <ThemeIcon size={38} radius="xl" color={stat.color} variant="light">
+                    <stat.icon size={20} />
+                  </ThemeIcon>
+                  <Text size="1.8rem" fw={900} c={`${stat.color}.7`} lh={1.1}>
+                    {stat.value}
+                  </Text>
+                  <Text size="sm" c="dimmed" ta="center" fw={600}>
+                    {stat.label}
+                  </Text>
+                </Stack>
+              </Card>
             ))}
           </SimpleGrid>
         </Container>
@@ -254,10 +316,10 @@ export default function LandingPage() {
                 variant="white"
                 color="blue"
                 rightSection={<IconArrowRight size={20} />}
-                onClick={() => navigate('/signup')}
+                onClick={() => navigate('/login')}
                 style={{ fontWeight: 600 }}
               >
-                Start Managing Today
+                Go to Login
               </Button>
             </Group>
           </Stack>

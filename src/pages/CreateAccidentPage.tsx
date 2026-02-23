@@ -23,6 +23,13 @@ import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { IconUpload, IconMapPin, IconCar, IconFileText } from '@tabler/icons-react';
 import axios from 'axios';
+import EthiopianPhoneInput from '../components/EthiopianPhoneInput';
+import VehiclePlateInput from '../components/VehiclePlateInput';
+import {
+  isValidEthiopianLocalPhone,
+  toEthiopianInternationalPhone,
+} from '../utils/ethiopianPhone';
+import { ETHIOPIAN_INSURANCE_COMPANY_OPTIONS } from '../utils/ethiopianInsuranceCompanies';
 
 const ACCIDENT_TYPES = [
   { value: 'VEHICLE_COLLISION', label: 'Vehicle Collision' },
@@ -43,6 +50,9 @@ interface AccidentFormData {
   locationDescription: string;
   vehiclePlateNumber: string;
   driverName: string;
+  driverPhoneNumber: string;
+  driverLicenseNumber: string;
+  driverNationalIdNumber: string;
   insuranceCompany: string;
   claimReferenceNumber: string;
 }
@@ -52,6 +62,7 @@ export default function CreateAccidentPage() {
   const queryClient = useQueryClient();
   const [photos, setPhotos] = useState<File[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [driverLicenseFile, setDriverLicenseFile] = useState<File | null>(null);
 
   const form = useForm<AccidentFormData>({
     initialValues: {
@@ -64,6 +75,9 @@ export default function CreateAccidentPage() {
       locationDescription: '',
       vehiclePlateNumber: '',
       driverName: '',
+      driverPhoneNumber: '',
+      driverLicenseNumber: '',
+      driverNationalIdNumber: '',
       insuranceCompany: '',
       claimReferenceNumber: '',
     },
@@ -72,6 +86,10 @@ export default function CreateAccidentPage() {
       accidentDate: (value) => !value && 'Accident date is required',
       accidentTime: (value) => !value && 'Accident time is required',
       locationDescription: (value) => !value && 'Location description is required',
+      driverPhoneNumber: (value) =>
+        isValidEthiopianLocalPhone(value)
+          ? null
+          : 'Phone must be 9 digits and cannot start with 0',
     },
   });
 
@@ -178,6 +196,29 @@ export default function CreateAccidentPage() {
         }
       }
 
+      // Upload driver license file if provided
+      if (driverLicenseFile) {
+        const formData = new FormData();
+        formData.append('file', driverLicenseFile);
+
+        try {
+          const token = localStorage.getItem('access_token');
+          await axios.post(`http://localhost:3011/api/v1/accidents/${accident.id}/driver-license`, formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        } catch (error) {
+          console.error('Failed to upload driver license file:', error);
+          notifications.show({
+            title: 'Driver License Upload Failed',
+            message: 'Accident was saved, but driver license file upload failed.',
+            color: 'orange',
+          });
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ['accidents'] });
       notifications.show({
         title: 'Success',
@@ -206,7 +247,10 @@ export default function CreateAccidentPage() {
       return;
     }
 
-    createMutation.mutate(values);
+    createMutation.mutate({
+      ...values,
+      driverPhoneNumber: toEthiopianInternationalPhone(values.driverPhoneNumber),
+    });
   };
 
   return (
@@ -328,10 +372,12 @@ export default function CreateAccidentPage() {
               <Stack p="md" gap="md">
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <TextInput
+                    <VehiclePlateInput
                       label="Vehicle Plate Number"
+                      value={form.values.vehiclePlateNumber}
+                      onChange={(value) => form.setFieldValue('vehiclePlateNumber', value)}
+                      error={form.errors.vehiclePlateNumber}
                       placeholder="Enter vehicle plate number"
-                      {...form.getInputProps('vehiclePlateNumber')}
                     />
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
@@ -345,9 +391,12 @@ export default function CreateAccidentPage() {
 
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <TextInput
+                    <Select
                       label="Insurance Company"
-                      placeholder="Enter insurance company name"
+                      placeholder="Select insurance company"
+                      data={ETHIOPIAN_INSURANCE_COMPANY_OPTIONS}
+                      searchable
+                      clearable
                       {...form.getInputProps('insuranceCompany')}
                     />
                   </Grid.Col>
@@ -359,6 +408,59 @@ export default function CreateAccidentPage() {
                     />
                   </Grid.Col>
                 </Grid>
+
+                <Grid>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <EthiopianPhoneInput
+                      label="Driver Phone Number"
+                      value={form.values.driverPhoneNumber}
+                      onChange={(value) => form.setFieldValue('driverPhoneNumber', value)}
+                      error={form.errors.driverPhoneNumber}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <TextInput
+                      label="Driver License Number"
+                      placeholder="Enter driver license number"
+                      {...form.getInputProps('driverLicenseNumber')}
+                    />
+                  </Grid.Col>
+                </Grid>
+
+                <Grid align="end">
+                  <Grid.Col span={{ base: 12, md: 8 }}>
+                    <TextInput
+                      label="Driver National ID Number"
+                      placeholder="Enter driver national ID number"
+                      {...form.getInputProps('driverNationalIdNumber')}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 4 }}>
+                    <Button
+                      type="button"
+                      variant="light"
+                      fullWidth
+                      onClick={() =>
+                        notifications.show({
+                          title: 'Coming Soon',
+                          message: 'National ID verification will be added in a future update.',
+                          color: 'blue',
+                        })
+                      }
+                    >
+                      Verify National ID
+                    </Button>
+                  </Grid.Col>
+                </Grid>
+
+                <FileInput
+                  label="Driver License File"
+                  placeholder="Upload driver license file (PDF or image)"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  leftSection={<IconUpload size={14} />}
+                  value={driverLicenseFile}
+                  onChange={setDriverLicenseFile}
+                />
               </Stack>
             </Card>
 

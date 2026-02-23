@@ -31,5 +31,8 @@ dist-ssr
 # Generated API types
 src/api/generated
 
+# Local tracking notes
+PROGRESS_COMPACT.md
+
 
 

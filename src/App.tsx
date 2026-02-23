@@ -2,8 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
+import SubcityPolesMapPage from './pages/SubcityPolesMapPage';
 import PolesListPage from './pages/PolesListPage';
 import PoleDetailPage from './pages/PoleDetailPage';
 import CreatePolePage from './pages/CreatePolePage';
@@ -76,7 +76,6 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
         <Route
           element={
             <ProtectedRoute>
@@ -85,6 +84,7 @@ function App() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/dashboard/poles-map" element={<SubcityPolesMapPage />} />
           <Route path="/poles" element={<PolesListPage />} />
           <Route path="/poles/new" element={<CreatePolePage />} />
           <Route path="/replacements" element={<PoleReplacementsListPage />} />
@@ -155,5 +155,3 @@ function App() {
 }
 
 export default App;
-
-

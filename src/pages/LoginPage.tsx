@@ -9,10 +9,8 @@ import {
   Title,
   Text,
   Stack,
-  Anchor,
   Box,
   Group,
-  Divider,
 } from '@mantine/core';
 import { IconLogin, IconBulb, IconShieldCheck, IconSparkles, IconArrowLeft, IconStar, IconSparkles2, IconHexagon } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
@@ -475,37 +473,6 @@ export default function LoginPage() {
             </Stack>
           </form>
 
-          <Divider
-            my="xl"
-            label="Don't have an account?"
-            labelPosition="center"
-            styles={{
-              label: {
-                color: '#666',
-                fontWeight: 500,
-              },
-            }}
-          />
-
-          <Text ta="center">
-            <Anchor
-              component={Link}
-              to="/signup"
-              size="sm"
-              style={{
-                color: '#667eea',
-                fontWeight: 500,
-                textDecoration: 'none',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  color: '#764ba2',
-                  textDecoration: 'underline',
-                },
-              }}
-            >
-              Create New Account
-            </Anchor>
-          </Text>
         </Paper>
 
         {/* Footer */}
@@ -629,5 +596,4 @@ export default function LoginPage() {
     </Box>
   );
 }
-
 

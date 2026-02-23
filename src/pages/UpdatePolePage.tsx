@@ -242,6 +242,8 @@ export default function UpdatePolePage() {
     code: '',
     subcity: '',
     street: '',
+    localAreaName: '',
+    localAreaNameAm: '',
     gpsLat: 0,
     gpsLng: 0,
     poleType: 'STANDARD',
@@ -277,6 +279,8 @@ export default function UpdatePolePage() {
         code: pole.code || '',
         subcity: pole.subcity || '',
         street: pole.street || '',
+        localAreaName: pole.localAreaName || '',
+        localAreaNameAm: pole.localAreaNameAm || '',
         gpsLat: pole.gpsLat !== undefined && pole.gpsLat !== null ? Number(pole.gpsLat) : 0,
         gpsLng: pole.gpsLng !== undefined && pole.gpsLng !== null ? Number(pole.gpsLng) : 0,
         poleType: pole.poleType || 'STANDARD',
@@ -331,6 +335,8 @@ export default function UpdatePolePage() {
       code: formData.code,
       subcity: formData.subcity,
       street: formData.street,
+      localAreaName: formData.localAreaName?.trim() ? formData.localAreaName.trim() : null,
+      localAreaNameAm: formData.localAreaNameAm?.trim() ? formData.localAreaNameAm.trim() : null,
       heightMeters: formData.heightMeters,
       powerRatingWatt: formData.powerRatingWatt,
       poleType: formData.poleType,
@@ -415,6 +421,21 @@ export default function UpdatePolePage() {
                 searchable
                 value={formData.street}
                 onChange={(value) => setFormData({ ...formData, street: value || '' })}
+              />
+            </Group>
+
+            <Group grow>
+              <TextInput
+                label="Local Area Name (English)"
+                placeholder="e.g. Bole Medhanialem"
+                value={formData.localAreaName}
+                onChange={(e) => setFormData({ ...formData, localAreaName: e.target.value })}
+              />
+              <TextInput
+                label="Local Area Name (Amharic)"
+                placeholder="e.g. ቦሌ መድሃኒዓለም"
+                value={formData.localAreaNameAm}
+                onChange={(e) => setFormData({ ...formData, localAreaNameAm: e.target.value })}
               />
             </Group>
 

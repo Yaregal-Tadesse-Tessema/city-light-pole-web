@@ -244,6 +244,8 @@ export default function CreatePolePage() {
       code: '',
       subcity: '',
       street: '',
+      localAreaName: '',
+      localAreaNameAm: '',
       gpsLat: undefined as number | undefined,
       gpsLng: undefined as number | undefined,
       poleType: 'STANDARD',
@@ -287,6 +289,8 @@ export default function CreatePolePage() {
         code: data.code,
         subcity: data.subcity,
         street: data.street,
+        localAreaName: data.localAreaName?.trim() ? data.localAreaName.trim() : null,
+        localAreaNameAm: data.localAreaNameAm?.trim() ? data.localAreaNameAm.trim() : null,
         heightMeters: data.heightMeters,
         powerRatingWatt: data.powerRatingWatt,
         poleType: data.poleType,
@@ -401,6 +405,19 @@ export default function CreatePolePage() {
                 data={STREETS}
                 searchable
                 {...form.getInputProps('street')}
+              />
+            </Group>
+
+            <Group grow>
+              <TextInput
+                label="Local Area Name (English)"
+                placeholder="e.g. Bole Medhanialem"
+                {...form.getInputProps('localAreaName')}
+              />
+              <TextInput
+                label="Local Area Name (Amharic)"
+                placeholder="e.g. ቦሌ መድሃኒዓለም"
+                {...form.getInputProps('localAreaNameAm')}
               />
             </Group>
 

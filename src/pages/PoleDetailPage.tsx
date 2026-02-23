@@ -150,6 +150,14 @@ export default function PoleDetailPage() {
                 <Text fw={700}>Street:</Text>
                 <Text>{pole.street}</Text>
               </Group>
+              <Group>
+                <Text fw={700}>Local Area (English):</Text>
+                <Text>{pole.localAreaName || '-'}</Text>
+              </Group>
+              <Group>
+                <Text fw={700}>Local Area (Amharic):</Text>
+                <Text>{pole.localAreaNameAm || '-'}</Text>
+              </Group>
               {pole.gpsLat && pole.gpsLng && (
                 <Group>
                   <Text fw={700}>GPS:</Text>
@@ -537,5 +545,3 @@ export default function PoleDetailPage() {
     </Container>
   );
 }
-
-

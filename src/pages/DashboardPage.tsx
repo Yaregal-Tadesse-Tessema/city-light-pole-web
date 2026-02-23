@@ -56,10 +56,18 @@ const ASSET_TYPES = [
   { value: 'river', label: 'River Side Project', disabled: true },
 ];
 
+const POLE_TYPE_ORDER = ['STANDARD', 'DECORATIVE', 'HIGH_MAST'];
+const POLE_TYPE_LABELS: Record<string, string> = {
+  STANDARD: 'Standard',
+  DECORATIVE: 'Decorative',
+  HIGH_MAST: 'High Mast',
+};
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedSubcity, setSelectedSubcity] = useState<string | null>(null);
+  const [selectedPoleTypeSubcity, setSelectedPoleTypeSubcity] = useState<string | null>(null);
   const [selectedAssetType, setSelectedAssetType] = useState<string>('pole');
   const [selectedStatus, setSelectedStatus] = useState<string>('Faulty');
 
@@ -103,6 +111,22 @@ export default function DashboardPage() {
       if (selectedSubcity) params.append('subcity', selectedSubcity);
       if (selectedAssetType) params.append('assetType', selectedAssetType);
       const res = await axios.get(`http://localhost:3011/api/v1/reports/faulty-by-district?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const { data: polesByType, isLoading: isPoleTypeLoading } = useQuery({
+    queryKey: ['reports', 'poles-by-type', selectedPoleTypeSubcity],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      const params = new URLSearchParams();
+      if (selectedPoleTypeSubcity) params.append('subcity', selectedPoleTypeSubcity);
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const res = await axios.get(`http://localhost:3011/api/v1/reports/poles-by-type${queryString}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -462,6 +486,19 @@ export default function DashboardPage() {
     }));
   }, [maintenanceSchedules]);
 
+  const poleTypeChartData = useMemo(() => {
+    const counts = new Map(
+      (polesByType || []).map((item: any) => [item.poleType, Number(item.count || 0)]),
+    );
+
+    return POLE_TYPE_ORDER.map((type) => ({
+      type,
+      label: POLE_TYPE_LABELS[type] || type,
+      count: counts.get(type) ?? 0,
+    }));
+  }, [polesByType]);
+  const hasPoleTypeData = poleTypeChartData.some((entry) => entry.count > 0);
+
   const chartData = selectedStatus === 'Faulty'
     ? faultyByDistrict?.map((item: any) => ({
         district: item.district,
@@ -612,12 +649,22 @@ export default function DashboardPage() {
                 </Title>
                 <Group gap="xs" wrap="wrap">
                   <Select
+                    placeholder="All Subcities"
+                    data={[
+                      { value: '', label: 'All Subcities' },
+                      ...SUBCITIES.map((subcity) => ({ value: subcity, label: subcity })),
+                    ]}
+                    value={selectedSubcity ?? ''}
+                    onChange={(value) => setSelectedSubcity(value && value.trim() ? value : null)}
+                    style={{ minWidth: 220 }}
+                  />
+                  <Select
                     placeholder="Select Status"
                     data={['Faulty', 'Working', 'In Progress Maintenances']}
                     value={selectedStatus}
                     onChange={(value) => setSelectedStatus(value || 'Faulty')}
                     clearable={false}
-                    style={{ minWidth: 200 }}
+                    style={{ minWidth: 220 }}
                   />
                 </Group>
               </Group>
@@ -886,6 +933,60 @@ export default function DashboardPage() {
         </Grid.Col>
       </Grid>
 
+      <Grid mt="xl">
+        <Grid.Col span={{ base: 12, md: 12 }}>
+          <Paper p="md" withBorder>
+            <Group justify="space-between" align="center" mb="md">
+              <Group align="center">
+                <Title order={3}>Pole Type Distribution</Title>
+              </Group>
+              <Group gap="xs" align="center">
+                <Select
+                  placeholder="All Subcities"
+                  data={[
+                    { value: '', label: 'All Subcities' },
+                    ...SUBCITIES.map((subcity) => ({ value: subcity, label: subcity })),
+                  ]}
+                  value={selectedPoleTypeSubcity ?? ''}
+                  onChange={(value) => setSelectedPoleTypeSubcity(value && value.trim() ? value : null)}
+                  style={{ minWidth: 220 }}
+                />
+                <Text size="sm" c="dimmed">
+                  {selectedPoleTypeSubcity ? `Filtered to ${selectedPoleTypeSubcity}` : 'Citywide'}
+                </Text>
+              </Group>
+            </Group>
+            {isPoleTypeLoading ? (
+              <Center py="xl">
+                <Text>Loading pole type data...</Text>
+              </Center>
+            ) : !hasPoleTypeData ? (
+              <Text c="dimmed" ta="center" py="xl">
+                No pole type data available yet.
+              </Text>
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={poleTypeChartData}
+                  margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Bar
+                    dataKey="count"
+                    fill="#2563eb"
+                    isAnimationActive
+                    animationDuration={900}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </Paper>
+        </Grid.Col>
+      </Grid>
+
       {/* Geographical Map Section */}
       <Grid mt="xl">
         <Grid.Col span={{ base: 12, md: 12 }}>
@@ -920,7 +1021,7 @@ export default function DashboardPage() {
                         backgroundColor: operationalCount > 0 ? 'var(--mantine-color-green-0)' : 'var(--mantine-color-gray-0)',
                         border: operationalCount === polesInSubcity.length ? '2px solid var(--mantine-color-green-6)' : '1px solid var(--mantine-color-gray-3)',
                       }}
-                      onClick={() => navigate(`/poles?subcity=${encodeURIComponent(subcity)}`)}
+                      onClick={() => navigate(`/dashboard/poles-map?subcity=${encodeURIComponent(subcity)}`)}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-2px)';
                         e.currentTarget.style.boxShadow = 'var(--mantine-shadow-md)';
@@ -1304,4 +1405,3 @@ export default function DashboardPage() {
     </Container>
   );
 }
-
