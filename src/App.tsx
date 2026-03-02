@@ -69,6 +69,7 @@ import UpdateComponentPage from './pages/UpdateComponentPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFoundPage from './pages/NotFoundPage';
+import ReportAccidentPage from './pages/ReportAccidentPage';
 
 function App() {
   return (
@@ -76,6 +77,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/report-accident" element={<ReportAccidentPage />} />
         <Route
           element={
             <ProtectedRoute>

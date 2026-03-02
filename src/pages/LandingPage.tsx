@@ -28,16 +28,9 @@ import {
   IconTool,
   IconCheck,
 } from '@tabler/icons-react';
-import PublicAccidentReportForm from '../components/PublicAccidentReportForm';
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const scrollToAccidentReport = () => {
-    const section = document.getElementById('public-accident-report');
-    if (section) {
-      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
 
   const features = [
     {
@@ -206,7 +199,7 @@ export default function LandingPage() {
                 variant="outline"
                 color="red"
                 leftSection={<IconAlertTriangle size={18} />}
-                onClick={scrollToAccidentReport}
+                onClick={() => navigate('/report-accident')}
                 style={{
                   boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
                   fontWeight: 600,
@@ -291,10 +284,6 @@ export default function LandingPage() {
             ))}
           </SimpleGrid>
         </Container>
-      </Box>
-
-      <Box py={{ base: 40, sm: 60 }} style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
-        <PublicAccidentReportForm />
       </Box>
 
       {/* CTA Section */}
