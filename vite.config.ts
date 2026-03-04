@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true,
+    allowedHosts: true,
     port: 5173,
     proxy: {
       '/api': {
@@ -13,6 +15,10 @@ export default defineConfig({
         // Don't rewrite, backend already has /api/v1 prefix
       },
     },
+  },
+  preview: {
+    host: true,
+    allowedHosts: true, // Allow all hosts (e.g. smartpole.aaesaa.gov.et)
   },
 });
 
