@@ -5,6 +5,7 @@ import { useDisclosure, useMediaQuery } from '@mantine/hooks';
 import { useAuth } from '../hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import {
   IconDashboard,
   IconBulb,
@@ -23,12 +24,14 @@ import {
   IconCarCrash,
   IconBox,
 } from '@tabler/icons-react';
+import LanguageSelector from './LanguageSelector';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [opened, { toggle, close }] = useDisclosure(true);
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const { t } = useTranslation('layout');
 
   // Get unread notifications count
   const { data: unreadCount } = useQuery({
@@ -93,6 +96,7 @@ export default function Layout() {
             />
           </Group>
           <Group gap="xs" visibleFrom="sm" wrap="nowrap">
+            <LanguageSelector compact size="xs" />
             <ActionIcon
               component={Link}
               to="/notifications"
@@ -150,8 +154,7 @@ export default function Layout() {
             fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-family='Arial' font-size='14' fill='%23999'%3ELogo%3C/text%3E%3C/svg%3E"
           />
           <Text size="sm" fw={600} ta="center" c="dimmed">
-            Addis Ababa
-            Light Poles Management System
+            {t('systemName')}
           </Text>
         </Stack>
         <Group mb="md" visibleFrom="sm" style={{ flexShrink: 0 }}>
@@ -172,99 +175,99 @@ export default function Layout() {
         </Stack>
         <ScrollArea style={{ flex: 1 }} offsetScrollbars>
           <Stack gap="xs">
-          <NavLink
-            component={Link}
-            to="/dashboard"
-          label="Dashboard"
-          leftSection={<IconDashboard size={16} />}
-          active={location.pathname === '/dashboard'}
-          onClick={() => {
-            if (isMobile) {
-              close();
-            }
-          }}
-        />
-        <NavLink
-          label="Light Pole"
-          leftSection={<IconBulb size={16} />}
-          rightSection={
-            lightPoleMenuOpened ? (
-              <IconChevronDown size={16} />
-            ) : (
-              <IconChevronRight size={16} />
-            )
-          }
-          active={isLightPoleRouteActive}
-          opened={lightPoleMenuOpened}
-          onChange={() => setLightPoleMenuOpened(!lightPoleMenuOpened)}
-        >
-          <NavLink
-            component={Link}
-            to="/poles"
-            label="Light Poles"
-            leftSection={<IconBulb size={16} />}
-            active={location.pathname.startsWith('/poles') && !location.pathname.includes('/replace')}
-            onClick={() => {
-              if (isMobile) {
-                close();
+            <NavLink
+              component={Link}
+              to="/dashboard"
+              label={t('nav.dashboard')}
+              leftSection={<IconDashboard size={16} />}
+              active={location.pathname === '/dashboard'}
+              onClick={() => {
+                if (isMobile) {
+                  close();
+                }
+              }}
+            />
+            <NavLink
+              label={t('nav.lightPole')}
+              leftSection={<IconBulb size={16} />}
+              rightSection={
+                lightPoleMenuOpened ? (
+                  <IconChevronDown size={16} />
+                ) : (
+                  <IconChevronRight size={16} />
+                )
               }
-            }}
-          />
-          <NavLink
-            component={Link}
-            to="/issues"
-            label="Issues"
-            leftSection={<IconAlertTriangle size={16} />}
-            active={location.pathname === '/issues'}
-            onClick={() => {
-              if (isMobile) {
-                close();
-              }
-            }}
-          />
-          <NavLink
-            component={Link}
-            to="/maintenance?type=pole"
-            label="Maintenance"
-            leftSection={<IconTools size={16} />}
-            active={
-              location.pathname === '/maintenance' &&
-              (!location.search.includes('type=') || location.search.includes('type=pole'))
-            }
-            onClick={() => {
-              if (isMobile) {
-                close();
-              }
-            }}
-          />
-          <NavLink
-            component={Link}
-            to="/replacements"
-            label="Replace Pole"
-            leftSection={<IconReplace size={16} />}
-            active={location.pathname.startsWith('/replacements')}
-            onClick={() => {
-              if (isMobile) {
-                close();
-              }
-            }}
-          />
-          <NavLink
-            component={Link}
-            to="/components"
-            label="Components"
-            leftSection={<IconBox size={16} />}
-            active={location.pathname.startsWith('/components')}
-            onClick={() => {
-              if (isMobile) {
-                close();
-              }
-            }}
-          />
-        </NavLink>
+              active={isLightPoleRouteActive}
+              opened={lightPoleMenuOpened}
+              onChange={() => setLightPoleMenuOpened(!lightPoleMenuOpened)}
+            >
+              <NavLink
+                component={Link}
+                to="/poles"
+                label={t('nav.lightPoles')}
+                leftSection={<IconBulb size={16} />}
+                active={location.pathname.startsWith('/poles') && !location.pathname.includes('/replace')}
+                onClick={() => {
+                  if (isMobile) {
+                    close();
+                  }
+                }}
+              />
+              <NavLink
+                component={Link}
+                to="/issues"
+                label={t('nav.issues')}
+                leftSection={<IconAlertTriangle size={16} />}
+                active={location.pathname === '/issues'}
+                onClick={() => {
+                  if (isMobile) {
+                    close();
+                  }
+                }}
+              />
+              <NavLink
+                component={Link}
+                to="/maintenance?type=pole"
+                label={t('nav.maintenance')}
+                leftSection={<IconTools size={16} />}
+                active={
+                  location.pathname === '/maintenance' &&
+                  (!location.search.includes('type=') || location.search.includes('type=pole'))
+                }
+                onClick={() => {
+                  if (isMobile) {
+                    close();
+                  }
+                }}
+              />
+              <NavLink
+                component={Link}
+                to="/replacements"
+                label={t('nav.replacements')}
+                leftSection={<IconReplace size={16} />}
+                active={location.pathname.startsWith('/replacements')}
+                onClick={() => {
+                  if (isMobile) {
+                    close();
+                  }
+                }}
+              />
+              <NavLink
+                component={Link}
+                to="/components"
+                label={t('nav.components')}
+                leftSection={<IconBox size={16} />}
+                active={location.pathname.startsWith('/components')}
+                onClick={() => {
+                  if (isMobile) {
+                    close();
+                  }
+                }}
+              />
+            </NavLink>
         {canSeeInventory && (
           <NavLink
-            label="Inventory Management"
+            label={t('nav.inventory')}
             leftSection={<IconPackage size={16} />}
             rightSection={
               inventoryMenuOpened ? (
@@ -280,7 +283,7 @@ export default function Layout() {
             <NavLink
               component={Link}
               to="/inventory"
-              label="Inventory Items"
+              label={t('nav.inventoryItems')}
               leftSection={<IconPackage size={16} />}
               active={location.pathname.startsWith('/inventory') && !location.pathname.startsWith('/inventory/')}
               onClick={() => {
@@ -292,7 +295,7 @@ export default function Layout() {
             <NavLink
               component={Link}
               to="/categories"
-              label="Categories"
+              label={t('nav.categories')}
               leftSection={<IconTags size={16} />}
               active={location.pathname.startsWith('/categories')}
               onClick={() => {
@@ -304,7 +307,7 @@ export default function Layout() {
             <NavLink
               component={Link}
               to="/material-requests"
-              label="Material Requests"
+              label={t('nav.materialRequests')}
               leftSection={<IconPackage size={16} />}
               active={location.pathname === '/material-requests'}
               onClick={() => {
@@ -316,7 +319,7 @@ export default function Layout() {
             <NavLink
               component={Link}
               to="/purchase-requests"
-              label="Purchase Requests"
+              label={t('nav.purchaseRequests')}
               leftSection={<IconShoppingCart size={16} />}
               active={location.pathname === '/purchase-requests'}
               onClick={() => {
@@ -328,7 +331,7 @@ export default function Layout() {
           </NavLink>
         )}
         <NavLink
-          label="Accident Management"
+          label={t('nav.accidentManagement')}
           leftSection={<IconCarCrash size={16} />}
           rightSection={
             accidentMenuOpened ? (
@@ -337,14 +340,18 @@ export default function Layout() {
               <IconChevronRight size={16} />
             )
           }
-          active={location.pathname.startsWith('/accidents') || location.pathname === '/damaged-components' || location.pathname === '/accident-reports'}
+          active={
+            location.pathname.startsWith('/accidents') ||
+            location.pathname === '/damaged-components' ||
+            location.pathname === '/accident-reports'
+          }
           opened={accidentMenuOpened}
           onChange={() => setAccidentMenuOpened(!accidentMenuOpened)}
         >
           <NavLink
             component={Link}
             to="/accidents"
-            label="Accidents"
+            label={t('nav.accidents')}
             leftSection={<IconCarCrash size={16} />}
             active={location.pathname.startsWith('/accidents') && !location.pathname.includes('/reports')}
             onClick={() => {
@@ -356,7 +363,7 @@ export default function Layout() {
           <NavLink
             component={Link}
             to="/accident-reports"
-            label="Reports"
+            label={t('nav.reports')}
             leftSection={<IconReport size={16} />}
             active={location.pathname === '/accident-reports'}
             onClick={() => {
@@ -369,7 +376,7 @@ export default function Layout() {
             <NavLink
               component={Link}
               to="/damaged-components"
-              label="Components"
+              label={t('nav.damagedComponents')}
               leftSection={<IconTools size={16} />}
               active={location.pathname === '/damaged-components'}
               onClick={() => {
@@ -386,7 +393,7 @@ export default function Layout() {
           <NavLink
             component={Link}
             to="/users"
-            label="Users"
+            label={t('nav.users')}
             leftSection={<IconUsers size={16} />}
             active={location.pathname === '/users'}
             onClick={() => {
@@ -399,7 +406,7 @@ export default function Layout() {
         <NavLink
           component={Link}
           to="/reports"
-          label="Reports"
+          label={t('nav.reports')}
           leftSection={<IconReport size={16} />}
           active={location.pathname === '/reports'}
           onClick={() => {
@@ -419,7 +426,7 @@ export default function Layout() {
             fullWidth
             style={{ flexShrink: 0 }}
           >
-            Logout
+            {t('actions.logout')}
           </Button>
         </Box>
       </AppShell.Navbar>
@@ -431,4 +438,3 @@ export default function Layout() {
     </AppShell>
   );
 }
-

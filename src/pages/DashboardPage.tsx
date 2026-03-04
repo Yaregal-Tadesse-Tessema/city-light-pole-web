@@ -5,6 +5,7 @@ import { Container, Grid, Paper, Text, Title, Table, Badge, Select, Stack, Group
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { IconPackage, IconShoppingCart, IconAlertTriangle, IconCarCrash, IconMapPin } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -66,6 +67,7 @@ const POLE_TYPE_LABELS: Record<string, string> = {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation('dashboard');
   const [selectedSubcity, setSelectedSubcity] = useState<string | null>(null);
   const [selectedPoleTypeSubcity, setSelectedPoleTypeSubcity] = useState<string | null>(null);
   const [selectedAssetType, setSelectedAssetType] = useState<string>('pole');
@@ -519,13 +521,13 @@ export default function DashboardPage() {
 
   return (
     <Container size="xl" pt={{ base: 'xl', sm: 'xl' }} pb={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} order={1} mt={{ base: 'md', sm: 0 }}>Dashboard</Title>
+      <Title mb={{ base: 'md', sm: 'xl' }} order={1} mt={{ base: 'md', sm: 0 }}>{t('title')}</Title>
 
       <Grid>
         <Grid.Col span={{ base: 12, md: 3 }}>
           <Paper p="md" withBorder style={{ animation: 'dashFadeUp 420ms ease-out both' }}>
             <Text size="sm" c="dimmed">
-              Total Poles
+              {t('totals.totalPoles')}
             </Text>
             <Text size="xl" fw={700} style={{ animation: 'dashPopIn 520ms ease-out both' }}>
               {totalPolesAnimated}
@@ -535,7 +537,7 @@ export default function DashboardPage() {
         <Grid.Col span={{ base: 12, md: 3 }}>
           <Paper p="md" withBorder style={{ animation: 'dashFadeUp 480ms ease-out both' }}>
             <Text size="sm" c="dimmed">
-              Faulty Poles
+              {t('totals.faultyPoles')}
             </Text>
             <Text size="xl" fw={700} c="red" style={{ animation: 'dashPopIn 560ms ease-out both' }}>
               {faultyPolesAnimated}
@@ -545,7 +547,7 @@ export default function DashboardPage() {
         <Grid.Col span={{ base: 12, md: 3 }}>
           <Paper p="md" withBorder style={{ animation: 'dashFadeUp 540ms ease-out both' }}>
             <Text size="sm" c="dimmed">
-              In Progress Maintenances
+              {t('totals.maintenance')}
             </Text>
             <Text size="xl" fw={700} c="orange" style={{ animation: 'dashPopIn 600ms ease-out both' }}>
               {inProgressMaintAnimated}
@@ -555,7 +557,7 @@ export default function DashboardPage() {
         <Grid.Col span={{ base: 12, md: 3 }}>
           <Paper p="md" withBorder style={{ animation: 'dashFadeUp 600ms ease-out both' }}>
             <Text size="sm" c="dimmed">
-              Completed Maintenance
+              {t('totals.completedMaintenance')}
             </Text>
             <Text size="xl" fw={700} c="green" style={{ animation: 'dashPopIn 640ms ease-out both' }}>
               {completedMaintAnimated}
@@ -995,11 +997,11 @@ export default function DashboardPage() {
               <Group align="center">
                 <IconMapPin size={24} color="var(--mantine-color-blue-6)" />
                 <Title order={3}>
-                  Addis Ababa Light Pole Distribution Map
+                  {t('mapSection.title')}
                 </Title>
               </Group>
               <Text size="sm" c="dimmed">
-                Interactive geographical overview
+                {t('mapSection.helperText')}
               </Text>
             </Group>
 
@@ -1037,17 +1039,17 @@ export default function DashboardPage() {
                         </Text>
                         <Group gap="xs" wrap="wrap" justify="center">
                           <Badge color="green" size="sm">
-                            {operationalCount} Working
+                            {operationalCount} {t('status.working')}
                           </Badge>
                           <Badge color="red" size="sm">
-                            {faultyCount} Faulty
+                            {faultyCount} {t('status.faulty')}
                           </Badge>
                           <Badge color="yellow" size="sm">
-                            {maintenanceCount} Maintenance
+                            {maintenanceCount} {t('status.maintenance')}
                           </Badge>
                         </Group>
                         <Text size="sm" c="dimmed" ta="center">
-                          Total: {polesInSubcity.length} poles
+                          {t('mapCard.totalLabel')}: {polesInSubcity.length} {t('mapCard.polesLabel')}
                         </Text>
                       </Stack>
                     </Paper>
@@ -1057,7 +1059,7 @@ export default function DashboardPage() {
             </Grid>
 
             <Text size="xs" c="dimmed" ta="center" mt="md">
-              Click on any subcity to view detailed pole information
+              {t('mapSection.detailText')}
             </Text>
           </Paper>
         </Grid.Col>
@@ -1067,12 +1069,12 @@ export default function DashboardPage() {
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Paper p={{ base: 'xs', sm: 'md' }} withBorder>
             <Title order={3} mb="md">
-              Operational Light Poles
+              {t('tables.operational')}
             </Title>
             <Tabs defaultValue="by-subcity">
               <Tabs.List>
-                <Tabs.Tab value="by-subcity">By Subcity</Tabs.Tab>
-                <Tabs.Tab value="by-street">By Street</Tabs.Tab>
+                <Tabs.Tab value="by-subcity">{t('tables.tabs.bySubcity')}</Tabs.Tab>
+                <Tabs.Tab value="by-street">{t('tables.tabs.byStreet')}</Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="by-subcity" pt="md">
@@ -1080,8 +1082,8 @@ export default function DashboardPage() {
                   <Table highlightOnHover>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th>Subcity</Table.Th>
-                        <Table.Th>Count</Table.Th>
+                        <Table.Th>{t('tableHeaders.subcity')}</Table.Th>
+                        <Table.Th>{t('tableHeaders.count')}</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -1127,8 +1129,8 @@ export default function DashboardPage() {
                   <Table highlightOnHover>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th>Street</Table.Th>
-                        <Table.Th>Count</Table.Th>
+                        <Table.Th>{t('tableHeaders.street')}</Table.Th>
+                        <Table.Th>{t('tableHeaders.count')}</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -1175,12 +1177,12 @@ export default function DashboardPage() {
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Paper p={{ base: 'xs', sm: 'md' }} withBorder>
             <Title order={3} mb="md">
-              Light Poles Under Maintenance
+              {t('tables.maintenance')}
             </Title>
             <Tabs defaultValue="by-subcity">
               <Tabs.List>
-                <Tabs.Tab value="by-subcity">By Subcity</Tabs.Tab>
-                <Tabs.Tab value="by-street">By Street</Tabs.Tab>
+                <Tabs.Tab value="by-subcity">{t('tables.tabs.bySubcity')}</Tabs.Tab>
+                <Tabs.Tab value="by-street">{t('tables.tabs.byStreet')}</Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="by-subcity" pt="md">
@@ -1188,8 +1190,8 @@ export default function DashboardPage() {
                   <Table highlightOnHover>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th>Subcity</Table.Th>
-                        <Table.Th>Count</Table.Th>
+                        <Table.Th>{t('tableHeaders.subcity')}</Table.Th>
+                        <Table.Th>{t('tableHeaders.count')}</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -1235,8 +1237,8 @@ export default function DashboardPage() {
                   <Table highlightOnHover>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th>Street</Table.Th>
-                        <Table.Th>Count</Table.Th>
+                        <Table.Th>{t('tableHeaders.street')}</Table.Th>
+                        <Table.Th>{t('tableHeaders.count')}</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -1283,12 +1285,12 @@ export default function DashboardPage() {
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Paper p={{ base: 'xs', sm: 'md' }} withBorder>
             <Title order={3} mb="md">
-              Failed Light Poles
+              {t('tables.failed')}
             </Title>
             <Tabs defaultValue="by-subcity">
               <Tabs.List>
-                <Tabs.Tab value="by-subcity">By Subcity</Tabs.Tab>
-                <Tabs.Tab value="by-street">By Street</Tabs.Tab>
+                <Tabs.Tab value="by-subcity">{t('tables.tabs.bySubcity')}</Tabs.Tab>
+                <Tabs.Tab value="by-street">{t('tables.tabs.byStreet')}</Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="by-subcity" pt="md">
@@ -1296,8 +1298,8 @@ export default function DashboardPage() {
                   <Table highlightOnHover>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th>Subcity</Table.Th>
-                        <Table.Th>Count</Table.Th>
+                        <Table.Th>{t('tableHeaders.subcity')}</Table.Th>
+                        <Table.Th>{t('tableHeaders.count')}</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -1343,8 +1345,8 @@ export default function DashboardPage() {
                   <Table highlightOnHover>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th>Street</Table.Th>
-                        <Table.Th>Count</Table.Th>
+                        <Table.Th>{t('tableHeaders.street')}</Table.Th>
+                        <Table.Th>{t('tableHeaders.count')}</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>

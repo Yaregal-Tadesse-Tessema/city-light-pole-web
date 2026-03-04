@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import './api/axiosSetup';
+import './i18n';
 import App from './App';
 
 // Unregister any existing service workers to prevent PWA errors

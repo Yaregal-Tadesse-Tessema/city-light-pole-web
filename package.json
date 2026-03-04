@@ -11,7 +11,8 @@
     "serve": "serve -s dist -l 5173",
     "seed:users": "tsx scripts/seed-users.ts",
     "api:types": "tsx scripts/generate-api-types.ts",
-    "dev-run": "tsx scripts/dev-run.ts"
+    "dev-run": "tsx scripts/dev-run.ts",
+    "i18n:audit": "node scripts/i18n-audit.cjs"
   },
   "dependencies": {
     "@mantine/core": "^7.15.0",
@@ -26,11 +27,13 @@
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.7",
     "file-saver": "^2.0.5",
+    "i18next": "^25.8.14",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
     "leaflet": "^1.9.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-i18next": "^16.5.4",
     "react-router-dom": "^6.28.0",
     "recharts": "^2.15.0",
     "xlsx": "^0.18.5"

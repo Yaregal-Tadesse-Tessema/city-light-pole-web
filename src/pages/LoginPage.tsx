@@ -15,6 +15,8 @@ import {
 import { IconLogin, IconBulb, IconShieldCheck, IconSparkles, IconArrowLeft, IconStar, IconSparkles2, IconHexagon } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
 import { notifications } from '@mantine/notifications';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from '../components/LanguageSelector';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,6 +24,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation(['login', 'landing']);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,8 +35,8 @@ export default function LoginPage() {
 
     if (result.success) {
       notifications.show({
-        title: 'Success',
-        message: 'Logged in successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.successMessage'),
         color: 'green',
       });
       // Check for redirect path saved before login
@@ -46,8 +49,8 @@ export default function LoginPage() {
       }
     } else {
       notifications.show({
-        title: 'Error',
-        message: result.error || 'Login failed',
+        title: t('notifications.errorTitle'),
+        message: result.error || t('notifications.defaultErrorMessage'),
         color: 'red',
       });
     }
@@ -185,6 +188,9 @@ export default function LoginPage() {
       />
 
       <Container size={480} style={{ position: 'relative', zIndex: 1 }}>
+        <Group mb="md" style={{ justifyContent: 'flex-end' }}>
+          <LanguageSelector size="sm" />
+        </Group>
         {/* Back to Home Button */}
         <Box style={{ position: 'absolute', top: 0, left: 0, zIndex: 2 }}>
           <Button
@@ -200,7 +206,7 @@ export default function LoginPage() {
               },
             }}
           >
-            Back to Home
+            {t('hero.backButton', { ns: 'landing' })}
           </Button>
         </Box>
 
@@ -348,15 +354,15 @@ export default function LoginPage() {
           <Group justify="center" mb="lg">
             <IconLogin size={24} style={{ color: '#667eea' }} />
             <Title order={3} c="#333" fw={600}>
-              Sign In to Your Account
+              {t('title')}
             </Title>
           </Group>
 
           <form onSubmit={handleSubmit}>
             <Stack gap="lg">
-              <TextInput
-                label="Email Address"
-                placeholder="admin@city.gov"
+                <TextInput
+                label={t('fields.email')}
+                placeholder={t('placeholders.email')}
                 required
                 size="md"
                 leftSection={<IconSparkles size={18} style={{ color: '#667eea', filter: 'drop-shadow(0 0 4px rgba(102, 126, 234, 0.3))' }} />}
@@ -392,8 +398,8 @@ export default function LoginPage() {
               />
 
               <PasswordInput
-                label="Password"
-                placeholder="Enter your password"
+                label={t('fields.password')}
+                placeholder={t('placeholders.password')}
                 required
                 size="md"
                 leftSection={<IconShieldCheck size={18} style={{ color: '#667eea', filter: 'drop-shadow(0 0 4px rgba(102, 126, 234, 0.3))' }} />}
@@ -468,7 +474,7 @@ export default function LoginPage() {
                   },
                 }}
               >
-                {loading ? 'Signing In...' : 'Sign In Securely'}
+                {loading ? t('buttons.submitting') : t('buttons.submit')}
               </Button>
             </Stack>
           </form>
@@ -485,7 +491,7 @@ export default function LoginPage() {
             textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
           }}
         >
-          © 2025 Smart City Infrastructure Management System
+          {t('footer')}
         </Text>
       </Container>
 
@@ -596,4 +602,3 @@ export default function LoginPage() {
     </Box>
   );
 }
-

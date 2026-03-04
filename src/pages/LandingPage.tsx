@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -28,42 +29,27 @@ import {
   IconTool,
   IconCheck,
 } from '@tabler/icons-react';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from '../components/LanguageSelector';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation('landing');
 
-  const features = [
-    {
-      icon: IconBulb,
-      title: 'Smart Lighting',
-      description: 'Automated street light management with real-time monitoring and energy optimization.',
-    },
-    {
-      icon: IconGauge,
-      title: 'GPS Tracking',
-      description: 'Precise location tracking for all light poles with interactive mapping capabilities.',
-    },
-    {
-      icon: IconChartBar,
-      title: 'Analytics Dashboard',
-      description: 'Comprehensive reporting and analytics for maintenance scheduling and performance monitoring.',
-    },
-    {
-      icon: IconShieldCheck,
-      title: 'Incident Management',
-      description: 'Streamlined accident reporting and damage assessment workflow for quick response.',
-    },
-    {
-      icon: IconCamera,
-      title: 'Surveillance Integration',
-      description: 'Integrated camera systems for enhanced security and incident documentation.',
-    },
-    {
-      icon: IconBolt,
-      title: 'Energy Management',
-      description: 'Intelligent power management to reduce energy consumption and operational costs.',
-    },
+  const baseFeatureIcons = [
+    IconBulb,
+    IconGauge,
+    IconChartBar,
+    IconShieldCheck,
+    IconCamera,
+    IconBolt,
   ];
+  const translatedFeatures = (t('features', { returnObjects: true }) as { title: string; description: string }[]) || [];
+  const features = baseFeatureIcons.map((IconComponent, index) => ({
+    icon: IconComponent,
+    title: translatedFeatures[index]?.title || '',
+    description: translatedFeatures[index]?.description || '',
+  }));
 
   const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3011').replace(/\/$/, '');
   const apiV1BaseUrl = apiBaseUrl.endsWith('/api/v1') ? apiBaseUrl : `${apiBaseUrl}/api/v1`;
@@ -110,16 +96,42 @@ export default function LandingPage() {
 
   const formatCount = (value: number) => value.toLocaleString();
 
-  const stats = [
-    { value: '5,000+', label: 'Light Poles Managed', icon: IconBulb, color: 'yellow' as const },
-    { value: '50+', label: 'Subcities Covered', icon: IconMapPin, color: 'grape' as const },
-    { value: '24/7', label: 'Monitoring', icon: IconClockHour4, color: 'blue' as const },
-    { value: '99.9%', label: 'Uptime', icon: IconShieldCheck, color: 'teal' as const },
-    { value: formatCount(incidentsTotal), label: 'Incidents Reported', icon: IconAlertTriangle, color: 'red' as const },
-    { value: formatCount(issuesTotal), label: 'Issues Reported', icon: IconListDetails, color: 'orange' as const },
-    { value: formatCount(inProgressMaintenance), label: 'In Progress Maintenances', icon: IconTool, color: 'indigo' as const },
-    { value: formatCount(completedMaintenance), label: 'Completed Maintenances', icon: IconCheck, color: 'green' as const },
-  ];
+  const statEntries = (t('stats', { returnObjects: true }) as { label: string; valueLabel: string }[]) || [];
+  const statValues = (t('statsValues', { returnObjects: true }) as Record<string, string>) || {};
+  const statDecorators: Record<string, { icon: ComponentType<any>; color: string }> = {
+    lightPolesManaged: { icon: IconBulb, color: 'yellow' },
+    subcitiesCovered: { icon: IconMapPin, color: 'grape' },
+    monitoring: { icon: IconClockHour4, color: 'blue' },
+    uptime: { icon: IconShieldCheck, color: 'teal' },
+    incidentsReported: { icon: IconAlertTriangle, color: 'red' },
+    issuesReported: { icon: IconListDetails, color: 'orange' },
+    inProgressMaintenances: { icon: IconTool, color: 'indigo' },
+    completedMaintenances: { icon: IconCheck, color: 'green' },
+  };
+  const stats = statEntries.map((stat) => {
+    let value = statValues[stat.valueLabel] ?? '';
+    switch (stat.valueLabel) {
+      case 'incidentsReported':
+        value = formatCount(incidentsTotal);
+        break;
+      case 'issuesReported':
+        value = formatCount(issuesTotal);
+        break;
+      case 'inProgressMaintenances':
+        value = formatCount(inProgressMaintenance);
+        break;
+      case 'completedMaintenances':
+        value = formatCount(completedMaintenance);
+        break;
+    }
+    const decorator = statDecorators[stat.valueLabel] || { icon: IconBulb, color: 'gray' };
+    return {
+      ...stat,
+      value,
+      icon: decorator.icon,
+      color: decorator.color,
+    };
+  });
 
   return (
     <Box style={{ minHeight: '100vh' }}>
@@ -138,6 +150,9 @@ export default function LandingPage() {
         p={60}
       >
         <Container size="lg" px="md">
+          <Group mb="md" style={{ justifyContent: 'flex-end' }}>
+            <LanguageSelector size="sm" />
+          </Group>
           <Stack align="center" gap="xl">
             <Stack align="center" gap="md">
               <Title
@@ -151,16 +166,21 @@ export default function LandingPage() {
                   letterSpacing: '-1px',
                 }}
               >
-                Addis Ababa
+                {t('hero.preTitle')}
                 <br />
-                <Text span c="#FFD700" inherit style={{
-                  textShadow: '0 0 10px rgba(255, 215, 0, 0.8), 2px 2px 4px rgba(0,0,0,0.8)',
-                  fontWeight: 900,
-                }}>
-                  Light Poles
+                <Text
+                  span
+                  c="#FFD700"
+                  inherit
+                  style={{
+                    textShadow: '0 0 10px rgba(255, 215, 0, 0.8), 2px 2px 4px rgba(0,0,0,0.8)',
+                    fontWeight: 900,
+                  }}
+                >
+                  {t('hero.titleHighlight')}
                 </Text>
                 <br />
-                Management System
+                {t('hero.titleSuffix')}
               </Title>
 
               <Text
@@ -174,9 +194,19 @@ export default function LandingPage() {
                   fontWeight: 600,
                 }}
               >
-                Advanced smart city infrastructure management with real-time monitoring,
-                GPS tracking, and comprehensive maintenance scheduling for Addis Ababa's
-                lighting network.
+                {t('hero.subtitle')}
+              </Text>
+              <Text
+                size="sm"
+                ta="center"
+                c="white"
+                maw={900}
+                style={{
+                  textShadow: '1px 1px 3px rgba(0,0,0,0.6)',
+                  lineHeight: 1.5,
+                }}
+              >
+                {t('hero.description')}
               </Text>
             </Stack>
 
@@ -192,7 +222,7 @@ export default function LandingPage() {
                   fontWeight: 600,
                 }}
               >
-                Login to Continue
+                {t('cta.login')}
               </Button>
               <Button
                 size="lg"
@@ -206,7 +236,7 @@ export default function LandingPage() {
                   border: '2px solid rgba(255, 255, 255, 0.5)',
                 }}
               >
-                Report Accident
+                {t('cta.report')}
               </Button>
             </Group>
           </Stack>
@@ -219,10 +249,10 @@ export default function LandingPage() {
           <Stack align="center" gap="xl">
             <Stack align="center" gap="md">
               <Title order={2} ta="center" size="h2">
-                Powerful Features
+                {t('sections.powerfulFeaturesTitle')}
               </Title>
               <Text c="dimmed" ta="center" maw={600} size="lg">
-                Comprehensive infrastructure management tools designed specifically for Addis Ababa's smart city initiatives.
+                {t('sections.powerfulFeaturesSubtitle')}
               </Text>
             </Stack>
 
@@ -292,10 +322,10 @@ export default function LandingPage() {
           <Stack align="center" gap="xl">
             <Stack align="center" gap="md">
               <Title order={2} ta="center" c="white" size="h2">
-                Ready to Get Started?
+                {t('cta.readyTitle')}
               </Title>
               <Text c="white" ta="center" maw={600} size="lg" opacity={0.9}>
-                Join thousands of users already managing Addis Ababa's infrastructure with our advanced platform.
+                {t('cta.readyBody')}
               </Text>
             </Stack>
 
@@ -308,7 +338,7 @@ export default function LandingPage() {
                 onClick={() => navigate('/login')}
                 style={{ fontWeight: 600 }}
               >
-                Go to Login
+                {t('cta.goToLogin')}
               </Button>
             </Group>
           </Stack>
