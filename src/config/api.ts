@@ -1,14 +1,19 @@
 const LOCAL_DEV_API_BASE = 'http://localhost:3011';
 const LOCALHOST_PATTERN = /(?:^|:\/\/)(localhost|127(?:\.\d{1,3}){3})(?::\d+)?(?:\/|$)/i;
+const DUPLICATE_API_PATTERN = /\/api\/api(?:\/|$)/i;
 
 const configuredBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
-const defaultBaseUrl = import.meta.env.PROD ? '/api' : LOCAL_DEV_API_BASE;
-const rawBaseUrl = configuredBaseUrl || defaultBaseUrl;
+const rawBaseUrl = configuredBaseUrl || LOCAL_DEV_API_BASE;
 
 const normalizedBaseUrl = rawBaseUrl.replace(/\/$/, '');
-const normalizedApiV1Base = normalizedBaseUrl.endsWith('/api/v1')
-  ? normalizedBaseUrl
-  : `${normalizedBaseUrl}/api/v1`;
+
+const toApiV1Base = (baseUrl: string) => {
+  if (baseUrl.endsWith('/api/v1')) return baseUrl;
+  if (baseUrl.endsWith('/api')) return `${baseUrl}/v1`;
+  return `${baseUrl}/api/v1`;
+};
+
+const normalizedApiV1Base = toApiV1Base(normalizedBaseUrl);
 
 const browserOrigin =
   typeof window !== 'undefined' && window.location?.origin
@@ -34,6 +39,14 @@ export const toApiOriginUrl = (path: string) =>
 
 if (import.meta.env.PROD && LOCALHOST_PATTERN.test(normalizedBaseUrl)) {
   throw new Error(
-    `Invalid production API base URL: "${normalizedBaseUrl}". Set VITE_API_BASE_URL to "/api" or your real API host.`,
+    `Invalid production API base URL: "${normalizedBaseUrl}". Set VITE_API_BASE_URL to your real API host.`,
   );
+}
+
+if (import.meta.env.PROD && !configuredBaseUrl) {
+  throw new Error('Missing VITE_API_BASE_URL in production build. Set it to your API base URL.');
+}
+
+if (DUPLICATE_API_PATTERN.test(normalizedApiV1Base)) {
+  throw new Error(`Malformed API base URL after normalization: "${normalizedApiV1Base}".`);
 }

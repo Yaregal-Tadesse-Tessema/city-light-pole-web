@@ -38,12 +38,13 @@ VITE_API_BASE_URL=http://localhost:3011
 Create a `.env.production` file for production builds:
 
 ```env
-VITE_API_BASE_URL=/api
+VITE_API_BASE_URL=https://lightpoleapi.aaesaa.gov.et/api/v1
 ```
 
 **Notes:**
 - In development, Vite proxies `/api/*` to `http://localhost:3011`.
-- In production, use same-origin `/api` (recommended) or a real API hostname.
+- In production, `VITE_API_BASE_URL` is required and should point to your real API host.
+- If needed, `/api` also works when your reverse proxy is correctly configured.
 - `npm run build` fails if `VITE_API_BASE_URL` points to localhost unless `ALLOW_LOCALHOST_API=1` is set.
 
 ### 3. Generate API Types
@@ -169,8 +170,8 @@ The system manages the following city assets:
 
 The frontend uses:
 - **Development:** Vite proxy (`/api` -> `http://localhost:3011`)
-- **Production (recommended):** Same-origin API calls via `/api/v1/*`
-- **Production (alternative):** Absolute API host via `VITE_API_BASE_URL`
+- **Production (recommended):** `VITE_API_BASE_URL=https://lightpoleapi.aaesaa.gov.et/api/v1`
+- **Production (alternative):** `VITE_API_BASE_URL=/api` with reverse proxy
 
 API types are generated from the backend OpenAPI schema and stored in `src/api/generated/types.ts`.
 
