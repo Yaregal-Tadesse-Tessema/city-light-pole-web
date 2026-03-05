@@ -16,6 +16,7 @@ import {
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconTrash, IconCheck, IconX } from '@tabler/icons-react';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
 interface MaterialRequestModalProps {
@@ -40,6 +41,7 @@ export default function MaterialRequestModal({
   maintenanceScheduleId,
   onSuccess,
 }: MaterialRequestModalProps) {
+  const { t } = useTranslation('materialRequestModal');
   const [items, setItems] = useState<MaterialItem[]>([]);
   const [selectedItemCode, setSelectedItemCode] = useState<string | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
@@ -96,8 +98,8 @@ export default function MaterialRequestModal({
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Material request created successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.successMessage'),
         color: 'green',
       });
       onSuccess?.();
@@ -106,8 +108,8 @@ export default function MaterialRequestModal({
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to create material request',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.errorMessage'),
         color: 'red',
       });
     },
@@ -116,8 +118,8 @@ export default function MaterialRequestModal({
   const handleAddItem = () => {
     if (!selectedItemCode || quantity <= 0) {
       notifications.show({
-        title: 'Error',
-        message: 'Please select an item and enter a valid quantity',
+        title: t('notifications.errorTitle'),
+        message: t('notifications.validation.selectItem'),
         color: 'red',
       });
       return;
@@ -129,8 +131,8 @@ export default function MaterialRequestModal({
     // Check if item already added
     if (items.some((i) => i.itemCode === selectedItemCode)) {
       notifications.show({
-        title: 'Error',
-        message: 'This item is already in the list',
+        title: t('notifications.errorTitle'),
+        message: t('notifications.validation.duplicateItem'),
         color: 'red',
       });
       return;
@@ -157,8 +159,8 @@ export default function MaterialRequestModal({
   const handleSubmit = async () => {
     if (items.length === 0) {
       notifications.show({
-        title: 'Error',
-        message: 'Please add at least one item',
+        title: t('notifications.errorTitle'),
+        message: t('notifications.validation.noItems'),
         color: 'red',
       });
       return;
@@ -193,30 +195,29 @@ export default function MaterialRequestModal({
   const inventoryOptions =
     inventoryItems?.map((item: any) => ({
       value: item.code,
-      label: `${item.code} - ${item.name} (Stock: ${item.currentStock} ${item.unitOfMeasure})`,
+      label: `${item.code} - ${item.name} (${t('form.stockLabel')}: ${item.currentStock} ${item.unitOfMeasure})`,
     })) || [];
 
   const usageItems = items.filter((item) => item.available);
   const purchaseItems = items.filter((item) => !item.available);
 
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title="Request Materials"
-      size="xl"
-      centered
-    >
-      <Stack>
+      <Modal
+        opened={opened}
+        onClose={onClose}
+        title={t('title')}
+        size="xl"
+        centered
+      >
+        <Stack>
         <Alert color="blue">
-          Select materials needed for this maintenance. Items with sufficient stock will be marked for usage, 
-          while items with insufficient stock will require purchase.
+          {t('alerts.summary')}
         </Alert>
 
         <Group grow>
           <Select
-            label="Inventory Item"
-            placeholder="Select an item"
+            label={t('form.inventoryItemLabel')}
+            placeholder={t('form.selectItemPlaceholder')}
             data={inventoryOptions}
             value={selectedItemCode}
             onChange={setSelectedItemCode}
@@ -224,31 +225,31 @@ export default function MaterialRequestModal({
             disabled={loadingInventory}
           />
           <NumberInput
-            label="Quantity"
-            placeholder="1"
+            label={t('form.quantityLabel')}
+            placeholder={t('form.quantityPlaceholder')}
             min={0.01}
             value={quantity}
             onChange={(value) => setQuantity(Number(value) || 1)}
             style={{ flex: '0 0 120px' }}
           />
-          <Button
-            onClick={handleAddItem}
-            style={{ alignSelf: 'flex-end' }}
-            disabled={!selectedItemCode || quantity <= 0}
-          >
-            Add
-          </Button>
-        </Group>
+              <Button
+                onClick={handleAddItem}
+                style={{ alignSelf: 'flex-end' }}
+                disabled={!selectedItemCode || quantity <= 0}
+              >
+                {t('form.addButton')}
+              </Button>
+            </Group>
 
         {items.length > 0 && (
           <Table>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Item</Table.Th>
-                <Table.Th>Quantity</Table.Th>
-                <Table.Th>Available</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Action</Table.Th>
+                <Table.Th>{t('tableHeaders.item')}</Table.Th>
+                <Table.Th>{t('tableHeaders.quantity')}</Table.Th>
+                <Table.Th>{t('tableHeaders.available')}</Table.Th>
+                <Table.Th>{t('tableHeaders.status')}</Table.Th>
+                <Table.Th>{t('tableHeaders.action')}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -258,14 +259,14 @@ export default function MaterialRequestModal({
                   <Table.Td>{item.quantity}</Table.Td>
                   <Table.Td>
                     {item.availableQuantity !== undefined
-                      ? `${item.availableQuantity} available`
-                      : 'Checking...'}
+                      ? `${item.availableQuantity} ${t('tableHeaders.available')}`
+                      : t('tableStatus.checking')}
                   </Table.Td>
                   <Table.Td>
                     {item.available ? (
-                      <Badge color="green">Available (Usage)</Badge>
+                      <Badge color="green">{t('tableStatus.availableUsage')}</Badge>
                     ) : (
-                      <Badge color="orange">Needs Purchase</Badge>
+                      <Badge color="orange">{t('tableStatus.needsPurchase')}</Badge>
                     )}
                   </Table.Td>
                   <Table.Td>
@@ -285,31 +286,29 @@ export default function MaterialRequestModal({
 
         {usageItems.length > 0 && (
           <Alert color="green" icon={<IconCheck size={16} />}>
-            {usageItems.length} item(s) available for immediate use
+            {t('alerts.usageAvailable', { count: usageItems.length })}
           </Alert>
         )}
 
         {purchaseItems.length > 0 && (
           <Alert color="orange" icon={<IconX size={16} />}>
-            {purchaseItems.length} item(s) need to be purchased
+            {t('alerts.needsPurchase', { count: purchaseItems.length })}
           </Alert>
         )}
 
         <Group justify="flex-end" mt="xl">
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t('buttons.cancel')}
           </Button>
           <Button
             onClick={handleSubmit}
             loading={createRequestMutation.isPending || checkAvailabilityMutation.isPending}
             disabled={items.length === 0}
           >
-            Create Request
+            {t('buttons.createRequest')}
           </Button>
         </Group>
       </Stack>
     </Modal>
   );
 }
-
-

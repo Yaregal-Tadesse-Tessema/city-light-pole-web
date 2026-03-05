@@ -29,6 +29,7 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 const SCHEDULE_STATUSES = ['REQUESTED', 'PARTIALLY_STARTED', 'STARTED', 'PAUSED', 'COMPLETED'];
 
@@ -57,7 +58,17 @@ const getSortIcon = (field: string) => {
 
 
 // TextTruncate component for showing truncated text with "show more" functionality
-function TextTruncate({ text, maxLength = 50 }: { text: string; maxLength?: number }) {
+function TextTruncate({
+  text,
+  maxLength = 50,
+  showMoreLabel,
+  showLessLabel,
+}: {
+  text: string;
+  maxLength?: number;
+  showMoreLabel: string;
+  showLessLabel: string;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   if (!text || text.length <= maxLength) {
@@ -75,7 +86,7 @@ function TextTruncate({ text, maxLength = 50 }: { text: string; maxLength?: numb
         onClick={() => setExpanded(!expanded)}
         style={{ marginLeft: 8, fontSize: '0.75rem' }}
       >
-        {expanded ? 'Show Less' : 'Show More'}
+        {expanded ? showLessLabel : showMoreLabel}
       </Button>
     </div>
   );
@@ -84,40 +95,18 @@ function getScheduleType(schedule: any): string {
   return 'pole'; // Always pole since we only have light poles
 }
 
-function getScheduleAssetCode(schedule: any): string {
-  return schedule?.poleCode || '—';
-}
-
 function getScheduleAsset(schedule: any) {
   return schedule?.pole || null;
 }
 
-function getAssetNameByType(type: string, asset: any): string {
-  return asset ? 'Light Pole' : '—';
-}
-
-function getAssetDistrictByType(type: string, asset: any): string {
-  return asset?.subcity || '—';
-}
-
-function getAssetStreet(asset: any): string {
-  return asset?.street || '—';
-}
-
-function getAssetInfoLabel(type: string): string {
-  return 'Pole Details';
-}
-
-function getAssetInfo(type: string, asset: any): string {
-  if (!asset) return '—';
-  return `${asset?.poleType || '—'} • ${asset?.lampType || '—'} • ${asset?.heightMeters ?? '—'}m`;
-}
 
 export default function MaintenancePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const filterType = (searchParams.get('type') || 'pole').toLowerCase(); // default: light poles
+  const { t } = useTranslation('maintenance');
+  const { t: tCommon } = useTranslation('common');
   console.log('MaintenancePage filterType:', filterType);
   const [createScheduleOpened, setCreateScheduleOpened] = useState(false);
   const [editScheduleOpened, setEditScheduleOpened] = useState(false);
@@ -167,6 +156,35 @@ export default function MaintenancePage() {
   const [startDateTo, setStartDateTo] = useState<Date | null>(null);
   const [endDateFrom, setEndDateFrom] = useState<Date | null>(null);
   const [endDateTo, setEndDateTo] = useState<Date | null>(null);
+
+  const statusOptions = useMemo(
+    () => SCHEDULE_STATUSES.map(status => ({ value: status, label: t(`statuses.${status}`) })),
+    [t],
+  );
+
+  const getStatusLabel = (status?: string) =>
+    status ? t(`statuses.${status}`, { defaultValue: status }) : t('labels.none');
+
+  const getSeverityLabel = (severity?: string) =>
+    severity ? t(`severity.${severity}`, { defaultValue: severity }) : t('labels.none');
+
+  const getFrequencyLabel = (frequency?: string) =>
+    frequency ? t(`frequency.${frequency}`, { defaultValue: frequency }) : t('labels.none');
+
+  const getScheduleAssetCode = (schedule: any): string => schedule?.poleCode || t('labels.none');
+  const getAssetNameByType = (type: string, asset: any): string =>
+    asset ? t('assetNames.lightPole') : t('labels.none');
+  const getAssetDistrictByType = (type: string, asset: any): string => asset?.subcity || t('labels.none');
+  const getAssetStreet = (asset: any): string => asset?.street || t('labels.none');
+  const getAssetInfoLabel = (type: string): string => t('tableHeaders.assetInfo');
+  const getAssetInfo = (type: string, asset: any): string => {
+    if (!asset) return t('labels.none');
+    const poleType = asset?.poleType || t('labels.none');
+    const lampType = asset?.lampType || t('labels.none');
+    const heightValue = asset?.heightMeters ?? null;
+    const heightDisplay = heightValue === null || heightValue === undefined ? t('labels.none') : `${heightValue}m`;
+    return `${poleType} / ${lampType} / ${heightDisplay}`;
+  };
 
   // Check if any filters are active
   const hasActiveFilters = assetCodeFilter || districtFilter || streetFilter || statusFilter || startDateFrom || startDateTo || endDateFrom || endDateTo;
@@ -253,11 +271,11 @@ export default function MaintenancePage() {
       const token = localStorage.getItem('access_token');
 
       if (!token) {
-        throw new Error('No authentication token found. Please log in again.');
+        throw new Error(t('errors.authTokenMissing'));
       }
 
       if (!materialRequestId) {
-        throw new Error('Material request ID is required.');
+        throw new Error(t('errors.materialRequestIdRequired'));
       }
 
       console.log('🔗 Making API call to:', `http://localhost:3011/api/v1/material-requests/${materialRequestId}/receive`);
@@ -277,8 +295,8 @@ export default function MaintenancePage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Material request marked as received successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.materialReceived'),
         color: 'green',
       });
       setReceiveModalOpened(false);
@@ -296,10 +314,10 @@ export default function MaintenancePage() {
       const errorMessage = error.response?.data?.message ||
                           error.response?.data?.error ||
                           error.message ||
-                          'Failed to mark material request as received';
+                          t('notifications.materialReceiveFailed');
 
       notifications.show({
-        title: 'Error Receiving Materials',
+        title: t('notifications.receiveErrorTitle'),
         message: errorMessage,
         color: 'red',
       });
@@ -527,8 +545,13 @@ export default function MaintenancePage() {
 
     // Create options for pole issues
     const options = poleIssues.map((issue: any) => {
-      const assetCode = issue?.pole?.code || issue?.poleCode || 'N/A';
-      const label = `Light Pole ${assetCode} – ${issue.description || 'No description'}`;
+      const assetCode = issue?.pole?.code || issue?.poleCode || t('labels.na');
+      const description = issue.description || t('labels.noDescription');
+      const label = t('issueOptionLabel', {
+        asset: t('assetNames.lightPole'),
+        code: assetCode,
+        description,
+      });
 
       return {
         value: issue.id,
@@ -538,7 +561,7 @@ export default function MaintenancePage() {
     });
 
     return options;
-  }, [issuesForType]);
+  }, [issuesForType, t]);
 
   const { data: polesData } = useQuery({
     queryKey: ['poles', 'for-maintenance'],
@@ -588,7 +611,7 @@ export default function MaintenancePage() {
     validate: {
       remark: (value, values) =>
         ['PAUSED', 'COMPLETED'].includes(values.status) && !value?.trim()
-          ? 'Remark is required when status is PAUSED or COMPLETED'
+          ? t('validation.remarkRequired')
           : null,
     },
   });
@@ -614,8 +637,8 @@ export default function MaintenancePage() {
       if (values.maintenanceType === 'issue') {
         if (!values.issueId) {
           notifications.show({
-            title: 'Error',
-            message: 'Please select an issue',
+            title: t('notifications.errorTitle'),
+            message: t('notifications.selectIssue'),
             color: 'red',
           });
           return;
@@ -627,8 +650,8 @@ export default function MaintenancePage() {
         // Direct maintenance - require a pole code
         if (!values.poleCode) {
           notifications.show({
-            title: 'Error',
-            message: 'Please select a light pole for direct maintenance',
+            title: t('notifications.errorTitle'),
+            message: t('notifications.selectPoleForDirect'),
             color: 'red',
           });
           return;
@@ -658,8 +681,8 @@ export default function MaintenancePage() {
         },
       });
       notifications.show({
-        title: 'Success',
-        message: 'Maintenance schedule created',
+        title: t('notifications.successTitle'),
+        message: t('notifications.scheduleCreated'),
         color: 'green',
       });
       setCreateScheduleOpened(false);
@@ -669,8 +692,8 @@ export default function MaintenancePage() {
       refetchSchedules();
     } catch (error: any) {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to create schedule',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.createFailed'),
         color: 'red',
       });
     }
@@ -693,7 +716,7 @@ export default function MaintenancePage() {
   const handleEditScheduleSubmit = async (values: any) => {
     if (!selectedSchedule) return;
     if (['PAUSED', 'COMPLETED'].includes(values.status) && !values.remark?.trim()) {
-      editScheduleForm.setFieldError('remark', 'Remark is required when status is PAUSED or COMPLETED');
+      editScheduleForm.setFieldError('remark', t('validation.remarkRequired'));
       return;
     }
     
@@ -711,8 +734,8 @@ export default function MaintenancePage() {
         const materialRequest = materialRequestRes.data;
         if (!materialRequest || materialRequest.status !== 'APPROVED') {
           notifications.show({
-            title: 'Material Request Required',
-            message: 'Please request and get approval for materials before starting maintenance',
+            title: t('notifications.materialRequestRequiredTitle'),
+            message: t('notifications.materialRequestApprovalRequired'),
             color: 'orange',
           });
           setEditScheduleOpened(false);
@@ -724,8 +747,8 @@ export default function MaintenancePage() {
         // If material request doesn't exist (404), show modal
         if (error.response?.status === 404 || !error.response) {
           notifications.show({
-            title: 'Material Request Required',
-            message: 'Please request materials before starting maintenance',
+            title: t('notifications.materialRequestRequiredTitle'),
+            message: t('notifications.materialRequestRequired'),
             color: 'orange',
           });
           setEditScheduleOpened(false);
@@ -763,8 +786,8 @@ export default function MaintenancePage() {
         },
       );
       notifications.show({
-        title: 'Success',
-        message: 'Schedule updated',
+        title: t('notifications.successTitle'),
+        message: t('notifications.scheduleUpdated'),
         color: 'green',
       });
       setEditScheduleOpened(false);
@@ -773,8 +796,8 @@ export default function MaintenancePage() {
       refetchSchedules();
     } catch (error: any) {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to update schedule',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.updateFailed'),
         color: 'red',
       });
     }
@@ -792,8 +815,8 @@ export default function MaintenancePage() {
       const token = localStorage.getItem('access_token');
       if (!token) {
         notifications.show({
-          title: 'Error',
-          message: 'Authentication token not found',
+          title: t('notifications.errorTitle'),
+          message: t('notifications.authTokenMissing'),
           color: 'red',
         });
         return;
@@ -809,8 +832,8 @@ export default function MaintenancePage() {
       });
       
       notifications.show({
-        title: 'Success',
-        message: 'Maintenance schedule deleted successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.scheduleDeleted'),
         color: 'green',
       });
       setDeleteModalOpened(false);
@@ -819,8 +842,8 @@ export default function MaintenancePage() {
     } catch (error: any) {
       console.error('Error deleting schedule:', error);
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || error.message || 'Failed to delete maintenance schedule',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || error.message || t('notifications.deleteFailed'),
         color: 'red',
       });
     }
@@ -830,14 +853,14 @@ export default function MaintenancePage() {
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
         <Title size="h2">
-          Maintenance
-          {filterType === 'park' && ' - Parks'}
-          {filterType === 'pole' && ' - Light Poles'}
-          {filterType === 'parking' && ' - Parking Lots'}
-          {filterType === 'museum' && ' - Museums'}
-          {filterType === 'toilet' && ' - Public Toilets'}
-          {filterType === 'football' && ' - Football Fields'}
-          {filterType === 'river' && ' - River Side Projects'}
+          {t('title')}
+          {filterType === 'park' && ` - ${t('titleSuffixes.park')}`}
+          {filterType === 'pole' && ` - ${t('titleSuffixes.pole')}`}
+          {filterType === 'parking' && ` - ${t('titleSuffixes.parking')}`}
+          {filterType === 'museum' && ` - ${t('titleSuffixes.museum')}`}
+          {filterType === 'toilet' && ` - ${t('titleSuffixes.toilet')}`}
+          {filterType === 'football' && ` - ${t('titleSuffixes.football')}`}
+          {filterType === 'river' && ` - ${t('titleSuffixes.river')}`}
         </Title>
         <Group>
           {hasActiveFilters && (
@@ -847,7 +870,7 @@ export default function MaintenancePage() {
               size="md"
               onClick={resetFilters}
             >
-              Clear Filters
+              {t('actions.clearFilters')}
             </Button>
           )}
           <Button
@@ -855,14 +878,14 @@ export default function MaintenancePage() {
             onClick={() => setCreateScheduleOpened(true)}
             size="md"
           >
-            Create Schedule
+            {t('actions.createSchedule')}
           </Button>
         </Group>
       </Group>
 
       <Tabs defaultValue="schedules">
         <Tabs.List>
-          <Tabs.Tab value="schedules">Maintenance History</Tabs.Tab>
+          <Tabs.Tab value="schedules">{t('tabs.schedules')}</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="schedules" pt={{ base: 'md', sm: 'xl' }}>
@@ -873,7 +896,9 @@ export default function MaintenancePage() {
                 <Table.Tr>
                   <Table.Th>
                     <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('assetCode')}>Asset Code</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('assetCode')}>
+                        {t('tableHeaders.assetCode')}
+                      </Text>
                       <Group gap="xs">
                         <ActionIcon
                           variant="subtle"
@@ -895,9 +920,9 @@ export default function MaintenancePage() {
                           </Popover.Target>
                           <Popover.Dropdown>
                             <Stack gap="sm">
-                              <Text size="sm" fw={500}>Filter by Asset Code</Text>
+                              <Text size="sm" fw={500}>{t('filters.assetCode.label')}</Text>
                               <TextInput
-                                placeholder="Enter asset code..."
+                                placeholder={t('filters.assetCode.placeholder')}
                                 value={assetCodeFilter}
                                 onChange={(e) => setAssetCodeFilter(e.currentTarget.value)}
                                 size="sm"
@@ -908,7 +933,7 @@ export default function MaintenancePage() {
                                   variant="light"
                                   onClick={() => setAssetCodeFilter('')}
                                 >
-                                  Clear
+                                  {t('filters.clear')}
                                 </Button>
                               )}
                             </Stack>
@@ -919,7 +944,9 @@ export default function MaintenancePage() {
                   </Table.Th>
                   <Table.Th>
                     <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('maintenanceCode')}>Maintenance Code</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('maintenanceCode')}>
+                        {t('tableHeaders.maintenanceCode')}
+                      </Text>
                       <Group gap="xs">
                         <ActionIcon
                           variant="subtle"
@@ -941,9 +968,9 @@ export default function MaintenancePage() {
                           </Popover.Target>
                           <Popover.Dropdown>
                             <Stack gap="sm">
-                              <Text size="sm" fw={500}>Filter by Maintenance Code</Text>
+                              <Text size="sm" fw={500}>{t('filters.maintenanceCode.label')}</Text>
                               <TextInput
-                                placeholder="Enter maintenance code..."
+                                placeholder={t('filters.maintenanceCode.placeholder')}
                                 value={maintenanceCodeFilter}
                                 onChange={(e) => setMaintenanceCodeFilter(e.currentTarget.value)}
                                 size="sm"
@@ -956,7 +983,7 @@ export default function MaintenancePage() {
                                 }}
                                 disabled={!maintenanceCodeFilter}
                               >
-                                Clear
+                                {t('filters.clear')}
                               </Button>
                             </Stack>
                           </Popover.Dropdown>
@@ -966,7 +993,9 @@ export default function MaintenancePage() {
                   </Table.Th>
                   <Table.Th>
                     <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('subcity')}>Subcity</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('subcity')}>
+                        {t('tableHeaders.subcity')}
+                      </Text>
                       <Group gap="xs">
                         <ActionIcon
                           variant="subtle"
@@ -988,9 +1017,9 @@ export default function MaintenancePage() {
                           </Popover.Target>
                           <Popover.Dropdown>
                             <Stack gap="sm">
-                              <Text size="sm" fw={500}>Filter by Subcity</Text>
+                              <Text size="sm" fw={500}>{t('filters.subcity.label')}</Text>
                               <Select
-                                placeholder="Select subcity..."
+                                placeholder={t('filters.subcity.placeholder')}
                                 data={getUniqueSubcities()}
                                 value={districtFilter}
                                 onChange={(value) => setDistrictFilter(value || '')}
@@ -1004,7 +1033,7 @@ export default function MaintenancePage() {
                                   variant="light"
                                   onClick={() => setDistrictFilter('')}
                                 >
-                                  Clear
+                                  {t('filters.clear')}
                                 </Button>
                               )}
                             </Stack>
@@ -1015,7 +1044,9 @@ export default function MaintenancePage() {
                   </Table.Th>
                   <Table.Th>
                     <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('street')}>Street</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('street')}>
+                        {t('tableHeaders.street')}
+                      </Text>
                       <Group gap="xs">
                         <ActionIcon
                           variant="subtle"
@@ -1037,9 +1068,9 @@ export default function MaintenancePage() {
                           </Popover.Target>
                           <Popover.Dropdown>
                             <Stack gap="sm">
-                              <Text size="sm" fw={500}>Filter by Street</Text>
+                              <Text size="sm" fw={500}>{t('filters.street.label')}</Text>
                               <Select
-                                placeholder="Select street..."
+                                placeholder={t('filters.street.placeholder')}
                                 data={getUniqueStreets()}
                                 value={streetFilter}
                                 onChange={(value) => setStreetFilter(value || '')}
@@ -1053,7 +1084,7 @@ export default function MaintenancePage() {
                                   variant="light"
                                   onClick={() => setStreetFilter('')}
                                 >
-                                  Clear
+                                  {t('filters.clear')}
                                 </Button>
                               )}
                             </Stack>
@@ -1063,10 +1094,12 @@ export default function MaintenancePage() {
                     </Group>
                   </Table.Th>
                   <Table.Th>{getAssetInfoLabel(filterType)}</Table.Th>
-                  <Table.Th w={200}>Maintenance</Table.Th>
+                  <Table.Th w={200}>{t('tableHeaders.maintenance')}</Table.Th>
                   <Table.Th>
                     <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('frequency')}>Frequency</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('frequency')}>
+                        {t('tableHeaders.frequency')}
+                      </Text>
                       <ActionIcon
                         variant="subtle"
                         color="gray"
@@ -1079,7 +1112,9 @@ export default function MaintenancePage() {
                   </Table.Th>
                   <Table.Th>
                     <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('startDate')}>Start Date</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('startDate')}>
+                        {t('tableHeaders.startDate')}
+                      </Text>
                       <Group gap="xs">
                         <ActionIcon
                           variant="subtle"
@@ -1101,18 +1136,18 @@ export default function MaintenancePage() {
                           </Popover.Target>
                           <Popover.Dropdown>
                             <Stack gap="sm">
-                              <Text size="sm" fw={500}>Filter by Start Date</Text>
+                              <Text size="sm" fw={500}>{t('filters.startDate.label')}</Text>
                               <TextInput
-                                label="From"
-                                placeholder="Select start date"
+                                label={t('filters.from')}
+                                placeholder={t('filters.startDate.fromPlaceholder')}
                                 type="date"
                                 value={startDateFrom ? startDateFrom.toISOString().split('T')[0] : ''}
                                 onChange={(e) => setStartDateFrom(e.target.value ? new Date(e.target.value) : null)}
                                 size="sm"
                               />
                               <TextInput
-                                label="To"
-                                placeholder="Select end date"
+                                label={t('filters.to')}
+                                placeholder={t('filters.startDate.toPlaceholder')}
                                 type="date"
                                 value={startDateTo ? startDateTo.toISOString().split('T')[0] : ''}
                                 onChange={(e) => setStartDateTo(e.target.value ? new Date(e.target.value) : null)}
@@ -1127,7 +1162,7 @@ export default function MaintenancePage() {
                                     setStartDateTo(null);
                                   }}
                                 >
-                                  Clear
+                                  {t('filters.clear')}
                                 </Button>
                               )}
                             </Stack>
@@ -1138,7 +1173,9 @@ export default function MaintenancePage() {
                   </Table.Th>
                   <Table.Th>
                     <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('endDate')}>End Date</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('endDate')}>
+                        {t('tableHeaders.endDate')}
+                      </Text>
                       <Group gap="xs">
                         <ActionIcon
                           variant="subtle"
@@ -1160,18 +1197,18 @@ export default function MaintenancePage() {
                           </Popover.Target>
                           <Popover.Dropdown>
                             <Stack gap="sm">
-                              <Text size="sm" fw={500}>Filter by End Date</Text>
+                              <Text size="sm" fw={500}>{t('filters.endDate.label')}</Text>
                               <TextInput
-                                label="From"
-                                placeholder="Select start date"
+                                label={t('filters.from')}
+                                placeholder={t('filters.endDate.fromPlaceholder')}
                                 type="date"
                                 value={endDateFrom ? endDateFrom.toISOString().split('T')[0] : ''}
                                 onChange={(e) => setEndDateFrom(e.target.value ? new Date(e.target.value) : null)}
                                 size="sm"
                               />
                               <TextInput
-                                label="To"
-                                placeholder="Select end date"
+                                label={t('filters.to')}
+                                placeholder={t('filters.endDate.toPlaceholder')}
                                 type="date"
                                 value={endDateTo ? endDateTo.toISOString().split('T')[0] : ''}
                                 onChange={(e) => setEndDateTo(e.target.value ? new Date(e.target.value) : null)}
@@ -1186,7 +1223,7 @@ export default function MaintenancePage() {
                                     setEndDateTo(null);
                                   }}
                                 >
-                                  Clear
+                                  {t('filters.clear')}
                                 </Button>
                               )}
                             </Stack>
@@ -1197,7 +1234,9 @@ export default function MaintenancePage() {
                   </Table.Th>
                   <Table.Th>
                     <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>Status</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>
+                        {t('tableHeaders.status')}
+                      </Text>
                       <Group gap="xs">
                         <ActionIcon
                           variant="subtle"
@@ -1219,10 +1258,10 @@ export default function MaintenancePage() {
                           </Popover.Target>
                           <Popover.Dropdown>
                             <Stack gap="sm">
-                              <Text size="sm" fw={500}>Filter by Status</Text>
+                              <Text size="sm" fw={500}>{t('filters.status.label')}</Text>
                               <Select
-                                placeholder="Select status"
-                                data={['REQUESTED', 'PARTIALLY_STARTED', 'STARTED', 'PAUSED', 'COMPLETED']}
+                                placeholder={t('filters.status.placeholder')}
+                                data={statusOptions}
                                 value={statusFilter}
                                 onChange={(value) => setStatusFilter(value || '')}
                                 clearable
@@ -1236,7 +1275,9 @@ export default function MaintenancePage() {
                   </Table.Th>
                   <Table.Th>
                     <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('cost')}>Cost</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('cost')}>
+                        {t('tableHeaders.cost')}
+                      </Text>
                       <ActionIcon
                         variant="subtle"
                         color="gray"
@@ -1247,17 +1288,17 @@ export default function MaintenancePage() {
                       </ActionIcon>
                     </Group>
                   </Table.Th>
-                  <Table.Th>Actions</Table.Th>
+                  <Table.Th>{t('tableHeaders.actions')}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {schedulesLoading ? (
                   <Table.Tr>
-                    <Table.Td colSpan={12}>Loading...</Table.Td>
+                    <Table.Td colSpan={12}>{tCommon('loading')}</Table.Td>
                   </Table.Tr>
                 ) : schedules?.length === 0 ? (
                   <Table.Tr>
-                    <Table.Td colSpan={12}>No maintenance records found</Table.Td>
+                    <Table.Td colSpan={12}>{t('tableStates.empty')}</Table.Td>
                   </Table.Tr>
                 ) : (
                   schedules?.map((schedule: any) => (
@@ -1276,24 +1317,29 @@ export default function MaintenancePage() {
                       <Table.Td>{getAssetStreet(asset)}</Table.Td>
                       <Table.Td>{getAssetInfo(type, asset)}</Table.Td>
                       <Table.Td>
-                        <TextTruncate text={schedule.description} maxLength={50} />
+                        <TextTruncate
+                          text={schedule.description}
+                          maxLength={50}
+                          showMoreLabel={t('labels.showMore')}
+                          showLessLabel={t('labels.showLess')}
+                        />
                       </Table.Td>
-                      <Table.Td>{schedule.frequency}</Table.Td>
+                      <Table.Td>{getFrequencyLabel(schedule.frequency)}</Table.Td>
                       <Table.Td>
-                        {schedule.startDate ? new Date(schedule.startDate).toLocaleDateString() : '—'}
+                        {schedule.startDate ? new Date(schedule.startDate).toLocaleDateString() : t('labels.none')}
                       </Table.Td>
                       <Table.Td>
-                        {schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : '—'}
+                        {schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : t('labels.none')}
                       </Table.Td>
                       <Table.Td>
-                        <Badge color={getScheduleStatusColor(schedule.status)}>{schedule.status}</Badge>
+                        <Badge color={getScheduleStatusColor(schedule.status)}>{getStatusLabel(schedule.status)}</Badge>
                       </Table.Td>
                       <Table.Td>
                         {schedule.cost && schedule.cost > 0
                           ? `${parseFloat(schedule.cost).toFixed(2)}`
                           : schedule.estimatedCost && schedule.estimatedCost > 0
                           ? `${parseFloat(schedule.estimatedCost).toFixed(2)}`
-                          : '-'}
+                          : t('labels.none')}
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs">
@@ -1301,7 +1347,7 @@ export default function MaintenancePage() {
                             color="blue"
                             variant="light"
                             onClick={() => navigate(`/maintenance/${schedule.id}`)}
-                            title="View Details"
+                            title={t('actionTitles.viewDetails')}
                           >
                             <IconEye size={16} />
                           </ActionIcon>
@@ -1314,7 +1360,7 @@ export default function MaintenancePage() {
                                   setSelectedScheduleForMaterial(schedule);
                                   setMaterialRequestModalOpened(true);
                                 }}
-                                title="Request Materials"
+                                title={t('actionTitles.requestMaterials')}
                               >
                                 <IconPackage size={16} />
                               </ActionIcon>
@@ -1322,7 +1368,7 @@ export default function MaintenancePage() {
                                 color="red"
                                 variant="light"
                                 onClick={() => handleDeleteClick(schedule)}
-                                title="Delete Schedule"
+                                title={t('actionTitles.deleteSchedule')}
                               >
                                 <IconTrash size={16} />
                               </ActionIcon>
@@ -1333,13 +1379,19 @@ export default function MaintenancePage() {
                               color="orange"
                               variant="light"
                               onClick={() => handleEditScheduleClick(schedule)}
-                              title={schedule.status === 'STARTED' || schedule.status === 'PAUSED' || schedule.status === 'PARTIALLY_STARTED' ? 'Update Status' : 'Edit Schedule'}
+                              title={
+                                schedule.status === 'STARTED' ||
+                                schedule.status === 'PAUSED' ||
+                                schedule.status === 'PARTIALLY_STARTED'
+                                  ? t('actionTitles.updateStatus')
+                                  : t('actionTitles.editSchedule')
+                              }
                             >
                               <IconEdit size={16} />
                             </ActionIcon>
                           )}
                           {schedule.materialRequests?.some((mr: any) => mr.status === 'AWAITING_DELIVERY') && (
-                            <Tooltip label="Receive Materials">
+                            <Tooltip label={t('actionTitles.receiveMaterials')}>
                               <ActionIcon
                                 color="purple"
                                 variant="light"
@@ -1355,8 +1407,8 @@ export default function MaintenancePage() {
                                     setReceiveNotes('');
                                   } else {
                                     notifications.show({
-                                      title: 'No Materials Awaiting Delivery',
-                                      message: 'There are no material requests currently awaiting delivery for this maintenance schedule.',
+                                      title: t('notifications.noMaterialsAwaitingTitle'),
+                                      message: t('notifications.noMaterialsAwaitingMessage'),
                                       color: 'orange',
                                     });
                                   }
@@ -1382,13 +1434,17 @@ export default function MaintenancePage() {
           <Group justify="space-between" align="center" mt="md">
             <Group gap="xs">
               <Text size="sm" c="dimmed">
-                Showing {schedules.length > 0 ? ((currentPage - 1) * pageSize) + 1 : 0} to {Math.min(currentPage * pageSize, totalSchedules)} of {totalSchedules} schedules
+                {t('pagination.showing', {
+                  from: schedules.length > 0 ? ((currentPage - 1) * pageSize) + 1 : 0,
+                  to: Math.min(currentPage * pageSize, totalSchedules),
+                  total: totalSchedules,
+                })}
               </Text>
             </Group>
 
             <Group gap="sm">
               <Group gap="xs">
-                <Text size="sm">Rows per page:</Text>
+                <Text size="sm">{t('pagination.rowsPerPage')}</Text>
                 <NumberInput
                   value={pageSize}
                   onChange={(value) => {
@@ -1426,17 +1482,17 @@ export default function MaintenancePage() {
           setCreateScheduleOpened(false);
           scheduleForm.reset();
         }}
-        title="Create Maintenance Schedule"
+        title={t('modals.createTitle')}
         size="lg"
         centered
       >
         <form onSubmit={scheduleForm.onSubmit(handleCreateSchedule)}>
           <Stack>
             <Select
-              label="Maintenance Type"
+              label={t('form.maintenanceType')}
               data={[
-                { value: 'issue', label: 'Related to Issue' },
-                { value: 'direct', label: 'Direct Maintenance (No Issue)' },
+                { value: 'issue', label: t('maintenanceType.issue') },
+                { value: 'direct', label: t('maintenanceType.direct') },
               ]}
               value={scheduleForm.values.maintenanceType}
               onChange={(value) => {
@@ -1459,8 +1515,8 @@ export default function MaintenancePage() {
             {scheduleForm.values.maintenanceType === 'issue' ? (
               <>
                 <Select
-                  label="Issue"
-                  placeholder="Type to search issues by pole code..."
+                  label={t('form.issueLabel')}
+                  placeholder={t('form.issuePlaceholder')}
                   data={issueOptions}
                   searchable
                   clearable
@@ -1478,13 +1534,13 @@ export default function MaintenancePage() {
                   }}
                 />
                 <Text size="xs" c="dimmed" mt="xs">
-                  Available issues: {issueOptions.length}
+                  {t('form.availableIssues', { count: issueOptions.length })}
                 </Text>
               </>
             ) : (
               <Select
-                label="Light Pole Code"
-                placeholder="Select light pole"
+                label={t('form.poleCodeLabel')}
+                placeholder={t('form.poleCodePlaceholder')}
                 data={assetOptionsByType.pole || []}
                 searchable
                 required
@@ -1495,31 +1551,31 @@ export default function MaintenancePage() {
               />
             )}
             <TextInput
-              label="Description"
-              placeholder="Monthly inspection"
+              label={t('form.descriptionLabel')}
+              placeholder={t('form.descriptionPlaceholder')}
               required
               {...scheduleForm.getInputProps('description')}
             />
             <TextInput
-              label="Start Date"
+              label={t('form.startDateLabel')}
               type="date"
               required
               {...scheduleForm.getInputProps('startDate')}
             />
             <TextInput
-              label="End Date (optional)"
+              label={t('form.endDateLabel')}
               type="date"
               {...scheduleForm.getInputProps('endDate')}
             />
             <Select
-              label="Status"
-              data={SCHEDULE_STATUSES}
+              label={t('form.statusLabel')}
+              data={statusOptions}
               required
               {...scheduleForm.getInputProps('status')}
             />
             <NumberInput
-              label="Estimated Cost (optional)"
-              placeholder="100"
+              label={t('form.estimatedCostLabel')}
+              placeholder={t('form.estimatedCostPlaceholder')}
               min={0}
               value={
                 scheduleForm.values.estimatedCost === undefined || scheduleForm.values.estimatedCost === null
@@ -1536,9 +1592,9 @@ export default function MaintenancePage() {
             />
             <Group justify="flex-end">
               <Button variant="outline" onClick={() => setCreateScheduleOpened(false)}>
-                Cancel
+                {t('form.cancel')}
               </Button>
-              <Button type="submit">Create</Button>
+              <Button type="submit">{t('form.create')}</Button>
             </Group>
           </Stack>
         </form>
@@ -1551,7 +1607,7 @@ export default function MaintenancePage() {
           setEditScheduleOpened(false);
           setSelectedSchedule(null);
         }}
-        title="Edit Maintenance Schedule"
+        title={t('modals.editTitle')}
         size="lg"
         centered
       >
@@ -1559,34 +1615,34 @@ export default function MaintenancePage() {
           <Stack>
             {selectedSchedule && (
               <Group gap="xs">
-                <Badge color="blue">{selectedSchedule.poleCode || selectedSchedule.parkCode || '—'}</Badge>
-                <Badge>{selectedSchedule.frequency}</Badge>
+                <Badge color="blue">{selectedSchedule.poleCode || selectedSchedule.parkCode || t('labels.none')}</Badge>
+                <Badge>{getFrequencyLabel(selectedSchedule.frequency)}</Badge>
               </Group>
             )}
             <TextInput
-              label="Description"
+              label={t('form.descriptionLabel')}
               required
               {...editScheduleForm.getInputProps('description')}
             />
             <TextInput
-              label="Start Date"
+              label={t('form.startDateLabel')}
               type="date"
               required
               {...editScheduleForm.getInputProps('startDate')}
             />
             <TextInput
-              label="End Date (optional)"
+              label={t('form.endDateLabel')}
               type="date"
               {...editScheduleForm.getInputProps('endDate')}
             />
             <Select
-              label="Status"
-              data={SCHEDULE_STATUSES}
+              label={t('form.statusLabel')}
+              data={statusOptions}
               required
               {...editScheduleForm.getInputProps('status')}
             />
             <NumberInput
-              label="Estimated Cost (optional)"
+              label={t('form.estimatedCostLabel')}
               min={0}
               value={
                 editScheduleForm.values.estimatedCost === undefined || editScheduleForm.values.estimatedCost === null
@@ -1602,15 +1658,15 @@ export default function MaintenancePage() {
               }}
             />
             <Textarea
-              label="Remark"
-              placeholder="Add remark (required for Paused/Completed)"
+              label={t('form.remarkLabel')}
+              placeholder={t('form.remarkPlaceholder')}
               {...editScheduleForm.getInputProps('remark')}
             />
             <Group justify="flex-end">
               <Button variant="outline" onClick={() => { setEditScheduleOpened(false); setSelectedSchedule(null); }}>
-                Cancel
+                {t('form.cancel')}
               </Button>
-              <Button type="submit">Update</Button>
+              <Button type="submit">{t('form.update')}</Button>
             </Group>
           </Stack>
         </form>
@@ -1624,7 +1680,7 @@ export default function MaintenancePage() {
           setSelectedIssueId(null);
           setSelectedIssueType(null);
         }}
-        title="Associated Issue"
+        title={t('modals.issueTitle')}
         size="lg"
         centered
       >
@@ -1636,7 +1692,7 @@ export default function MaintenancePage() {
           <Stack>
             <Paper p="md" withBorder>
               <Group mb="xs">
-                <Text fw={700}>Asset Code:</Text>
+                <Text fw={700}>{t('issueDetails.assetCode')}:</Text>
                 <Badge color="blue">
                   {selectedIssue.pole?.code ||
                     selectedIssue.poleCode ||
@@ -1652,11 +1708,11 @@ export default function MaintenancePage() {
                     selectedIssue.footballFieldCode ||
                     selectedIssue.riverSideProject?.code ||
                     selectedIssue.riverSideProjectCode ||
-                    'N/A'}
+                    t('labels.na')}
                 </Badge>
               </Group>
               <Group mb="xs">
-                <Text fw={700}>Severity:</Text>
+                <Text fw={700}>{t('issueDetails.severity')}:</Text>
                 <Badge
                   color={
                     selectedIssue.severity === 'LOW'
@@ -1668,28 +1724,28 @@ export default function MaintenancePage() {
                       : 'red'
                   }
                 >
-                  {selectedIssue.severity}
+                  {getSeverityLabel(selectedIssue.severity)}
                 </Badge>
               </Group>
-              <Text fw={700} mb="xs">Description:</Text>
+              <Text fw={700} mb="xs">{t('issueDetails.description')}:</Text>
               <Text mb="xs">{selectedIssue.description}</Text>
               {selectedIssue.resolutionNotes && (
                 <>
-                  <Text fw={700} mb="xs">Resolution Notes:</Text>
+                  <Text fw={700} mb="xs">{t('issueDetails.resolutionNotes')}:</Text>
                   <Text mb="xs">{selectedIssue.resolutionNotes}</Text>
                 </>
               )}
               <Group mt="xs">
-                <Text fw={700}>Reported By:</Text>
-                <Text>{selectedIssue.reportedBy?.fullName || 'N/A'}</Text>
+                <Text fw={700}>{t('issueDetails.reportedBy')}:</Text>
+                <Text>{selectedIssue.reportedBy?.fullName || t('labels.na')}</Text>
               </Group>
               <Group mt="xs">
-                <Text fw={700}>Created:</Text>
+                <Text fw={700}>{t('issueDetails.created')}:</Text>
                 <Text>{new Date(selectedIssue.createdAt).toLocaleDateString()}</Text>
               </Group>
               {selectedIssue.updatedAt && (
                 <Group mt="xs">
-                  <Text fw={700}>Updated:</Text>
+                  <Text fw={700}>{t('issueDetails.updated')}:</Text>
                   <Text>{new Date(selectedIssue.updatedAt).toLocaleDateString()}</Text>
                 </Group>
               )}
@@ -1699,13 +1755,13 @@ export default function MaintenancePage() {
                 setIssueModalOpened(false);
                 setSelectedIssueId(null);
               }}>
-                Close
+                {t('issueDetails.close')}
               </Button>
             </Group>
           </Stack>
         ) : (
           <Text c="dimmed" ta="center" p="xl">
-            Issue not found
+            {t('issueDetails.notFound')}
           </Text>
         )}
       </Modal>
@@ -1717,21 +1773,23 @@ export default function MaintenancePage() {
           setDeleteModalOpened(false);
           setScheduleToDelete(null);
         }}
-        title="Delete Maintenance Schedule"
+        title={t('modals.deleteTitle')}
         centered
       >
         <Stack>
           <Text>
-            Are you sure you want to delete this maintenance schedule?
+            {t('delete.confirm')}
           </Text>
           {scheduleToDelete && (
             <Paper p="sm" withBorder bg="gray.0">
-              <Text size="sm" fw={700}>Asset Code:</Text>
+              <Text size="sm" fw={700}>{t('delete.assetCode')}:</Text>
               <Text size="sm">{getScheduleAssetCode(scheduleToDelete)}</Text>
-              <Text size="sm" fw={700} mt="xs">Description:</Text>
+              <Text size="sm" fw={700} mt="xs">{t('delete.description')}:</Text>
               <Text size="sm">{scheduleToDelete.description}</Text>
-              <Text size="sm" fw={700} mt="xs">Status:</Text>
-              <Badge color={getScheduleStatusColor(scheduleToDelete.status)}>{scheduleToDelete.status}</Badge>
+              <Text size="sm" fw={700} mt="xs">{t('delete.status')}:</Text>
+              <Badge color={getScheduleStatusColor(scheduleToDelete.status)}>
+                {getStatusLabel(scheduleToDelete.status)}
+              </Badge>
             </Paper>
           )}
           <Group justify="flex-end">
@@ -1742,10 +1800,10 @@ export default function MaintenancePage() {
                 setScheduleToDelete(null);
               }}
             >
-              Cancel
+              {t('delete.cancel')}
             </Button>
             <Button color="red" onClick={handleDeleteConfirm}>
-              Delete
+              {t('delete.confirmButton')}
             </Button>
           </Group>
         </Stack>
@@ -1774,28 +1832,33 @@ export default function MaintenancePage() {
           setSelectedScheduleForReceive(null);
           setReceiveNotes('');
         }}
-        title="Receive Materials"
+        title={t('modals.receiveTitle')}
         centered
       >
         <Stack>
           <Text size="sm" c="dimmed">
-            Confirm that you have received the materials for this maintenance schedule. This will mark the material request as delivered and start the maintenance work.
+            {t('receive.description')}
           </Text>
           {selectedScheduleForReceive && (
             <Paper p="sm" withBorder bg="gray.0">
-              <Text size="sm" fw={600}>Asset Code:</Text>
-              <Text size="sm">{getScheduleAssetCode(selectedScheduleForReceive) || 'N/A'}</Text>
-              <Text size="sm" fw={600} mt="xs">Pole Details:</Text>
-              <Text size="sm">{getAssetNameByType(filterType, getScheduleAsset(selectedScheduleForReceive)) || 'N/A'}</Text>
-              <Text size="sm" fw={600} mt="xs">Awaiting Delivery:</Text>
+              <Text size="sm" fw={600}>{t('receive.assetCode')}:</Text>
+              <Text size="sm">{getScheduleAssetCode(selectedScheduleForReceive) || t('labels.na')}</Text>
+              <Text size="sm" fw={600} mt="xs">{t('receive.poleDetails')}:</Text>
               <Text size="sm">
-                {selectedScheduleForReceive.materialRequests?.filter((mr: any) => mr.status === 'AWAITING_DELIVERY').length || 0} material request(s)
+                {getAssetNameByType(filterType, getScheduleAsset(selectedScheduleForReceive)) || t('labels.na')}
+              </Text>
+              <Text size="sm" fw={600} mt="xs">{t('receive.awaitingDelivery')}:</Text>
+              <Text size="sm">
+                {t('receive.materialRequests', {
+                  count:
+                    selectedScheduleForReceive.materialRequests?.filter((mr: any) => mr.status === 'AWAITING_DELIVERY').length || 0,
+                })}
               </Text>
             </Paper>
           )}
           <Textarea
-            label="Delivery Notes (Optional)"
-            placeholder="Add any notes about the delivery..."
+            label={t('receive.deliveryNotesLabel')}
+            placeholder={t('receive.deliveryNotesPlaceholder')}
             value={receiveNotes}
             onChange={(event) => setReceiveNotes(event.currentTarget.value)}
             minRows={3}
@@ -1809,7 +1872,7 @@ export default function MaintenancePage() {
                 setReceiveNotes('');
               }}
             >
-              Cancel
+              {t('receive.cancel')}
             </Button>
             <Button
               color="purple"
@@ -1819,8 +1882,8 @@ export default function MaintenancePage() {
                 if (!selectedScheduleForReceive) {
                   console.error('❌ No schedule selected for receive');
                   notifications.show({
-                    title: 'Error',
-                    message: 'No maintenance schedule selected.',
+                    title: t('notifications.errorTitle'),
+                    message: t('notifications.noScheduleSelected'),
                     color: 'red',
                   });
                   return;
@@ -1832,8 +1895,8 @@ export default function MaintenancePage() {
                 if (awaitingRequests.length === 0) {
                   console.warn('⚠️ No materials awaiting delivery');
                   notifications.show({
-                    title: 'No Materials Awaiting Delivery',
-                    message: 'There are no material requests currently awaiting delivery for this maintenance schedule.',
+                    title: t('notifications.noMaterialsAwaitingTitle'),
+                    message: t('notifications.noMaterialsAwaitingMessage'),
                     color: 'orange',
                   });
                   return;
@@ -1850,8 +1913,8 @@ export default function MaintenancePage() {
                 if (!awaitingRequest.id) {
                   console.error('❌ Material request has no ID');
                   notifications.show({
-                    title: 'Error',
-                    message: 'Material request ID is missing.',
+                    title: t('notifications.errorTitle'),
+                    message: t('notifications.materialRequestIdMissing'),
                     color: 'red',
                   });
                   return;
@@ -1865,15 +1928,15 @@ export default function MaintenancePage() {
                 } catch (syncError) {
                   console.error('❌ Synchronous error in receive mutation:', syncError);
                   notifications.show({
-                    title: 'Error',
-                    message: 'An unexpected error occurred while processing the request.',
+                    title: t('notifications.errorTitle'),
+                    message: t('notifications.unexpectedError'),
                     color: 'red',
                   });
                 }
               }}
               loading={receiveMutation.isPending}
             >
-              Mark as Received
+              {t('receive.confirm')}
             </Button>
           </Group>
         </Stack>
@@ -1881,4 +1944,3 @@ export default function MaintenancePage() {
     </Container>
   );
 }
-

@@ -6,7 +6,7 @@ const STORAGE_KEY = 'app_language';
 const languageLabels: Record<AppLanguage, string> = {
   en: 'English',
   om: 'Afaan Oromoo',
-  am: '????',
+  am: 'አማርኛ',
 };
 
 export const languageOptions = ((): { value: AppLanguage; label: string }[] =>
@@ -52,3 +52,4 @@ export function useLanguage() {
     [language, setLanguageFromUi],
   );
 }
+

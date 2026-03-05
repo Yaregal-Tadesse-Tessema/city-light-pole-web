@@ -27,7 +27,7 @@ i18n.use(initReactI18next).init({
   lng: initialLanguage,
   fallbackLng: defaultLanguage,
   defaultNS: 'common',
-  ns: ['common', 'layout', 'landing', 'login', 'auth', 'dashboard', 'reportAccident'],
+  ns: ['common', 'layout', 'landing', 'login', 'auth', 'dashboard', 'reportAccident', 'polesList'],
   interpolation: {
     escapeValue: false,
   },

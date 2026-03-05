@@ -20,22 +20,10 @@ import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 import { MapPicker } from '../components/MapPicker';
-
-const PARKING_TYPES = [
-  { value: 'SURFACE', label: 'Surface' },
-  { value: 'MULTI_LEVEL', label: 'Multi-Level' },
-  { value: 'UNDERGROUND', label: 'Underground' },
-  { value: 'STREET', label: 'Street' },
-];
-
-const PARKING_STATUSES = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'FAULT_DAMAGED', label: 'Fault/Damaged' },
-  { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
-  { value: 'OPERATIONAL', label: 'Operational' },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function CreateParkingLotPage() {
+  const { t } = useTranslation('createParkingLot');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -56,23 +44,23 @@ export default function CreateParkingLotPage() {
       status: 'ACTIVE',
     },
     validate: {
-      code: (value) => (!value ? 'Code is required' : null),
-      name: (value) => (!value ? 'Name is required' : null),
-      district: (value) => (!value ? 'Subcity is required' : null),
-      street: (value) => (!value ? 'Street is required' : null),
+      code: (value) => (!value ? t('validation.codeRequired') : null),
+      name: (value) => (!value ? t('validation.nameRequired') : null),
+      district: (value) => (!value ? t('validation.subcityRequired') : null),
+      street: (value) => (!value ? t('validation.streetRequired') : null),
       capacity: (value) => {
         if (value === undefined || value === null) {
-          return 'Capacity is required';
+          return t('validation.capacityRequired');
         }
-        if (value <= 0) return 'Capacity must be greater than 0';
+        if (value <= 0) return t('validation.capacityMin');
         return null;
       },
       hourlyRate: (value, values) => {
         if (values.hasPaidParking && (value === undefined || value === null)) {
-          return 'Hourly rate is required when paid parking is enabled';
+          return t('validation.hourlyRateRequired');
         }
         if (values.hasPaidParking && value !== undefined && value !== null && value <= 0) {
-          return 'Hourly rate must be greater than 0';
+          return t('validation.hourlyRateMin');
         }
         return null;
       },
@@ -118,23 +106,23 @@ export default function CreateParkingLotPage() {
     },
     onSuccess: (data) => {
       notifications.show({
-        title: 'Success',
-        message: 'Parking lot registered successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.createSuccess'),
         color: 'green',
       });
       queryClient.invalidateQueries({ queryKey: ['parking-lots'] });
       navigate(`/parking-lots/${data.code}`);
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Failed to register parking lot';
+      const errorMessage = error.response?.data?.message || t('notifications.createError');
       setApiError(errorMessage);
       
       if (errorMessage.includes('code') && errorMessage.includes('already exists')) {
-        form.setFieldError('code', 'This code is already in use');
+        form.setFieldError('code', t('validation.codeExists'));
       }
       
       notifications.show({
-        title: 'Error',
+        title: t('notifications.errorTitle'),
         message: errorMessage,
         color: 'red',
       });
@@ -148,27 +136,27 @@ export default function CreateParkingLotPage() {
 
   return (
     <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">Create New Parking Lot</Title>
+      <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">{t('title')}</Title>
 
       <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
         <form onSubmit={handleSubmit}>
           <Stack>
             {apiError && (
-              <Alert color="red" title="Error" onClose={() => setApiError(null)} withCloseButton>
+              <Alert color="red" title={t('notifications.errorTitle')} onClose={() => setApiError(null)} withCloseButton>
                 {apiError}
               </Alert>
             )}
 
             <Group grow>
               <TextInput
-                label="Code"
-                placeholder="PL-001"
+                label={t('fields.code')}
+                placeholder={t('placeholders.code')}
                 required
                 {...form.getInputProps('code')}
               />
               <TextInput
-                label="Name"
-                placeholder="Central Parking"
+                label={t('fields.name')}
+                placeholder={t('placeholders.name')}
                 required
                 {...form.getInputProps('name')}
               />
@@ -176,28 +164,28 @@ export default function CreateParkingLotPage() {
 
             <Group grow>
               <Select
-                label="Subcity"
-                placeholder="Select subcity"
+                label={t('fields.subcity')}
+                placeholder={t('placeholders.subcity')}
                 required
                 data={[
-                  'Addis Ketema',
-                  'Akaky Kaliti',
-                  'Arada',
-                  'Bole',
-                  'Gullele',
-                  'Kirkos',
-                  'Kolfe Keranio',
-                  'Lideta',
-                  'Nifas Silk-Lafto',
-                  'Yeka',
-                  'Lemi Kura',
+                  t('subcities.addisKetema', { ns: 'dashboard' }),
+                  t('subcities.akakyKaliti', { ns: 'dashboard' }),
+                  t('subcities.arada', { ns: 'dashboard' }),
+                  t('subcities.bole', { ns: 'dashboard' }),
+                  t('subcities.gullele', { ns: 'dashboard' }),
+                  t('subcities.kirkos', { ns: 'dashboard' }),
+                  t('subcities.kolfeKeranio', { ns: 'dashboard' }),
+                  t('subcities.lideta', { ns: 'dashboard' }),
+                  t('subcities.nifasSilkLafto', { ns: 'dashboard' }),
+                  t('subcities.yeka', { ns: 'dashboard' }),
+                  t('subcities.lemiKura', { ns: 'dashboard' }),
                 ]}
                 searchable
                 {...form.getInputProps('district')}
               />
               <TextInput
-                label="Street"
-                placeholder="Main Street"
+                label={t('fields.street')}
+                placeholder={t('placeholders.street')}
                 required
                 {...form.getInputProps('street')}
               />
@@ -206,16 +194,16 @@ export default function CreateParkingLotPage() {
             <Stack gap="xs">
               <Group grow>
                 <NumberInput
-                  label="GPS Latitude (Optional)"
-                  placeholder="Auto-filled from map"
+                  label={t('fields.gpsLatOptional')}
+                  placeholder={t('placeholders.gpsAuto')}
                   min={-90}
                   max={90}
                   value={form.values.gpsLat ?? undefined}
                   readOnly
                 />
                 <NumberInput
-                  label="GPS Longitude (Optional)"
-                  placeholder="Auto-filled from map"
+                  label={t('fields.gpsLngOptional')}
+                  placeholder={t('placeholders.gpsAuto')}
                   min={-180}
                   max={180}
                   value={form.values.gpsLng ?? undefined}
@@ -223,7 +211,7 @@ export default function CreateParkingLotPage() {
                 />
               </Group>
               <Text size="sm" c="dimmed">
-                Click on the map to set coordinates (centered on Addis Ababa).
+                {t('helper.map')}
               </Text>
               <MapPicker
                 value={{ lat: form.values.gpsLat, lng: form.values.gpsLng }}
@@ -239,13 +227,13 @@ export default function CreateParkingLotPage() {
 
             <Group grow>
               <Select
-                label="Parking Type"
-                data={PARKING_TYPES}
+                label={t('fields.parkingType')}
+                data={t('parkingTypes', { returnObjects: true }) as { value: string; label: string }[]}
                 {...form.getInputProps('parkingType')}
               />
               <NumberInput
-                label="Capacity (vehicles)"
-                placeholder="50"
+                label={t('fields.capacity')}
+                placeholder={t('placeholders.capacity')}
                 required
                 min={1}
                 value={form.values.capacity ?? undefined}
@@ -258,14 +246,14 @@ export default function CreateParkingLotPage() {
             </Group>
 
             <Switch
-              label="Has Paid Parking"
+              label={t('fields.hasPaidParking')}
               {...form.getInputProps('hasPaidParking', { type: 'checkbox' })}
             />
 
             {form.values.hasPaidParking && (
               <NumberInput
-                label="Hourly Rate (ETB)"
-                placeholder="20.00"
+                label={t('fields.hourlyRate')}
+                placeholder={t('placeholders.hourlyRate')}
                 required
                 min={0.01}
                 decimalScale={2}
@@ -280,24 +268,24 @@ export default function CreateParkingLotPage() {
             )}
 
             <Textarea
-              label="Description (Optional)"
-              placeholder="Public parking facility with security"
+              label={t('fields.descriptionOptional')}
+              placeholder={t('placeholders.description')}
               rows={4}
               {...form.getInputProps('description')}
             />
 
             <Select
-              label="Status"
-              data={PARKING_STATUSES}
+              label={t('fields.status')}
+              data={t('statuses', { returnObjects: true }) as { value: string; label: string }[]}
               {...form.getInputProps('status')}
             />
 
             <Group justify="flex-end" mt="xl">
               <Button variant="outline" onClick={() => navigate('/parking-lots')}>
-                Cancel
+                {t('actions.cancel')}
               </Button>
               <Button type="submit" loading={createMutation.isPending}>
-                Register Parking Lot
+                {t('actions.submit')}
               </Button>
             </Group>
           </Stack>

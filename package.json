@@ -5,7 +5,7 @@
   "description": "Coredor Assets Management System - React Frontend",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "node scripts/validate-api-env.cjs && tsc && vite build",
     "preview": "vite preview",
     "start": "vite preview --port 5173 --host",
     "serve": "serve -s dist -l 5173",

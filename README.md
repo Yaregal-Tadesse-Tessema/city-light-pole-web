@@ -32,10 +32,19 @@ npm install
 Create a `.env` file in the root directory:
 
 ```env
-VITE_API_BASE_URL=http://localhost:3011/api/v1
+VITE_API_BASE_URL=http://localhost:3011
 ```
 
-**Note:** In development, the Vite proxy will handle `/api` routes automatically. In production, set `VITE_API_BASE_URL` to your API server URL.
+Create a `.env.production` file for production builds:
+
+```env
+VITE_API_BASE_URL=/api
+```
+
+**Notes:**
+- In development, Vite proxies `/api/*` to `http://localhost:3011`.
+- In production, use same-origin `/api` (recommended) or a real API hostname.
+- `npm run build` fails if `VITE_API_BASE_URL` points to localhost unless `ALLOW_LOCALHOST_API=1` is set.
 
 ### 3. Generate API Types
 
@@ -159,8 +168,9 @@ The system manages the following city assets:
 ## API Integration
 
 The frontend uses:
-- **Development:** Vite proxy (`/api` → `VITE_API_BASE_URL/api/v1`)
-- **Production:** Direct API calls to `VITE_API_BASE_URL/api/v1`
+- **Development:** Vite proxy (`/api` -> `http://localhost:3011`)
+- **Production (recommended):** Same-origin API calls via `/api/v1/*`
+- **Production (alternative):** Absolute API host via `VITE_API_BASE_URL`
 
 API types are generated from the backend OpenAPI schema and stored in `src/api/generated/types.ts`.
 
@@ -173,6 +183,7 @@ API types are generated from the backend OpenAPI schema and stored in `src/api/g
 ## License
 
 UNLICENSED
+
 
 
 

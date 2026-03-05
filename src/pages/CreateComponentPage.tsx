@@ -18,10 +18,14 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { componentsApi, COMPONENT_TYPES } from '../api/components';
-
-const TYPE_OPTIONS = COMPONENT_TYPES.map((t) => ({ value: t, label: t.replace(/_/g, ' ') }));
+import { useTranslation } from 'react-i18next';
 
 export default function CreateComponentPage() {
+  const { t } = useTranslation('createComponent');
+  const typeOptions = COMPONENT_TYPES.map((type) => ({
+    value: type,
+    label: t(`typeLabels.${type}`, { defaultValue: type.replace(/_/g, ' ') }),
+  }));
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -45,22 +49,22 @@ export default function CreateComponentPage() {
       tags: '',
     },
     validate: {
-      name: (v) => (!v ? 'Name is required' : null),
-      type: (v) => (!v ? 'Type is required' : null),
+      name: (v) => (!v ? t('validation.nameRequired') : null),
+      type: (v) => (!v ? t('validation.typeRequired') : null),
     },
   });
 
   const createMutation = useMutation({
     mutationFn: (data: any) => componentsApi.create(data),
     onSuccess: (data) => {
-      notifications.show({ title: 'Success', message: 'Component created', color: 'green' });
+      notifications.show({ title: t('notifications.successTitle'), message: t('notifications.createSuccess'), color: 'green' });
       queryClient.invalidateQueries({ queryKey: ['components'] });
       navigate(`/components/${data.id}`);
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || 'Failed to create component';
+      const msg = error.response?.data?.message || t('notifications.createError');
       setApiError(msg);
-      notifications.show({ title: 'Error', message: msg, color: 'red' });
+      notifications.show({ title: t('notifications.errorTitle'), message: msg, color: 'red' });
     },
   });
 
@@ -90,46 +94,46 @@ export default function CreateComponentPage() {
 
   return (
     <Container size="md" py="xl">
-      <Title order={1} mb="xl">Create Component</Title>
+      <Title order={1} mb="xl">{t('title')}</Title>
       <Paper withBorder p="xl">
         <form onSubmit={handleSubmit}>
           <Stack>
             {apiError && (
-              <Alert color="red" title="Error" onClose={() => setApiError(null)} withCloseButton>
+              <Alert color="red" title={t('notifications.errorTitle')} onClose={() => setApiError(null)} withCloseButton>
                 {apiError}
               </Alert>
             )}
             <Group grow>
-              <TextInput label="Name" required {...form.getInputProps('name')} />
-              <Select label="Type" required data={TYPE_OPTIONS} {...form.getInputProps('type')} />
+              <TextInput label={t('fields.name')} required {...form.getInputProps('name')} />
+              <Select label={t('fields.type')} required data={typeOptions} {...form.getInputProps('type')} />
             </Group>
             <Group grow>
-              <TextInput label="Model" {...form.getInputProps('model')} />
-              <TextInput label="Part Number" {...form.getInputProps('partNumber')} />
-              <TextInput label="SKU" {...form.getInputProps('sku')} />
+              <TextInput label={t('fields.model')} {...form.getInputProps('model')} />
+              <TextInput label={t('fields.partNumber')} {...form.getInputProps('partNumber')} />
+              <TextInput label={t('fields.sku')} {...form.getInputProps('sku')} />
             </Group>
-            <Textarea label="Description" minRows={2} {...form.getInputProps('description')} />
+            <Textarea label={t('fields.description')} minRows={2} {...form.getInputProps('description')} />
             <Stack gap="xs">
-              <Text size="sm" fw={600} c="dimmed">Manufacturer Information</Text>
+              <Text size="sm" fw={600} c="dimmed">{t('sections.manufacturerInfo')}</Text>
               <Group grow>
-                <TextInput label="Name" placeholder="Manufacturer name" {...form.getInputProps('manufacturerName')} />
-                <TextInput label="Phone" placeholder="Phone number" {...form.getInputProps('manufacturerPhone')} />
-                <TextInput label="Email" type="email" placeholder="Email address" {...form.getInputProps('manufacturerEmail')} />
+                <TextInput label={t('fields.manufacturerName')} placeholder={t('placeholders.manufacturerName')} {...form.getInputProps('manufacturerName')} />
+                <TextInput label={t('fields.manufacturerPhone')} placeholder={t('placeholders.manufacturerPhone')} {...form.getInputProps('manufacturerPhone')} />
+                <TextInput label={t('fields.manufacturerEmail')} type="email" placeholder={t('placeholders.manufacturerEmail')} {...form.getInputProps('manufacturerEmail')} />
               </Group>
-              <TextInput label="Manufacturer Country" {...form.getInputProps('manufacturerCountry')} />
+              <TextInput label={t('fields.manufacturerCountry')} {...form.getInputProps('manufacturerCountry')} />
             </Stack>
             <Group grow>
-              <TextInput label="Serial Number" {...form.getInputProps('serialNumber')} />
-              <NumberInput label="Power (W)" min={0} {...form.getInputProps('powerUsageWatt')} />
-              <NumberInput label="Lifespan (months)" min={0} {...form.getInputProps('lifespanMonths')} />
+              <TextInput label={t('fields.serialNumber')} {...form.getInputProps('serialNumber')} />
+              <NumberInput label={t('fields.power')} min={0} {...form.getInputProps('powerUsageWatt')} />
+              <NumberInput label={t('fields.lifespanMonths')} min={0} {...form.getInputProps('lifespanMonths')} />
             </Group>
-            <TextInput label="Tags (comma-separated)" {...form.getInputProps('tags')} />
+            <TextInput label={t('fields.tags')} {...form.getInputProps('tags')} />
             <Group justify="flex-end" mt="xl">
               <Button variant="outline" onClick={() => navigate('/components')}>
-                Cancel
+                {t('actions.cancel')}
               </Button>
               <Button type="submit" loading={createMutation.isPending}>
-                Create
+                {t('actions.create')}
               </Button>
             </Group>
           </Stack>
@@ -138,3 +142,8 @@ export default function CreateComponentPage() {
     </Container>
   );
 }
+
+
+
+
+

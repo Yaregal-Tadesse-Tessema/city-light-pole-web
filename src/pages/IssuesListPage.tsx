@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Container,
@@ -28,16 +28,14 @@ import { useAuth } from '../hooks/useAuth';
 import { notifications } from '@mantine/notifications';
 import { IconEdit, IconTrash, IconUpload, IconPhoto, IconFilter, IconCalendar, IconArrowsUpDown } from '@tabler/icons-react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
-const ISSUE_STATUSES = [
-  { value: 'REPORTED', label: 'Reported' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'RESOLVED', label: 'Resolved' },
-  { value: 'CLOSED', label: 'Closed' },
-];
+const ISSUE_STATUSES = ['REPORTED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 
 export default function IssuesListPage() {
   const { user } = useAuth();
+  const { t } = useTranslation('issuesList');
+  const { t: tCommon } = useTranslation('common');
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [updateModalOpened, setUpdateModalOpened] = useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
@@ -61,6 +59,22 @@ export default function IssuesListPage() {
   const [createdAtTo, setCreatedAtTo] = useState<Date | null>(null);
   const [updatedAtFrom, setUpdatedAtFrom] = useState<Date | null>(null);
   const [updatedAtTo, setUpdatedAtTo] = useState<Date | null>(null);
+
+  const issueStatusOptions = useMemo(
+    () => ISSUE_STATUSES.map(status => ({ value: status, label: t(`statusLabels.${status}`) })),
+    [t],
+  );
+
+  const severityOptions = useMemo(
+    () => ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(severity => ({ value: severity, label: t(`severityLabels.${severity}`) })),
+    [t],
+  );
+
+  const getStatusLabel = (status?: string) =>
+    status ? t(`statusLabels.${status}`, { defaultValue: status }) : t('labels.none');
+
+  const getSeverityLabel = (severity?: string) =>
+    severity ? t(`severityLabels.${severity}`, { defaultValue: severity }) : t('labels.none');
 
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('createdAt');
@@ -227,9 +241,12 @@ export default function IssuesListPage() {
       });
 
       console.log('Issue created successfully:', response.data);
+      const createMessage = uploadedFileUrls.length > 0
+        ? t('notifications.createSuccessWithAttachments', { count: uploadedFileUrls.length })
+        : t('notifications.createSuccess');
       notifications.show({
-        title: 'Success',
-        message: `Issue created successfully${uploadedFileUrls.length > 0 ? ` with ${uploadedFileUrls.length} attachment(s)` : ''}`,
+        title: t('notifications.successTitle'),
+        message: createMessage,
         color: 'green',
       });
 
@@ -240,8 +257,8 @@ export default function IssuesListPage() {
     } catch (error: any) {
       console.error('Error creating issue:', error);
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to create issue',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.createFailed'),
         color: 'red',
       });
       // Clear files on error too, so user can try again
@@ -309,11 +326,11 @@ export default function IssuesListPage() {
       );
 
       const message = updateFiles.length > 0
-        ? `Issue updated successfully with ${updateFiles.length} additional attachment(s) added`
-        : 'Issue updated successfully';
+        ? t('notifications.updateSuccessWithAttachments', { count: updateFiles.length })
+        : t('notifications.updateSuccess');
 
       notifications.show({
-        title: 'Success',
+        title: t('notifications.successTitle'),
         message,
         color: 'green',
       });
@@ -328,8 +345,8 @@ export default function IssuesListPage() {
     } catch (error: any) {
       console.error('Error updating issue:', error);
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to update issue',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.updateFailed'),
         color: 'red',
       });
       // Clear files on error too, so user can try again
@@ -363,8 +380,8 @@ export default function IssuesListPage() {
       const token = localStorage.getItem('access_token');
       if (!token) {
         notifications.show({
-          title: 'Error',
-          message: 'Authentication token not found',
+          title: t('notifications.errorTitle'),
+          message: t('notifications.authTokenMissing'),
           color: 'red',
         });
         return;
@@ -379,8 +396,8 @@ export default function IssuesListPage() {
       
       console.log('Delete response:', response);
       notifications.show({
-        title: 'Success',
-        message: 'Issue deleted successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.deleteSuccess'),
         color: 'green',
       });
       setDeleteModalOpened(false);
@@ -389,8 +406,8 @@ export default function IssuesListPage() {
     } catch (error: any) {
       console.error('Error deleting issue:', error);
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || error.message || 'Failed to delete issue',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || error.message || t('notifications.deleteFailed'),
         color: 'red',
       });
       // Don't close modal on error so user can try again
@@ -430,7 +447,7 @@ export default function IssuesListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title order={1} size="h1">Issues</Title>
+        <Title order={1} size="h1">{t('title')}</Title>
         <Group gap="sm">
           {hasActiveFilters && (
             <Button
@@ -439,7 +456,7 @@ export default function IssuesListPage() {
               size="md"
               onClick={resetFilters}
             >
-              Clear Filters
+              {t('actions.clearFilters')}
             </Button>
           )}
           {canCreate && (
@@ -447,7 +464,7 @@ export default function IssuesListPage() {
               onClick={() => setCreateModalOpened(true)}
               size="md"
             >
-              Create Issue
+              {t('actions.createIssue')}
             </Button>
           )}
         </Group>
@@ -460,7 +477,9 @@ export default function IssuesListPage() {
             <Table.Tr>
               <Table.Th>
                 <Group gap="xs" wrap="nowrap">
-                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('poleCode')}>Pole Code</Text>
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('poleCode')}>
+                    {t('tableHeaders.poleCode')}
+                  </Text>
                   <Group gap="xs">
                     <ActionIcon
                       variant="subtle"
@@ -482,9 +501,9 @@ export default function IssuesListPage() {
                       </Popover.Target>
                       <Popover.Dropdown>
                         <Stack gap="sm">
-                          <Text size="sm" fw={500}>Filter by Pole Code</Text>
+                          <Text size="sm" fw={500}>{t('filters.poleCodeLabel')}</Text>
                           <TextInput
-                            placeholder="Enter pole code..."
+                            placeholder={t('filters.poleCodePlaceholder')}
                             value={poleCodeFilter}
                             onChange={(e) => setPoleCodeFilter(e.currentTarget.value)}
                             size="sm"
@@ -495,7 +514,7 @@ export default function IssuesListPage() {
                               variant="light"
                               onClick={() => setPoleCodeFilter('')}
                             >
-                              Clear
+                              {t('actions.clear')}
                             </Button>
                           )}
                         </Stack>
@@ -504,11 +523,13 @@ export default function IssuesListPage() {
                   </Group>
                 </Group>
               </Table.Th>
-              <Table.Th>Description</Table.Th>
-              <Table.Th>Attachments</Table.Th>
+              <Table.Th>{t('tableHeaders.description')}</Table.Th>
+              <Table.Th>{t('tableHeaders.attachments')}</Table.Th>
               <Table.Th>
                 <Group gap="xs" wrap="nowrap">
-                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>Status</Text>
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>
+                    {t('tableHeaders.status')}
+                  </Text>
                   <Group gap="xs">
                     <ActionIcon
                       variant="subtle"
@@ -530,10 +551,10 @@ export default function IssuesListPage() {
                       </Popover.Target>
                       <Popover.Dropdown>
                         <Stack gap="sm">
-                          <Text size="sm" fw={500}>Filter by Status</Text>
+                          <Text size="sm" fw={500}>{t('filters.statusLabel')}</Text>
                           <Select
-                            placeholder="Select status"
-                            data={ISSUE_STATUSES}
+                            placeholder={t('filters.statusPlaceholder')}
+                            data={issueStatusOptions}
                             value={statusFilter}
                             onChange={(value) => setStatusFilter(value || '')}
                             clearable
@@ -547,7 +568,9 @@ export default function IssuesListPage() {
               </Table.Th>
               <Table.Th>
                 <Group gap="xs" wrap="nowrap">
-                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('severity')}>Severity</Text>
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('severity')}>
+                    {t('tableHeaders.severity')}
+                  </Text>
                   <Group gap="xs">
                     <ActionIcon
                       variant="subtle"
@@ -569,10 +592,10 @@ export default function IssuesListPage() {
                       </Popover.Target>
                       <Popover.Dropdown>
                         <Stack gap="sm">
-                          <Text size="sm" fw={500}>Filter by Severity</Text>
+                          <Text size="sm" fw={500}>{t('filters.severityLabel')}</Text>
                           <Select
-                            placeholder="Select severity"
-                            data={['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']}
+                            placeholder={t('filters.severityPlaceholder')}
+                            data={severityOptions}
                             value={severityFilter}
                             onChange={(value) => setSeverityFilter(value || '')}
                             clearable
@@ -586,7 +609,9 @@ export default function IssuesListPage() {
               </Table.Th>
               <Table.Th>
                 <Group gap="xs" wrap="nowrap">
-                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('reportedBy')}>Reported By</Text>
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('reportedBy')}>
+                    {t('tableHeaders.reportedBy')}
+                  </Text>
                   <ActionIcon
                     variant="subtle"
                     color="gray"
@@ -599,7 +624,9 @@ export default function IssuesListPage() {
               </Table.Th>
               <Table.Th>
                 <Group gap="xs" wrap="nowrap">
-                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('createdAt')}>Created</Text>
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('createdAt')}>
+                    {t('tableHeaders.created')}
+                  </Text>
                   <Group gap="xs">
                     <ActionIcon
                       variant="subtle"
@@ -621,18 +648,18 @@ export default function IssuesListPage() {
                       </Popover.Target>
                       <Popover.Dropdown>
                         <Stack gap="sm">
-                          <Text size="sm" fw={500}>Filter by Created Date</Text>
+                          <Text size="sm" fw={500}>{t('filters.createdDateLabel')}</Text>
                           <TextInput
-                            label="From"
-                            placeholder="Select start date"
+                            label={t('filters.from')}
+                            placeholder={t('filters.startDatePlaceholder')}
                             type="date"
                             value={createdAtFrom ? createdAtFrom.toISOString().split('T')[0] : ''}
                             onChange={(e) => setCreatedAtFrom(e.target.value ? new Date(e.target.value) : null)}
                             size="sm"
                           />
                           <TextInput
-                            label="To"
-                            placeholder="Select end date"
+                            label={t('filters.to')}
+                            placeholder={t('filters.endDatePlaceholder')}
                             type="date"
                             value={createdAtTo ? createdAtTo.toISOString().split('T')[0] : ''}
                             onChange={(e) => setCreatedAtTo(e.target.value ? new Date(e.target.value) : null)}
@@ -647,7 +674,7 @@ export default function IssuesListPage() {
                                 setCreatedAtTo(null);
                               }}
                             >
-                              Clear
+                              {t('actions.clear')}
                             </Button>
                           )}
                         </Stack>
@@ -656,10 +683,12 @@ export default function IssuesListPage() {
                   </Group>
                 </Group>
               </Table.Th>
-              <Table.Th>Resolution Notes</Table.Th>
+              <Table.Th>{t('tableHeaders.resolutionNotes')}</Table.Th>
               <Table.Th>
                 <Group gap="xs" wrap="nowrap">
-                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('updatedAt')}>Updated</Text>
+                  <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('updatedAt')}>
+                    {t('tableHeaders.updated')}
+                  </Text>
                   <Group gap="xs">
                     <ActionIcon
                       variant="subtle"
@@ -681,18 +710,18 @@ export default function IssuesListPage() {
                       </Popover.Target>
                       <Popover.Dropdown>
                         <Stack gap="sm">
-                          <Text size="sm" fw={500}>Filter by Updated Date</Text>
+                          <Text size="sm" fw={500}>{t('filters.updatedDateLabel')}</Text>
                           <TextInput
-                            label="From"
-                            placeholder="Select start date"
+                            label={t('filters.from')}
+                            placeholder={t('filters.startDatePlaceholder')}
                             type="date"
                             value={updatedAtFrom ? updatedAtFrom.toISOString().split('T')[0] : ''}
                             onChange={(e) => setUpdatedAtFrom(e.target.value ? new Date(e.target.value) : null)}
                             size="sm"
                           />
                           <TextInput
-                            label="To"
-                            placeholder="Select end date"
+                            label={t('filters.to')}
+                            placeholder={t('filters.endDatePlaceholder')}
                             type="date"
                             value={updatedAtTo ? updatedAtTo.toISOString().split('T')[0] : ''}
                             onChange={(e) => setUpdatedAtTo(e.target.value ? new Date(e.target.value) : null)}
@@ -707,7 +736,7 @@ export default function IssuesListPage() {
                                 setUpdatedAtTo(null);
                               }}
                             >
-                              Clear
+                              {t('actions.clear')}
                             </Button>
                           )}
                         </Stack>
@@ -716,22 +745,22 @@ export default function IssuesListPage() {
                   </Group>
                 </Group>
               </Table.Th>
-              {canUpdate && <Table.Th>Actions</Table.Th>}
+              {canUpdate && <Table.Th>{t('tableHeaders.actions')}</Table.Th>}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {isLoading ? (
               <Table.Tr>
-                <Table.Td colSpan={totalColumnCount}>Loading...</Table.Td>
+                <Table.Td colSpan={totalColumnCount}>{tCommon('loading')}</Table.Td>
               </Table.Tr>
             ) : issues?.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={totalColumnCount}>No issues found</Table.Td>
+                <Table.Td colSpan={totalColumnCount}>{t('tableStates.empty')}</Table.Td>
               </Table.Tr>
             ) : (
               issues?.map((issue: any) => (
                 <Table.Tr key={issue.id}>
-                  <Table.Td>{issue.pole?.code || issue.poleCode || 'N/A'}</Table.Td>
+                  <Table.Td>{issue.pole?.code || issue.poleCode || t('labels.na')}</Table.Td>
                   <Table.Td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {issue.description}
                   </Table.Td>
@@ -743,27 +772,27 @@ export default function IssuesListPage() {
                         onClick={() => openAttachmentsModal(issue)}
                         style={{ cursor: 'pointer' }}
                       >
-                        📎 {issue.attachments.length} file{issue.attachments.length > 1 ? 's' : ''}
+                        {t('attachments.buttonLabel', { count: issue.attachments.length })}
                       </Button>
                     ) : (
-                      <Text size="sm" c="dimmed">No attachments</Text>
+                      <Text size="sm" c="dimmed">{t('attachments.none')}</Text>
                     )}
                   </Table.Td>
                   <Table.Td>
-                    <Badge color={getStatusColor(issue.status)}>{issue.status}</Badge>
+                    <Badge color={getStatusColor(issue.status)}>{getStatusLabel(issue.status)}</Badge>
                   </Table.Td>
                   <Table.Td>
-                    <Badge color={getSeverityColor(issue.severity)}>{issue.severity}</Badge>
+                    <Badge color={getSeverityColor(issue.severity)}>{getSeverityLabel(issue.severity)}</Badge>
                   </Table.Td>
-                  <Table.Td>{issue.reportedBy?.fullName || 'N/A'}</Table.Td>
+                  <Table.Td>{issue.reportedBy?.fullName || t('labels.na')}</Table.Td>
                   <Table.Td>
                     {new Date(issue.createdAt).toLocaleDateString()}
                   </Table.Td>
                   <Table.Td style={{ maxWidth: 240, whiteSpace: 'pre-wrap' }}>
-                    {issue.resolutionNotes || '—'}
+                    {issue.resolutionNotes || t('labels.none')}
                   </Table.Td>
                   <Table.Td>
-                    {issue.updatedAt ? new Date(issue.updatedAt).toLocaleDateString() : '—'}
+                    {issue.updatedAt ? new Date(issue.updatedAt).toLocaleDateString() : t('labels.none')}
                   </Table.Td>
                   {canUpdate && (
                     <Table.Td onClick={(e) => e.stopPropagation()}>
@@ -805,13 +834,17 @@ export default function IssuesListPage() {
       <Group justify="space-between" align="center" mt="md">
         <Group gap="xs">
           <Text size="sm" c="dimmed">
-            Showing {issues.length > 0 ? ((currentPage - 1) * pageSize) + 1 : 0} to {Math.min(currentPage * pageSize, totalIssues)} of {totalIssues} issues
+            {t('pagination.showing', {
+              from: issues.length > 0 ? ((currentPage - 1) * pageSize) + 1 : 0,
+              to: Math.min(currentPage * pageSize, totalIssues),
+              total: totalIssues,
+            })}
           </Text>
         </Group>
 
         <Group gap="sm">
           <Group gap="xs">
-            <Text size="sm">Rows per page:</Text>
+            <Text size="sm">{t('pagination.rowsPerPage')}</Text>
             <NumberInput
               value={pageSize}
               onChange={(value) => {
@@ -846,37 +879,41 @@ export default function IssuesListPage() {
           setCreateModalOpened(false);
           setCreateFiles([]);
         }}
-        title="Create Issue"
+        title={t('modals.createTitle')}
         size="lg"
         centered
       >
         <form onSubmit={createForm.onSubmit(handleCreateSubmit)}>
           <Stack>
             <Select
-              label="Pole Code"
-              placeholder="Select a pole"
+              label={t('form.poleCodeLabel')}
+              placeholder={t('form.poleCodePlaceholder')}
               data={poleOptions}
               searchable
               required
               {...createForm.getInputProps('poleCode')}
             />
             <Textarea
-              label="Description"
-              placeholder="Describe the issue..."
+              label={t('form.descriptionLabel')}
+              placeholder={t('form.descriptionPlaceholder')}
               required
               {...createForm.getInputProps('description')}
             />
             <Select
-              label="Severity"
-              data={['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']}
+              label={t('form.severityLabel')}
+              data={severityOptions}
               {...createForm.getInputProps('severity')}
             />
 
             {/* File Upload Section */}
             <div>
-              <Text size="sm" fw={500} mb="xs">Attachments (Optional)</Text>
+              <Text size="sm" fw={500} mb="xs">{t('attachments.sectionTitle')}</Text>
               <FileInput
-                placeholder={createFiles.length > 0 ? `Add more files (${createFiles.length} selected)` : "Select files to upload"}
+                placeholder={
+                  createFiles.length > 0
+                    ? t('attachments.addMoreFiles', { count: createFiles.length })
+                    : t('attachments.selectFiles')
+                }
                 multiple
                 accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
                 leftSection={<IconUpload size={16} />}
@@ -893,7 +930,7 @@ export default function IssuesListPage() {
               {createFiles.length > 0 && (
                 <div style={{ marginTop: '12px' }}>
                   <Text size="sm" c="dimmed" mb="xs">
-                    Selected files ({createFiles.length}):
+                    {t('attachments.selectedFiles', { count: createFiles.length })}
                   </Text>
                   <SimpleGrid cols={2} spacing="xs">
                     {createFiles.map((file, index) => (
@@ -916,7 +953,7 @@ export default function IssuesListPage() {
             </div>
 
             <Button type="submit" loading={uploadingFiles}>
-              {uploadingFiles ? 'Uploading...' : 'Create Issue'}
+              {uploadingFiles ? t('actions.uploading') : t('actions.create')}
             </Button>
           </Stack>
         </form>
@@ -931,7 +968,7 @@ export default function IssuesListPage() {
           updateForm.reset();
           setUpdateFiles([]);
         }}
-        title="Edit Issue"
+        title={t('modals.editTitle')}
         size="lg"
         centered
       >
@@ -943,7 +980,7 @@ export default function IssuesListPage() {
                   <Badge color="blue">{selectedIssue.pole?.code || selectedIssue.poleCode}</Badge>
                 </Group>
                 <Textarea
-                  label="Description"
+                  label={t('form.descriptionLabel')}
                   value={selectedIssue.description}
                   readOnly
                   styles={{ input: { backgroundColor: 'transparent', cursor: 'not-allowed' } }}
@@ -954,12 +991,12 @@ export default function IssuesListPage() {
             {/* Display existing attachments */}
             {selectedIssue?.status === 'CLOSED' && selectedIssue?.attachments && selectedIssue.attachments.length > 0 && (
               <Text size="sm" c="orange" mb="xs">
-                ⚠️ This issue is closed. Existing attachments cannot be deleted.
+                {t('attachments.closedExistingWarning')}
               </Text>
             )}
             {selectedIssue?.attachments && selectedIssue.attachments.length > 0 && (
               <div>
-                <Text size="sm" fw={500} mb="xs">Existing Attachments</Text>
+                <Text size="sm" fw={500} mb="xs">{t('attachments.existingTitle')}</Text>
                 <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="sm" mb="md">
                   {selectedIssue.attachments.map((attachment: any, index: number) => (
                     <Paper key={index} p={0} withBorder style={{ position: 'relative', height: '120px', overflow: 'hidden' }}>
@@ -1018,7 +1055,7 @@ export default function IssuesListPage() {
                           color="red"
                           size="xs"
                           onClick={() => {
-                            if (confirm('Are you sure you want to delete this attachment?')) {
+                            if (confirm(t('attachments.confirmDelete'))) {
                               // Delete attachment
                               const token = localStorage.getItem('access_token');
                               axios.delete(`http://localhost:3011/api/v1/issues/${selectedIssue.id}/attachments/${attachment.id}`, {
@@ -1028,8 +1065,8 @@ export default function IssuesListPage() {
                               })
                               .then(() => {
                                 notifications.show({
-                                  title: 'Success',
-                                  message: 'Attachment deleted successfully',
+                                  title: t('notifications.successTitle'),
+                                  message: t('notifications.attachmentDeleteSuccess'),
                                   color: 'green',
                                 });
                                 // Refresh data
@@ -1040,13 +1077,13 @@ export default function IssuesListPage() {
                                   attachments: prev.attachments.filter((att: any) => att.id !== attachment.id)
                                 } : null);
                               })
-                              .catch((error) => {
-                                notifications.show({
-                                  title: 'Error',
-                                  message: error.response?.data?.message || 'Failed to delete attachment',
-                                  color: 'red',
+                                .catch((error) => {
+                                  notifications.show({
+                                    title: t('notifications.errorTitle'),
+                                    message: error.response?.data?.message || t('notifications.attachmentDeleteFailed'),
+                                    color: 'red',
+                                  });
                                 });
-                              });
                             }
                           }}
                           disabled={selectedIssue?.status === 'CLOSED'}
@@ -1062,28 +1099,32 @@ export default function IssuesListPage() {
             )}
 
             <Select
-              label="Severity"
-              data={['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']}
+              label={t('form.severityLabel')}
+              data={severityOptions}
               required
               {...updateForm.getInputProps('severity')}
             />
             <Select
-              label="Status"
-              data={ISSUE_STATUSES}
+              label={t('form.statusLabel')}
+              data={issueStatusOptions}
               required
               {...updateForm.getInputProps('status')}
             />
             <Textarea
-              label="Resolution Notes"
-              placeholder="Add notes about the resolution..."
+              label={t('form.resolutionNotesLabel')}
+              placeholder={t('form.resolutionNotesPlaceholder')}
               {...updateForm.getInputProps('resolutionNotes')}
             />
 
             {/* File Upload Section for Update */}
             <div>
-              <Text size="sm" fw={500} mb="xs">Additional Attachments (Optional)</Text>
+              <Text size="sm" fw={500} mb="xs">{t('attachments.additionalTitle')}</Text>
               <FileInput
-                placeholder={updateFiles.length > 0 ? `Add more files (${updateFiles.length} selected)` : "Select additional files to upload"}
+                placeholder={
+                  updateFiles.length > 0
+                    ? t('attachments.addMoreFiles', { count: updateFiles.length })
+                    : t('attachments.selectAdditionalFiles')
+                }
                 multiple
                 accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
                 leftSection={<IconUpload size={16} />}
@@ -1100,7 +1141,7 @@ export default function IssuesListPage() {
               {updateFiles.length > 0 && (
                 <div style={{ marginTop: '12px' }}>
                   <Text size="sm" c="dimmed" mb="xs">
-                    Files to upload ({updateFiles.length}):
+                    {t('attachments.filesToUpload', { count: updateFiles.length })}
                   </Text>
                   <SimpleGrid cols={2} spacing="xs">
                     {updateFiles.map((file, index) => (
@@ -1129,10 +1170,10 @@ export default function IssuesListPage() {
                 updateForm.reset();
                 setUpdateFiles([]);
               }}>
-                Cancel
+                {t('actions.cancel')}
               </Button>
               <Button type="submit" loading={uploadingFiles}>
-                {uploadingFiles ? 'Uploading...' : 'Update Issue'}
+                {uploadingFiles ? t('actions.uploading') : t('actions.update')}
               </Button>
             </Group>
           </Stack>
@@ -1146,19 +1187,19 @@ export default function IssuesListPage() {
           setDeleteModalOpened(false);
           setIssueToDelete(null);
         }}
-        title="Delete Issue"
+        title={t('modals.deleteTitle')}
         size="md"
         centered
       >
         <Stack>
           <Text>
-            Are you sure you want to delete this issue?
+            {t('delete.confirm')}
           </Text>
           {issueToDelete && (
             <Paper p="sm" withBorder bg="gray.0">
-              <Text size="sm" fw={700}>Pole Code:</Text>
+              <Text size="sm" fw={700}>{t('delete.poleCode')}:</Text>
               <Text size="sm">{issueToDelete.pole?.code || issueToDelete.poleCode}</Text>
-              <Text size="sm" fw={700} mt="xs">Description:</Text>
+              <Text size="sm" fw={700} mt="xs">{t('delete.description')}:</Text>
               <Text size="sm">{issueToDelete.description}</Text>
             </Paper>
           )}
@@ -1170,10 +1211,10 @@ export default function IssuesListPage() {
                 setIssueToDelete(null);
               }}
             >
-              Cancel
+              {t('actions.cancel')}
             </Button>
             <Button color="red" onClick={handleDeleteConfirm}>
-              Delete
+              {t('actions.delete')}
             </Button>
           </Group>
         </Stack>
@@ -1186,14 +1227,14 @@ export default function IssuesListPage() {
           setAttachmentsModalOpened(false);
           setSelectedIssueForAttachments(null);
         }}
-        title={`Attachments for Issue ${selectedIssueForAttachments?.pole?.code || selectedIssueForAttachments?.poleCode}`}
+        title={t('attachments.modalTitle', { code: selectedIssueForAttachments?.pole?.code || selectedIssueForAttachments?.poleCode || '' })}
         size="lg"
         centered
       >
         <Stack>
           {selectedIssueForAttachments?.status === 'CLOSED' && (
             <Text size="sm" c="orange" ta="center">
-              ⚠️ This issue is closed. Attachments cannot be deleted.
+              {t('attachments.closedWarning')}
             </Text>
           )}
           {selectedIssueForAttachments?.attachments && selectedIssueForAttachments.attachments.length > 0 ? (
@@ -1255,7 +1296,7 @@ export default function IssuesListPage() {
                       color="red"
                       size="sm"
                       onClick={() => {
-                        if (confirm('Are you sure you want to delete this attachment?')) {
+                        if (confirm(t('attachments.confirmDelete'))) {
                           const token = localStorage.getItem('access_token');
                           axios.delete(`http://localhost:3011/api/v1/issues/${selectedIssueForAttachments.id}/attachments/${attachment.id}`, {
                             headers: {
@@ -1264,8 +1305,8 @@ export default function IssuesListPage() {
                           })
                           .then(() => {
                             notifications.show({
-                              title: 'Success',
-                              message: 'Attachment deleted successfully',
+                              title: t('notifications.successTitle'),
+                              message: t('notifications.attachmentDeleteSuccess'),
                               color: 'green',
                             });
                             setAttachmentsModalOpened(false);
@@ -1273,8 +1314,8 @@ export default function IssuesListPage() {
                           })
                           .catch((error) => {
                             notifications.show({
-                              title: 'Error',
-                              message: error.response?.data?.message || 'Failed to delete attachment',
+                              title: t('notifications.errorTitle'),
+                              message: error.response?.data?.message || t('notifications.attachmentDeleteFailed'),
                               color: 'red',
                             });
                           });
@@ -1291,7 +1332,7 @@ export default function IssuesListPage() {
             </SimpleGrid>
           ) : (
             <Text ta="center" c="dimmed" py="xl">
-              No attachments found for this issue.
+              {t('attachments.noneFound')}
             </Text>
           )}
         </Stack>

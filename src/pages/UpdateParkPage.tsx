@@ -19,7 +19,7 @@ import {
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
-import { ErrorBoundary } from '../components/ErrorBoundary';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { MapPicker } from '../components/MapPicker';
 
 const PARK_TYPES = [

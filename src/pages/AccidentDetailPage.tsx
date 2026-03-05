@@ -54,27 +54,14 @@ import { useDisclosure } from '@mantine/hooks';
 import { useAuth } from '../hooks/useAuth';
 import EthiopianPhoneInput from '../components/EthiopianPhoneInput';
 import VehiclePlateInput from '../components/VehiclePlateInput';
+import { useTranslation } from 'react-i18next';
 import {
   fromStoredPhoneToLocal,
   isValidEthiopianLocalPhone,
   toEthiopianInternationalPhone,
 } from '../utils/ethiopianPhone';
 import { ETHIOPIAN_INSURANCE_COMPANY_OPTIONS } from '../utils/ethiopianInsuranceCompanies';
-
-const DAMAGE_LEVELS = [
-  { value: 'MINOR', label: 'Minor Damage' },
-  { value: 'MODERATE', label: 'Moderate Damage' },
-  { value: 'SEVERE', label: 'Severe Damage' },
-  { value: 'TOTAL_LOSS', label: 'Total Loss' },
-];
-
-const DAMAGED_COMPONENTS = [
-  { value: 'POLE', label: 'Pole' },
-  { value: 'LUMINAIRE', label: 'Luminaire' },
-  { value: 'ARM_BRACKET', label: 'Arm & Bracket' },
-  { value: 'FOUNDATION', label: 'Foundation' },
-  { value: 'CABLE', label: 'Cable' },
-];
+import { toApiOriginUrl, toApiV1Url } from '../config/api';
 
 function getAccidentStatusColor(status: string): string {
   switch (status?.toUpperCase()) {
@@ -121,6 +108,14 @@ export default function AccidentDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { t } = useTranslation('accidentDetail');
+
+  const damageLevels = [
+    { value: 'MINOR', label: t('damageLevels.minor') },
+    { value: 'MODERATE', label: t('damageLevels.moderate') },
+    { value: 'SEVERE', label: t('damageLevels.severe') },
+    { value: 'TOTAL_LOSS', label: t('damageLevels.totalLoss') },
+  ];
 
   // Modal states
   const [damageAssessmentOpened, { open: openDamageAssessment, close: closeDamageAssessment }] = useDisclosure(false);
@@ -189,7 +184,7 @@ export default function AccidentDetailPage() {
     queryKey: ['accident', id],
     queryFn: () => {
       const token = localStorage.getItem('access_token');
-      return axios.get(`http://localhost:3011/api/v1/accidents/${id}`, {
+      return axios.get(toApiV1Url(`/accidents/${id}`), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -235,27 +230,27 @@ export default function AccidentDetailPage() {
       claimReferenceNumber: '',
     },
     validate: {
-      accidentType: (value) => !value && 'Accident type is required',
-      accidentDate: (value) => !value && 'Accident date is required',
-      accidentTime: (value) => !value && 'Accident time is required',
-      locationDescription: (value) => !value && 'Location description is required',
+      accidentType: (value) => !value && t('validation.accidentTypeRequired'),
+      accidentDate: (value) => !value && t('validation.accidentDateRequired'),
+      accidentTime: (value) => !value && t('validation.accidentTimeRequired'),
+      locationDescription: (value) => !value && t('validation.locationDescriptionRequired'),
       driverPhoneNumber: (value) =>
         isValidEthiopianLocalPhone(value)
           ? null
-          : 'Phone must be 9 digits and cannot start with 0',
+          : t('validation.phoneFormat'),
       latitude: (value) => {
         if (value !== null && value !== undefined && value !== '') {
           const num = Number(value);
-          if (isNaN(num)) return 'Latitude must be a valid number';
-          if (num < -90 || num > 90) return 'Latitude must be between -90 and 90';
+          if (isNaN(num)) return t('validation.latitudeValid');
+          if (num < -90 || num > 90) return t('validation.latitudeRange');
         }
         return null;
       },
       longitude: (value) => {
         if (value !== null && value !== undefined && value !== '') {
           const num = Number(value);
-          if (isNaN(num)) return 'Longitude must be a valid number';
-          if (num < -180 || num > 180) return 'Longitude must be between -180 and 180';
+          if (isNaN(num)) return t('validation.longitudeValid');
+          if (num < -180 || num > 180) return t('validation.longitudeRange');
         }
         return null;
       },
@@ -266,7 +261,7 @@ export default function AccidentDetailPage() {
   const updateMutation = useMutation({
     mutationFn: (data: any) => {
       const token = localStorage.getItem('access_token');
-      return axios.patch(`http://localhost:3011/api/v1/accidents/${id}`, data, {
+      return axios.patch(toApiV1Url(`/accidents/${id}`), data, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -275,8 +270,8 @@ export default function AccidentDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accident', id] });
       notifications.show({
-        title: 'Success',
-        message: 'Damage assessment completed successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.damageAssessmentSuccess'),
         color: 'green',
       });
       closeDamageAssessment();
@@ -284,8 +279,8 @@ export default function AccidentDetailPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to update accident',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.updateAccidentError'),
         color: 'red',
       });
     },
@@ -296,7 +291,7 @@ export default function AccidentDetailPage() {
     queryKey: ['poles', 'all'],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
-      const response = await axios.get('http://localhost:3011/api/v1/poles?limit=10000', {
+      const response = await axios.get(toApiV1Url('/poles?limit=10000'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -310,7 +305,7 @@ export default function AccidentDetailPage() {
     queryKey: ['damaged-components', 'active'],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
-      const response = await axios.get('http://localhost:3011/api/v1/damaged-components?activeOnly=true', {
+      const response = await axios.get(toApiV1Url('/damaged-components?activeOnly=true'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -335,7 +330,7 @@ export default function AccidentDetailPage() {
   const editMutation = useMutation({
     mutationFn: (data: any) => {
       const token = localStorage.getItem('access_token');
-      return axios.patch(`http://localhost:3011/api/v1/accidents/${id}`, data, {
+      return axios.patch(toApiV1Url(`/accidents/${id}`), data, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -344,16 +339,16 @@ export default function AccidentDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accident', id] });
       notifications.show({
-        title: 'Success',
-        message: 'Accident details updated successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.updateAccidentSuccess'),
         color: 'green',
       });
       closeEdit();
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to update accident',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.updateAccidentError'),
         color: 'red',
       });
     },
@@ -363,7 +358,7 @@ export default function AccidentDetailPage() {
   const approveMutation = useMutation({
     mutationFn: (data: any) => {
       const token = localStorage.getItem('access_token');
-      return axios.post(`http://localhost:3011/api/v1/accidents/${id}/approve`, data, {
+      return axios.post(toApiV1Url(`/accidents/${id}/approve`), data, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -372,8 +367,8 @@ export default function AccidentDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accident', id] });
       notifications.show({
-        title: 'Success',
-        message: 'Approval processed successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.approvalSuccess'),
         color: 'green',
       });
       closeApproval();
@@ -381,8 +376,8 @@ export default function AccidentDetailPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to process approval',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.approvalError'),
         color: 'red',
       });
     },
@@ -392,7 +387,7 @@ export default function AccidentDetailPage() {
   const claimUpdateMutation = useMutation({
     mutationFn: (claimStatus: string) => {
       const token = localStorage.getItem('access_token');
-      return axios.patch(`http://localhost:3011/api/v1/accidents/${id}/status`, { claimStatus }, {
+      return axios.patch(toApiV1Url(`/accidents/${id}/status`), { claimStatus }, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -402,15 +397,15 @@ export default function AccidentDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accident', id] });
       notifications.show({
-        title: 'Success',
-        message: 'Claim status updated successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.claimStatusSuccess'),
         color: 'green',
       });
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to update claim status',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.claimStatusError'),
         color: 'red',
       });
     },
@@ -420,7 +415,7 @@ export default function AccidentDetailPage() {
   const photoUploadMutation = useMutation({
     mutationFn: (formData: FormData) => {
       const token = localStorage.getItem('access_token');
-      return axios.post(`http://localhost:3011/api/v1/accidents/${id}/photos`, formData, {
+      return axios.post(toApiV1Url(`/accidents/${id}/photos`), formData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -429,8 +424,8 @@ export default function AccidentDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accident', id] });
       notifications.show({
-        title: 'Success',
-        message: 'Photos uploaded successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.photosUploadSuccess'),
         color: 'green',
       });
       closePhotoUpload();
@@ -438,8 +433,8 @@ export default function AccidentDetailPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: 'Failed to upload photos',
+        title: t('notifications.errorTitle'),
+        message: t('notifications.photosUploadError'),
         color: 'red',
       });
     },
@@ -449,7 +444,7 @@ export default function AccidentDetailPage() {
   const deletePhotoMutation = useMutation({
     mutationFn: (photoId: string) => {
       const token = localStorage.getItem('access_token');
-      return axios.delete(`http://localhost:3011/api/v1/accidents/photos/${photoId}`, {
+      return axios.delete(toApiV1Url(`/accidents/photos/${photoId}`), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -458,15 +453,15 @@ export default function AccidentDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accident', id] });
       notifications.show({
-        title: 'Success',
-        message: 'Photo deleted successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.photoDeleteSuccess'),
         color: 'green',
       });
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to delete photo',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.photoDeleteError'),
         color: 'red',
       });
     },
@@ -476,7 +471,7 @@ export default function AccidentDetailPage() {
   const attachmentUploadMutation = useMutation({
     mutationFn: (formData: FormData) => {
       const token = localStorage.getItem('access_token');
-      return axios.post(`http://localhost:3011/api/v1/accidents/${id}/attachments`, formData, {
+      return axios.post(toApiV1Url(`/accidents/${id}/attachments`), formData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -485,8 +480,8 @@ export default function AccidentDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accident', id] });
       notifications.show({
-        title: 'Success',
-        message: 'Attachments uploaded successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.attachmentsUploadSuccess'),
         color: 'green',
       });
       closeAttachmentUpload();
@@ -494,8 +489,8 @@ export default function AccidentDetailPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: 'Failed to upload attachments',
+        title: t('notifications.errorTitle'),
+        message: t('notifications.attachmentsUploadError'),
         color: 'red',
       });
     },
@@ -505,7 +500,7 @@ export default function AccidentDetailPage() {
   const downloadReportMutation = useMutation({
     mutationFn: (type: string) => {
       const token = localStorage.getItem('access_token');
-      return axios.get(`http://localhost:3011/api/v1/accidents/${id}/reports/${type}`, {
+      return axios.get(toApiV1Url(`/accidents/${id}/reports/${type}`), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -523,8 +518,8 @@ export default function AccidentDetailPage() {
     },
     onError: () => {
       notifications.show({
-        title: 'Error',
-        message: 'Failed to download report',
+        title: t('notifications.errorTitle'),
+        message: t('notifications.downloadReportError'),
         color: 'red',
       });
     },
@@ -582,7 +577,7 @@ export default function AccidentDetailPage() {
   };
 
   const handleDeletePhoto = (photoId: string) => {
-    if (window.confirm('Are you sure you want to delete this photo?')) {
+    if (window.confirm(t('confirm.deletePhoto'))) {
       deletePhotoMutation.mutate(photoId);
     }
   };
@@ -595,8 +590,8 @@ export default function AccidentDetailPage() {
     if (!accident) {
       console.error('❌ No accident data available');
       notifications.show({
-        title: 'Error',
-        message: 'No accident data available for report generation.',
+        title: t('notifications.errorTitle'),
+        message: t('notifications.noAccidentForReport'),
         color: 'red',
       });
       return;
@@ -604,8 +599,8 @@ export default function AccidentDetailPage() {
 
     // Show loading notification
     const loadingNotification = notifications.show({
-      title: 'Generating Report',
-      message: 'Creating PDF report with images...',
+      title: t('notifications.generatingReport.title'),
+      message: t('notifications.generatingReport.message'),
       color: 'blue',
       loading: true,
       autoClose: false,
@@ -621,109 +616,191 @@ export default function AccidentDetailPage() {
 
       // Add content
       doc.setFontSize(20);
-      doc.text('Accident Comprehensive Report', 20, 20);
+      doc.text(t('pdf.comprehensiveReportTitle'), 20, 20);
 
       doc.setFontSize(12);
-      doc.text(`Report Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 20, 30);
-      doc.text(`Incident ID: ${accident.id}`, 20, 35);
+      doc.text(
+        `${t('pdf.reportGenerated')}: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+        20,
+        30,
+      );
+      doc.text(`${t('pdf.incidentId')}: ${accident.id}`, 20, 35);
 
       let yPosition = 50;
 
       // Section 1: Incident Information
       doc.setFontSize(16);
-      doc.text('1. Incident Information', 20, yPosition);
+      doc.text(`1. ${t('pdf.sections.incidentInformation')}`, 20, yPosition);
       yPosition += 15;
 
       doc.setFontSize(10);
       // Debug: Log all accident properties
       console.log('PDF Generation - Accident object:', accident);
 
-      doc.text(`Status: ${accident.status?.replace(/_/g, ' ') || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.status')}: ${accident.status?.replace(/_/g, ' ') || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Type: ${accident.type?.replace(/_/g, ' ') || accident.accidentType || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.type')}: ${accident.type?.replace(/_/g, ' ') || accident.accidentType || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Reported Date: ${accident.createdAt ? formatDate(accident.createdAt) : accident.accidentDate ? formatDate(accident.accidentDate) : 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.reportedDate')}: ${
+          accident.createdAt
+            ? formatDate(accident.createdAt)
+            : accident.accidentDate
+            ? formatDate(accident.accidentDate)
+            : t('labels.notAvailable')
+        }`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Incident Date: ${accident.accidentDate ? formatDate(accident.accidentDate) : 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.incidentDate')}: ${accident.accidentDate ? formatDate(accident.accidentDate) : t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Incident Time: ${accident.accidentTime || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.incidentTime')}: ${accident.accidentTime || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Location: ${typeof accident.latitude === 'number' ? accident.latitude.toFixed(6) : 'N/A'}, ${typeof accident.longitude === 'number' ? accident.longitude.toFixed(6) : 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.location')}: ${
+          typeof accident.latitude === 'number' ? accident.latitude.toFixed(6) : t('labels.notAvailable')
+        }, ${
+          typeof accident.longitude === 'number' ? accident.longitude.toFixed(6) : t('labels.notAvailable')
+        }`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Street: ${accident.street || accident.locationDescription || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.street')}: ${accident.street || accident.locationDescription || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Subcity: ${accident.subcity || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.subcity')}: ${accident.subcity || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Pole ID: ${accident.poleId || accident.pole?.code || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.poleId')}: ${accident.poleId || accident.pole?.code || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Vehicle Plate: ${accident.vehiclePlateNumber || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.vehiclePlate')}: ${accident.vehiclePlateNumber || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Driver Name: ${accident.driverName || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.driverName')}: ${accident.driverName || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Driver Phone: ${accident.driverPhoneNumber || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.driverPhone')}: ${accident.driverPhoneNumber || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Driver License No: ${accident.driverLicenseNumber || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.driverLicense')}: ${accident.driverLicenseNumber || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Driver National ID: ${accident.driverNationalIdNumber || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.driverNationalId')}: ${accident.driverNationalIdNumber || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Insurance Company: ${accident.insuranceCompany || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.insuranceCompany')}: ${accident.insuranceCompany || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
-      doc.text(`Claim Reference: ${accident.claimReferenceNumber || 'N/A'}`, 20, yPosition);
+      doc.text(
+        `${t('pdf.labels.claimReference')}: ${accident.claimReferenceNumber || t('labels.notAvailable')}`,
+        20,
+        yPosition,
+      );
       yPosition += 8;
 
       // Handle long descriptions
-      const description = accident.description || accident.locationDescription || 'N/A';
-      if (description !== 'N/A' && description.length > 80) {
-        const lines = doc.splitTextToSize(`Description: ${description}`, 150);
+      const description = accident.description || accident.locationDescription || t('labels.notAvailable');
+      if (description !== t('labels.notAvailable') && description.length > 80) {
+        const lines = doc.splitTextToSize(`${t('pdf.labels.description')}: ${description}`, 150);
         doc.text(lines, 20, yPosition);
         yPosition += lines.length * 5 + 5;
       } else {
-        doc.text(`Description: ${description}`, 20, yPosition);
+        doc.text(`${t('pdf.labels.description')}: ${description}`, 20, yPosition);
         yPosition += 8;
       }
 
       // Section 2: Damage Assessment
       if (accident.damageLevel || accident.damageDescription || accident.damagedComponents?.length) {
         doc.setFontSize(16);
-        doc.text('2. Damage Assessment', 20, yPosition);
+        doc.text(`2. ${t('pdf.sections.damageAssessment')}`, 20, yPosition);
         yPosition += 15;
 
         doc.setFontSize(10);
 
         if (accident.damageLevel && typeof accident.damageLevel === 'string') {
-          doc.text(`Damage Level: ${accident.damageLevel.replace(/_/g, ' ')}`, 20, yPosition);
+          doc.text(`${t('pdf.labels.damageLevel')}: ${accident.damageLevel.replace(/_/g, ' ')}`, 20, yPosition);
           yPosition += 8;
         } else {
-          doc.text('Damage Level: N/A', 20, yPosition);
+          doc.text(`${t('pdf.labels.damageLevel')}: ${t('labels.notAvailable')}`, 20, yPosition);
           yPosition += 8;
         }
 
         if (accident.damageDescription) {
           if (accident.damageDescription.length > 80) {
-            const lines = doc.splitTextToSize(`Description: ${accident.damageDescription}`, 150);
+            const lines = doc.splitTextToSize(`${t('pdf.labels.description')}: ${accident.damageDescription}`, 150);
             doc.text(lines, 20, yPosition);
             yPosition += lines.length * 5 + 5;
           } else {
-            doc.text(`Description: ${accident.damageDescription}`, 20, yPosition);
+            doc.text(`${t('pdf.labels.description')}: ${accident.damageDescription}`, 20, yPosition);
             yPosition += 8;
           }
         }
 
         if (accident.safetyRisk !== undefined) {
-          doc.text(`Safety Risk: ${accident.safetyRisk ? 'High Risk' : 'Safe'}`, 20, yPosition);
+          doc.text(
+            `${t('pdf.labels.safetyRisk')}: ${accident.safetyRisk ? t('labels.highRisk') : t('labels.safe')}`,
+            20,
+            yPosition,
+          );
           yPosition += 8;
         }
 
         if (accident.damagedComponents?.length) {
           const componentNames = accident.damagedComponents
-            .map(dc => componentNameMap[dc.damagedComponentId] || dc.damagedComponentId || 'Unknown Component')
+            .map(dc => componentNameMap[dc.damagedComponentId] || dc.damagedComponentId || t('labels.unknownComponent'))
             .join(', ');
           if (componentNames.length > 80) {
-            const lines = doc.splitTextToSize(`Damaged Components: ${componentNames}`, 150);
+            const lines = doc.splitTextToSize(`${t('pdf.labels.damagedComponents')}: ${componentNames}`, 150);
             doc.text(lines, 20, yPosition);
             yPosition += lines.length * 5 + 5;
           } else {
-            doc.text(`Damaged Components: ${componentNames}`, 20, yPosition);
+            doc.text(`${t('pdf.labels.damagedComponents')}: ${componentNames}`, 20, yPosition);
             yPosition += 8;
           }
         }
@@ -732,13 +809,13 @@ export default function AccidentDetailPage() {
       // Section 3: Cost Estimation
       if (accident.costBreakdown || accident.estimatedCost) {
         doc.setFontSize(16);
-        doc.text('3. Cost Estimation', 20, yPosition);
+        doc.text(`3. ${t('pdf.sections.costEstimation')}`, 20, yPosition);
         yPosition += 15;
 
         doc.setFontSize(10);
 
         if (accident.estimatedCost) {
-          doc.text(`Estimated Total Cost: ${formatCurrency(accident.estimatedCost)}`, 20, yPosition);
+          doc.text(`${t('pdf.labels.estimatedTotalCost')}: ${formatCurrency(accident.estimatedCost)}`, 20, yPosition);
           yPosition += 10;
         }
 
@@ -756,12 +833,12 @@ export default function AccidentDetailPage() {
           });
 
           if (accident.costBreakdown.labor) {
-            doc.text(`Labor Cost: ${formatCurrency(accident.costBreakdown.labor)}`, 20, yPosition);
+            doc.text(`${t('labels.laborCost')}: ${formatCurrency(accident.costBreakdown.labor)}`, 20, yPosition);
             yPosition += 8;
           }
 
           if (accident.costBreakdown.transport) {
-            doc.text(`Transport Cost: ${formatCurrency(accident.costBreakdown.transport)}`, 20, yPosition);
+            doc.text(`${t('labels.transportCost')}: ${formatCurrency(accident.costBreakdown.transport)}`, 20, yPosition);
             yPosition += 8;
           }
 
@@ -777,7 +854,7 @@ export default function AccidentDetailPage() {
 
           yPosition += 5; // Add some space before total
           doc.setFontSize(12);
-          doc.text(`Total Loss Cost: ${formatCurrency(totalCost)}`, 20, yPosition);
+          doc.text(`${t('labels.totalLossCost')}: ${formatCurrency(totalCost)}`, 20, yPosition);
           yPosition += 15;
           doc.setFontSize(10);
         }
@@ -786,19 +863,19 @@ export default function AccidentDetailPage() {
       // Section 4: Evidence Summary
       if (accident.photos?.length || accident.attachments?.length) {
         doc.setFontSize(16);
-        doc.text('4. Evidence Summary', 20, yPosition);
+        doc.text(`4. ${t('pdf.sections.evidenceSummary')}`, 20, yPosition);
         yPosition += 15;
 
         doc.setFontSize(10);
 
         if (accident.photos?.length) {
-          doc.text(`Photos: ${accident.photos.length} photo(s) available`, 20, yPosition);
+          doc.text(t('pdf.photosAvailable', { count: accident.photos.length }), 20, yPosition);
           yPosition += 10;
 
           // Add photo URLs (for reference)
           doc.setFontSize(8);
           accident.photos.forEach((photo: any, index: number) => {
-            const photoUrl = photo.url || photo.path || `Photo ${index + 1}`;
+            const photoUrl = photo.url || photo.path || t('pdf.photoLabel', { index: index + 1 });
             if (yPosition > 250) { // Check if we need a new page
               doc.addPage();
               yPosition = 20;
@@ -811,7 +888,7 @@ export default function AccidentDetailPage() {
         }
 
         if (accident.attachments?.length) {
-          doc.text(`Attachments: ${accident.attachments.length} document(s) attached`, 20, yPosition);
+          doc.text(t('pdf.attachmentsAvailable', { count: accident.attachments.length }), 20, yPosition);
           yPosition += 8;
         }
       }
@@ -825,11 +902,11 @@ export default function AccidentDetailPage() {
         }
 
         doc.setFontSize(16);
-        doc.text('5. Accident Images', 20, yPosition);
+        doc.text(`5. ${t('pdf.sections.accidentImages')}`, 20, yPosition);
         yPosition += 15;
 
         doc.setFontSize(10);
-        doc.text('Embedded accident photographs:', 20, yPosition);
+        doc.text(t('pdf.embeddedPhotos'), 20, yPosition);
         yPosition += 10;
 
         // Process images asynchronously
@@ -842,40 +919,43 @@ export default function AccidentDetailPage() {
               return null;
             }
 
-            // Convert relative URL to full URL - try MinIO first for accident photos
+            // Convert relative URL to full URL and try multiple known path shapes.
             let fullUrl: string;
             if (imageUrl.startsWith('http')) {
               fullUrl = imageUrl;
             } else {
-              // For accident photos, try MinIO URL first
-              fullUrl = `http://localhost:9000/lightpoles/${imageUrl}`;
+              fullUrl = toApiOriginUrl(`/lightpoles/${imageUrl.replace(/^\//, '')}`);
             }
 
             console.log(`Loading image ${index + 1} from:`, fullUrl, 'original path:', imageUrl);
 
             // Try multiple URL formats if the first one fails
-            let response: Response;
+            const mediaCandidates = imageUrl.startsWith('http')
+              ? [imageUrl]
+              : [
+                  fullUrl,
+                  toApiOriginUrl(`/${imageUrl.replace(/^\//, '')}`),
+                  toApiOriginUrl(`/uploads/accidents/${imageUrl.replace(/^\//, '')}`),
+                ];
+
+            let response: Response | undefined;
             let finalUrl = fullUrl;
 
-            try {
-              response = await fetch(fullUrl);
-              if (!response.ok) {
-                // Try alternative URL format
-                const altUrl = `http://localhost:3011/${imageUrl}`;
-                console.log(`First URL failed, trying alternative:`, altUrl);
-                response = await fetch(altUrl);
-                finalUrl = altUrl;
-              }
-            } catch (firstError) {
-              // Try alternative URL format
+            for (const candidate of mediaCandidates) {
               try {
-                const altUrl = `http://localhost:3011/${imageUrl}`;
-                console.log(`Primary URL failed, trying alternative:`, altUrl);
-                response = await fetch(altUrl);
-                finalUrl = altUrl;
-              } catch (secondError) {
-                throw new Error(`Failed to load image from both URLs: ${firstError} | ${secondError}`);
+                const res = await fetch(candidate);
+                if (res.ok) {
+                  response = res;
+                  finalUrl = candidate;
+                  break;
+                }
+              } catch {
+                // Try next candidate URL.
               }
+            }
+
+            if (!response) {
+              throw new Error(`Failed to load image from candidates: ${mediaCandidates.join(', ')}`);
             }
 
             if (!response.ok) {
@@ -886,7 +966,7 @@ export default function AccidentDetailPage() {
             return new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
               reader.onload = () => resolve(reader.result as string);
-              reader.onerror = () => reject(new Error('Failed to read image file'));
+              reader.onerror = () => reject(new Error(t('errors.readImageFile')));
               reader.readAsDataURL(blob);
             });
           } catch (error) {
@@ -910,7 +990,7 @@ export default function AccidentDetailPage() {
 
             // Add image title
             doc.setFontSize(10);
-            doc.text(`Image ${index + 1}:`, 20, yPosition);
+            doc.text(t('pdf.imageLabel', { index: index + 1 }), 20, yPosition);
             yPosition += 8;
 
             if (imageData) {
@@ -927,25 +1007,25 @@ export default function AccidentDetailPage() {
                 console.log(`Successfully added image ${index + 1} to PDF`);
               } catch (imageError) {
                 console.error(`Failed to add image ${index + 1} to PDF:`, imageError);
-                doc.text(`[Image failed to load]`, 25, yPosition);
+                doc.text(t('pdf.imageFailedToLoad'), 25, yPosition);
                 yPosition += 8;
               }
             } else {
               // Image failed to load
-              doc.text(`[Image failed to load from server]`, 25, yPosition);
+              doc.text(t('pdf.imageFailedFromServer'), 25, yPosition);
               yPosition += 8;
             }
 
             // Add image description if available
             if (photo.description) {
-              doc.text(`Description: ${photo.description}`, 25, yPosition);
+              doc.text(`${t('pdf.description')}: ${photo.description}`, 25, yPosition);
               yPosition += 8;
             }
 
             // Add filename if available
             if (photo.filename || photo.name) {
               doc.setFontSize(8);
-              doc.text(`File: ${photo.filename || photo.name}`, 25, yPosition);
+              doc.text(`${t('pdf.file')}: ${photo.filename || photo.name}`, 25, yPosition);
               yPosition += 6;
               doc.setFontSize(10);
             }
@@ -954,7 +1034,7 @@ export default function AccidentDetailPage() {
           });
         } catch (error) {
           console.error('Error processing images:', error);
-          doc.text('Error loading images for PDF.', 20, yPosition);
+          doc.text(t('pdf.errorLoadingImages'), 20, yPosition);
           yPosition += 8;
         }
       }
@@ -964,7 +1044,7 @@ export default function AccidentDetailPage() {
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
-        doc.text(`Generated by Addis Ababa Light Poles Management System - Page ${i} of ${pageCount}`, 20, 280);
+        doc.text(t('pdf.footer', { page: i, total: pageCount }), 20, 280);
       }
 
       // Save the PDF
@@ -974,8 +1054,8 @@ export default function AccidentDetailPage() {
       // Close loading notification and show success
       notifications.update({
         id: loadingNotification,
-        title: 'Report Downloaded',
-        message: 'Comprehensive accident report with images has been downloaded successfully.',
+        title: t('notifications.reportDownloaded.title'),
+        message: t('notifications.reportDownloaded.message'),
         color: 'green',
         loading: false,
         autoClose: 3000,
@@ -986,8 +1066,8 @@ export default function AccidentDetailPage() {
       // Close loading notification and show error
       notifications.update({
         id: loadingNotification,
-        title: 'Error',
-        message: 'Failed to generate PDF report. Please try again.',
+        title: t('notifications.errorTitle'),
+        message: t('notifications.reportDownloadError'),
         color: 'red',
         loading: false,
         autoClose: 5000,
@@ -1026,8 +1106,8 @@ export default function AccidentDetailPage() {
   if (error || !accident) {
     return (
       <Container size="xl" py="xl">
-        <Alert color="red" title="Error">
-          Failed to load accident details. Please try again.
+        <Alert color="red" title={t('error.title')}>
+          {t('error.loadFailed')}
         </Alert>
       </Container>
     );
@@ -1040,7 +1120,10 @@ export default function AccidentDetailPage() {
         <div>
           <Title order={2}>{accident.incidentId}</Title>
           <Text c="dimmed">
-            Reported on {formatDate(accident.createdAt)} by {accident.reportedBy?.fullName}
+            {t('header.reportedOn', {
+              date: formatDate(accident.createdAt),
+              name: accident.reportedBy?.fullName,
+            })}
           </Text>
         </div>
         <Group>
@@ -1050,7 +1133,7 @@ export default function AccidentDetailPage() {
             onClick={() => downloadReportMutation.mutate('incident')}
             loading={downloadReportMutation.isPending}
           >
-            Incident Report
+            {t('actions.downloadIncidentReport')}
           </Button>
           <Button
             variant="light"
@@ -1058,7 +1141,7 @@ export default function AccidentDetailPage() {
             onClick={() => downloadReportMutation.mutate('damage-assessment')}
             loading={downloadReportMutation.isPending}
           >
-            Damage Assessment
+            {t('actions.downloadDamageAssessment')}
           </Button>
           <Button
             variant="light"
@@ -1066,7 +1149,7 @@ export default function AccidentDetailPage() {
             onClick={() => downloadReportMutation.mutate('cost-estimate')}
             loading={downloadReportMutation.isPending}
           >
-            Cost Estimate
+            {t('actions.downloadCostEstimate')}
           </Button>
         </Group>
       </Group>
@@ -1077,11 +1160,11 @@ export default function AccidentDetailPage() {
           {accident.status.replace(/_/g, ' ')}
         </Badge>
         <Badge color={getClaimStatusColor(accident.claimStatus)} size="lg">
-          Claim: {accident.claimStatus.replace(/_/g, ' ')}
+          {t('labels.claim')}: {accident.claimStatus.replace(/_/g, ' ')}
         </Badge>
         {accident.estimatedCost && (
           <Badge color="blue" size="lg">
-            Estimated Cost: {formatCurrency(accident.estimatedCost)}
+            {t('labels.estimatedCost')}: {formatCurrency(accident.estimatedCost)}
           </Badge>
         )}
       </Group>
@@ -1093,18 +1176,18 @@ export default function AccidentDetailPage() {
           leftSection={<IconArrowLeft size={16} />}
           onClick={() => navigate('/accidents')}
         >
-          Back to Accidents List
+          {t('actions.backToList')}
         </Button>
       </Group>
 
       <Tabs defaultValue="details">
         <Tabs.List>
-          <Tabs.Tab value="details">Incident Details</Tabs.Tab>
-          <Tabs.Tab value="assessment">Damage Assessment</Tabs.Tab>
-          <Tabs.Tab value="photos">Photos & Evidence</Tabs.Tab>
-          <Tabs.Tab value="approvals">Approval History</Tabs.Tab>
+          <Tabs.Tab value="details">{t('tabs.details')}</Tabs.Tab>
+          <Tabs.Tab value="assessment">{t('tabs.assessment')}</Tabs.Tab>
+          <Tabs.Tab value="photos">{t('tabs.photos')}</Tabs.Tab>
+          <Tabs.Tab value="approvals">{t('tabs.approvals')}</Tabs.Tab>
           {(isAdmin || accident?.status === 'APPROVED' || accident?.status === 'UNDER_REPAIR' || accident?.status === 'COMPLETED') && (
-            <Tabs.Tab value="claims">Insurance Claims</Tabs.Tab>
+            <Tabs.Tab value="claims">{t('tabs.claims')}</Tabs.Tab>
           )}
         </Tabs.List>
 
@@ -1114,16 +1197,16 @@ export default function AccidentDetailPage() {
             <Grid.Col span={{ base: 12, md: 8 }}>
               <Card withBorder mb="md">
                 <Card.Section withBorder inheritPadding py="sm">
-                  <Title order={4}>Incident Information</Title>
+                  <Title order={4}>{t('sections.incidentInformation')}</Title>
                 </Card.Section>
                 <Stack p="md" gap="md">
                   <Grid>
                     <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text fw={500}>Accident Type</Text>
+                      <Text fw={500}>{t('fields.accidentType')}</Text>
                       <Text>{accident.accidentType.replace(/_/g, ' ')}</Text>
                     </Grid.Col>
                     <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text fw={500}>Date & Time</Text>
+                      <Text fw={500}>{t('fields.dateTime')}</Text>
                       <Text>{formatDate(accident.accidentDate)} {accident.accidentTime}</Text>
                     </Grid.Col>
                   </Grid>
@@ -1131,11 +1214,11 @@ export default function AccidentDetailPage() {
                   <Divider />
 
                   <div>
-                    <Text fw={500}>Location</Text>
+                    <Text fw={500}>{t('fields.location')}</Text>
                     <Text>{accident.locationDescription}</Text>
                     {accident.latitude && accident.longitude && (
                       <Text size="sm" c="dimmed">
-                        Coordinates: {accident.latitude}, {accident.longitude}
+                        {t('fields.coordinates')}: {accident.latitude}, {accident.longitude}
                       </Text>
                     )}
                   </div>
@@ -1143,8 +1226,10 @@ export default function AccidentDetailPage() {
                   <Divider />
 
                   <div>
-                    <Text fw={500}>Pole Information</Text>
-                    <Text>Pole ID: {accident.poleId || 'Not specified'}</Text>
+                    <Text fw={500}>{t('fields.poleInformation')}</Text>
+                    <Text>
+                      {t('fields.poleId')}: {accident.poleId || t('labels.notSpecified')}
+                    </Text>
                   </div>
                 </Stack>
               </Card>
@@ -1153,29 +1238,29 @@ export default function AccidentDetailPage() {
                 <Card.Section withBorder inheritPadding py="sm">
                   <Title order={4}>
                     <IconCar size={16} style={{ marginRight: 8 }} />
-                    Vehicle & Insurance Information
+                    {t('sections.vehicleInsurance')}
                   </Title>
                 </Card.Section>
                 <Stack p="md" gap="md">
                   <Grid>
                     <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text fw={500}>Vehicle Plate Number</Text>
-                      <Text>{accident.vehiclePlateNumber || 'Not provided'}</Text>
+                      <Text fw={500}>{t('fields.vehiclePlateNumber')}</Text>
+                      <Text>{accident.vehiclePlateNumber || t('labels.notProvided')}</Text>
                     </Grid.Col>
                     <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text fw={500}>Driver Name</Text>
-                      <Text>{accident.driverName || 'Not provided'}</Text>
+                      <Text fw={500}>{t('fields.driverName')}</Text>
+                      <Text>{accident.driverName || t('labels.notProvided')}</Text>
                     </Grid.Col>
                   </Grid>
 
                   <Grid>
                     <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text fw={500}>Insurance Company</Text>
-                      <Text>{accident.insuranceCompany || 'Not provided'}</Text>
+                      <Text fw={500}>{t('fields.insuranceCompany')}</Text>
+                      <Text>{accident.insuranceCompany || t('labels.notProvided')}</Text>
                     </Grid.Col>
                     <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text fw={500}>Claim Reference</Text>
-                      <Text>{accident.claimReferenceNumber || 'Not provided'}</Text>
+                      <Text fw={500}>{t('fields.claimReference')}</Text>
+                      <Text>{accident.claimReferenceNumber || t('labels.notProvided')}</Text>
                     </Grid.Col>
                   </Grid>
                 </Stack>
@@ -1186,7 +1271,7 @@ export default function AccidentDetailPage() {
               {/* Action Buttons */}
               <Card withBorder mb="md">
                 <Card.Section withBorder inheritPadding py="sm">
-                  <Title order={4}>Actions</Title>
+                  <Title order={4}>{t('sections.actions')}</Title>
                 </Card.Section>
                 <Stack p="md" gap="sm">
                   {accident?.status === 'REPORTED' && (
@@ -1196,7 +1281,7 @@ export default function AccidentDetailPage() {
                       onClick={openEdit}
                       variant="light"
                     >
-                      Edit Incident Details
+                      {t('actions.editIncident')}
                     </Button>
                   )}
 
@@ -1206,7 +1291,7 @@ export default function AccidentDetailPage() {
                       leftSection={<IconEdit size={16} />}
                       onClick={openDamageAssessmentModal}
                     >
-                      Perform Damage Assessment
+                      {t('actions.performDamageAssessment')}
                     </Button>
                   )}
 
@@ -1217,7 +1302,7 @@ export default function AccidentDetailPage() {
                       color="green"
                       onClick={openApproval}
                     >
-                      Process Approval
+                      {t('actions.processApproval')}
                     </Button>
                   )}
 
@@ -1227,7 +1312,7 @@ export default function AccidentDetailPage() {
                     leftSection={<IconFileDownload size={16} />}
                     onClick={() => downloadComprehensiveReport()}
                   >
-                    Download Full Report (PDF)
+                    {t('actions.downloadFullReport')}
                   </Button>
 
                   {(canApproveSupervisor || canApproveFinance) && accident?.status === 'APPROVED' && (
@@ -1237,7 +1322,7 @@ export default function AccidentDetailPage() {
                       color="green"
                       disabled
                     >
-                      Approval Completed
+                      {t('actions.approvalCompleted')}
                     </Button>
                   )}
 
@@ -1248,7 +1333,7 @@ export default function AccidentDetailPage() {
                       color="blue"
                       onClick={openApproval}
                     >
-                      Complete Repairs
+                      {t('actions.completeRepairs')}
                     </Button>
                   )}
 
@@ -1259,7 +1344,7 @@ export default function AccidentDetailPage() {
                       color="blue"
                       disabled
                     >
-                      Repairs Completed
+                      {t('actions.repairsCompleted')}
                     </Button>
                   )}
 
@@ -1270,7 +1355,7 @@ export default function AccidentDetailPage() {
                       leftSection={<IconCamera size={16} />}
                       onClick={openPhotoUpload}
                     >
-                      Add Photos
+                      {t('actions.addPhotos')}
                     </Button>
                   )}
 
@@ -1281,7 +1366,7 @@ export default function AccidentDetailPage() {
                       leftSection={<IconFileText size={16} />}
                       onClick={openAttachmentUpload}
                     >
-                      Add Attachments
+                      {t('actions.addAttachments')}
                     </Button>
                   )}
 
@@ -1293,7 +1378,7 @@ export default function AccidentDetailPage() {
                         leftSection={<IconCamera size={16} />}
                         disabled
                       >
-                        Photos Locked
+                        {t('actions.photosLocked')}
                       </Button>
 
                       <Button
@@ -1302,7 +1387,7 @@ export default function AccidentDetailPage() {
                         leftSection={<IconFileText size={16} />}
                         disabled
                       >
-                        Attachments Locked
+                        {t('actions.attachmentsLocked')}
                       </Button>
                     </>
                   )}
@@ -1312,19 +1397,19 @@ export default function AccidentDetailPage() {
               {/* Quick Stats */}
               <Card withBorder>
                 <Card.Section withBorder inheritPadding py="sm">
-                  <Title order={4}>Quick Stats</Title>
+                  <Title order={4}>{t('sections.quickStats')}</Title>
                 </Card.Section>
                 <Stack p="md" gap="sm">
                   <div>
-                    <Text size="sm" c="dimmed">Photos</Text>
+                    <Text size="sm" c="dimmed">{t('stats.photos')}</Text>
                     <Text fw={500}>{accident.photos?.length || 0}</Text>
                   </div>
                   <div>
-                    <Text size="sm" c="dimmed">Attachments</Text>
+                    <Text size="sm" c="dimmed">{t('stats.attachments')}</Text>
                     <Text fw={500}>{accident.attachments?.length || 0}</Text>
                   </div>
                   <div>
-                    <Text size="sm" c="dimmed">Approval Steps</Text>
+                    <Text size="sm" c="dimmed">{t('stats.approvalSteps')}</Text>
                     <Text fw={500}>{accident.approvals?.length || 0}</Text>
                   </div>
                 </Stack>
@@ -1337,32 +1422,32 @@ export default function AccidentDetailPage() {
         <Tabs.Panel value="assessment" pt="xl">
           <Card withBorder>
             <Card.Section withBorder inheritPadding py="sm">
-              <Title order={4}>Damage Assessment</Title>
+              <Title order={4}>{t('sections.damageAssessment')}</Title>
             </Card.Section>
             <Stack p="md" gap="md">
               {accident.damageLevel ? (
                 <>
                   <Grid>
                     <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text fw={500}>Damage Level</Text>
+                      <Text fw={500}>{t('fields.damageLevel')}</Text>
                       <Badge color="red">{accident.damageLevel}</Badge>
                     </Grid.Col>
                     <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text fw={500}>Safety Risk</Text>
+                      <Text fw={500}>{t('fields.safetyRisk')}</Text>
                       <Badge color={accident.safetyRisk ? 'red' : 'green'}>
-                        {accident.safetyRisk ? 'Yes' : 'No'}
+                        {accident.safetyRisk ? t('labels.yes') : t('labels.no')}
                       </Badge>
                     </Grid.Col>
                   </Grid>
 
                   <div>
-                    <Text fw={500}>Damage Description</Text>
+                    <Text fw={500}>{t('fields.damageDescription')}</Text>
                     <Text>{accident.damageDescription}</Text>
                   </div>
 
                   {accident.estimatedCost && (
                     <div>
-                      <Text fw={500}>Estimated Cost</Text>
+                      <Text fw={500}>{t('labels.estimatedCost')}</Text>
                       <Text size="lg" fw={600} c="green">{formatCurrency(accident.estimatedCost)}</Text>
                     </div>
                   )}
@@ -1370,7 +1455,7 @@ export default function AccidentDetailPage() {
                   {accident.costBreakdown && (
                     <Card withBorder>
                       <Card.Section withBorder inheritPadding py="sm">
-                        <Title order={5}>Detailed Cost Breakdown</Title>
+                        <Title order={5}>{t('sections.detailedCostBreakdown')}</Title>
                       </Card.Section>
                       <Stack p="md" gap="xs">
                         {/* Calculate displayed components count for total */}
@@ -1397,14 +1482,14 @@ export default function AccidentDetailPage() {
                               {/* Show labor and transport costs */}
                               {accident.costBreakdown?.labor && (
                                 <Group justify="space-between">
-                                  <Text size="sm">Labor Cost:</Text>
+                                  <Text size="sm">{t('labels.laborCost')}:</Text>
                                   <Text size="sm" fw={500}>{formatCurrency(accident.costBreakdown.labor)}</Text>
                                 </Group>
                               )}
 
                               {accident.costBreakdown?.transport && (
                                 <Group justify="space-between">
-                                  <Text size="sm">Transport Cost:</Text>
+                                  <Text size="sm">{t('labels.transportCost')}:</Text>
                                   <Text size="sm" fw={500}>{formatCurrency(accident.costBreakdown.transport)}</Text>
                                 </Group>
                               )}
@@ -1412,7 +1497,7 @@ export default function AccidentDetailPage() {
                               {/* Show total loss cost */}
                               <Divider />
                               <Group justify="space-between">
-                                <Text size="sm" fw={600}>Total Loss Cost:</Text>
+                                <Text size="sm" fw={600}>{t('labels.totalLossCost')}:</Text>
                                 <Text size="sm" fw={600}>
                                   {formatCurrency(
                                     (displayedComponents.length * 2000.00) +
@@ -1436,19 +1521,19 @@ export default function AccidentDetailPage() {
                         leftSection={<IconEdit size={16} />}
                         onClick={openDamageAssessmentModal}
                       >
-                        Perform Damage Assessment
+                        {t('actions.performDamageAssessment')}
                       </Button>
                     </Group>
                   ) : (
                     <Alert color="blue">
-                      {isAdmin && ' As an admin, you can perform all actions in the workflow.'}
-                      {!isAdmin && accident?.status === 'REPORTED' && !canInspect && ' Click the "Perform Damage Assessment" button to get started.'}
-                      {!isAdmin && accident?.status === 'INSPECTED' && (canApproveSupervisor || canApproveFinance) && ' Click the "Process Approval" button to continue the workflow.'}
-                      {!isAdmin && accident?.status === 'SUPERVISOR_REVIEW' && canApproveFinance && ' Click the "Process Approval" button for final finance approval.'}
-                      {!isAdmin && accident?.status === 'APPROVED' && ' Accident has been approved. Repairs can begin and insurance claims can be filed.'}
-                      {!isAdmin && accident?.status === 'UNDER_REPAIR' && canCompleteRepair && ' Repairs are in progress. Click the "Complete Repairs" button when finished. Insurance claims can be managed in the Claims tab.'}
-                      {!isAdmin && accident?.status === 'COMPLETED' && ' Accident repairs have been completed. Insurance claims can be managed in the Claims tab.'}
-                      {!isAdmin && accident?.status === 'REJECTED' && ' This accident report has been rejected.'}
+                      {isAdmin && ` ${t('guidance.admin')}`}
+                      {!isAdmin && accident?.status === 'REPORTED' && !canInspect && ` ${t('guidance.reported')}`}
+                      {!isAdmin && accident?.status === 'INSPECTED' && (canApproveSupervisor || canApproveFinance) && ` ${t('guidance.inspected')}`}
+                      {!isAdmin && accident?.status === 'SUPERVISOR_REVIEW' && canApproveFinance && ` ${t('guidance.supervisorReview')}`}
+                      {!isAdmin && accident?.status === 'APPROVED' && ` ${t('guidance.approved')}`}
+                      {!isAdmin && accident?.status === 'UNDER_REPAIR' && canCompleteRepair && ` ${t('guidance.underRepair')}`}
+                      {!isAdmin && accident?.status === 'COMPLETED' && ` ${t('guidance.completed')}`}
+                      {!isAdmin && accident?.status === 'REJECTED' && ` ${t('guidance.rejected')}`}
                     </Alert>
                   )}
                 </>
@@ -1463,7 +1548,7 @@ export default function AccidentDetailPage() {
             <Grid.Col span={{ base: 12, md: 6 }}>
               <Card withBorder mb="md">
                 <Card.Section withBorder inheritPadding py="sm">
-                  <Title order={4}>Photos ({accident.photos?.length || 0})</Title>
+                  <Title order={4}>{t('sections.photos', { count: accident.photos?.length || 0 })}</Title>
                 </Card.Section>
                 <Stack p="md" gap="md">
                   {accident.photos?.length > 0 ? (
@@ -1492,7 +1577,7 @@ export default function AccidentDetailPage() {
                             <Image
                               src={photo.path}
                               height={250}
-                              alt={photo.description || 'Accident photo'}
+                              alt={photo.description || t('labels.accidentPhoto')}
                               fit="cover"
                               style={{
                                 transition: 'transform 0.2s ease',
@@ -1574,14 +1659,14 @@ export default function AccidentDetailPage() {
                             }}
                           >
                             <Text size="sm" c="white" fw={500}>
-                              Uploaded: {formatDate(photo.createdAt)}
+                              {t('labels.uploaded')}: {formatDate(photo.createdAt)}
                             </Text>
                           </div>
                         </Card.Section>
                       </Card>
                     ))
                   ) : (
-                    <Text c="dimmed">No photos uploaded yet.</Text>
+                    <Text c="dimmed">{t('empty.photos')}</Text>
                   )}
                 </Stack>
               </Card>
@@ -1590,7 +1675,7 @@ export default function AccidentDetailPage() {
             <Grid.Col span={{ base: 12, md: 6 }}>
               <Card withBorder mb="md">
                 <Card.Section withBorder inheritPadding py="sm">
-                  <Title order={4}>Attachments ({accident.attachments?.length || 0})</Title>
+                  <Title order={4}>{t('sections.attachments', { count: accident.attachments?.length || 0 })}</Title>
                 </Card.Section>
                 <Stack p="md" gap="md">
                   {accident.attachments?.length > 0 ? (
@@ -1600,10 +1685,10 @@ export default function AccidentDetailPage() {
                           <div>
                             <Text fw={500}>{attachment.originalName}</Text>
                             <Text size="sm" c="dimmed">
-                              Type: {attachment.attachmentType.replace(/_/g, ' ')}
+                              {t('labels.type')}: {attachment.attachmentType.replace(/_/g, ' ')}
                             </Text>
                             <Text size="xs" c="dimmed">
-                              Uploaded: {formatDate(attachment.createdAt)}
+                              {t('labels.uploaded')}: {formatDate(attachment.createdAt)}
                             </Text>
                           </div>
                           <Button
@@ -1613,13 +1698,13 @@ export default function AccidentDetailPage() {
                             href={`/uploads/accidents/${attachment.filename}`}
                             target="_blank"
                           >
-                            View
+                            {t('actions.view')}
                           </Button>
                         </Group>
                       </Card>
                     ))
                   ) : (
-                    <Text c="dimmed">No attachments uploaded yet.</Text>
+                    <Text c="dimmed">{t('empty.attachments')}</Text>
                   )}
                 </Stack>
               </Card>
@@ -1631,7 +1716,7 @@ export default function AccidentDetailPage() {
         <Tabs.Panel value="approvals" pt="xl">
           <Card withBorder>
             <Card.Section withBorder inheritPadding py="sm">
-              <Title order={4}>Approval History</Title>
+              <Title order={4}>{t('sections.approvalHistory')}</Title>
             </Card.Section>
             <Stack p="md" gap="md">
               {accident.approvals?.length > 0 ? (
@@ -1644,7 +1729,10 @@ export default function AccidentDetailPage() {
                       lineVariant="dashed"
                     >
                       <Text size="sm" c="dimmed">
-                        {formatDate(approval.createdAt)} by {approval.approvedBy?.fullName}
+                        {t('labels.approvedBy', {
+                          date: formatDate(approval.createdAt),
+                          name: approval.approvedBy?.fullName,
+                        })}
                       </Text>
                       {approval.comments && (
                         <Text size="sm" mt="xs">
@@ -1652,13 +1740,16 @@ export default function AccidentDetailPage() {
                         </Text>
                       )}
                       <Text size="xs" c="dimmed" mt="xs">
-                        Status changed from {approval.previousStatus.replace(/_/g, ' ')} to {approval.newStatus.replace(/_/g, ' ')}
+                        {t('labels.statusChanged', {
+                          from: approval.previousStatus.replace(/_/g, ' '),
+                          to: approval.newStatus.replace(/_/g, ' '),
+                        })}
                       </Text>
                     </Timeline.Item>
                   ))}
                 </Timeline>
               ) : (
-                <Text c="dimmed">No approval actions have been taken yet.</Text>
+                <Text c="dimmed">{t('empty.approvals')}</Text>
               )}
             </Stack>
           </Card>
@@ -1670,12 +1761,12 @@ export default function AccidentDetailPage() {
             {/* First: Insurance Claims */}
             <Card withBorder>
               <Card.Section withBorder inheritPadding py="sm">
-                <Title order={4}>Insurance Claims</Title>
+                <Title order={4}>{t('sections.insuranceClaims')}</Title>
               </Card.Section>
               <Stack p="md" gap="md">
                 <Group justify="space-between" align="center">
                   <div>
-                    <Text fw={500}>Claim Status</Text>
+                    <Text fw={500}>{t('fields.claimStatus')}</Text>
                     <Badge
                       color={
                         accident.claimStatus === 'PAID' ? 'green' :
@@ -1684,25 +1775,25 @@ export default function AccidentDetailPage() {
                         accident.claimStatus === 'REJECTED' ? 'red' : 'gray'
                       }
                     >
-                      {accident.claimStatus?.replace(/_/g, ' ') || 'NOT SUBMITTED'}
+                      {accident.claimStatus?.replace(/_/g, ' ') || t('labels.notSubmitted')}
                     </Badge>
                   </div>
                   {(isAdmin || user?.role === 'FINANCE') && (
                     <Select
-                      placeholder="Update claim status"
+                      placeholder={t('placeholders.updateClaimStatus')}
                       data={[
-                        { value: 'NOT_SUBMITTED', label: 'Not Submitted' },
-                        { value: 'SUBMITTED', label: 'Submitted' },
-                        { value: 'APPROVED', label: 'Approved' },
-                        { value: 'REJECTED', label: 'Rejected' },
-                        { value: 'PAID', label: 'Paid' },
+                        { value: 'NOT_SUBMITTED', label: t('claimStatus.notSubmitted') },
+                        { value: 'SUBMITTED', label: t('claimStatus.submitted') },
+                        { value: 'APPROVED', label: t('claimStatus.approved') },
+                        { value: 'REJECTED', label: t('claimStatus.rejected') },
+                        { value: 'PAID', label: t('claimStatus.paid') },
                       ]}
                       onChange={(value) => {
                         console.log('🎯 Claim status change selected:', value);
                         if (value) {
                           const payload = { claimStatus: value };
                           console.log('🎯 Sending payload:', payload);
-                          console.log('🎯 Full API URL:', `http://localhost:3011/api/v1/accidents/${id}/status`);
+                          console.log('🎯 Full API URL:', toApiV1Url(`/accidents/${id}/status`));
                           claimUpdateMutation.mutate(value);
                         }
                       }}
@@ -1713,14 +1804,14 @@ export default function AccidentDetailPage() {
 
                 {accident.insuranceCompany && (
                   <div>
-                    <Text fw={500}>Insurance Company</Text>
+                    <Text fw={500}>{t('fields.insuranceCompany')}</Text>
                     <Text>{accident.insuranceCompany}</Text>
                   </div>
                 )}
 
                 {accident.claimReferenceNumber && (
                   <div>
-                    <Text fw={500}>Claim Reference Number</Text>
+                    <Text fw={500}>{t('fields.claimReferenceNumber')}</Text>
                     <Text>{accident.claimReferenceNumber}</Text>
                   </div>
                 )}
@@ -1730,39 +1821,41 @@ export default function AccidentDetailPage() {
             {/* Second: Cost Information */}
             <Card withBorder>
               <Card.Section withBorder inheritPadding py="sm">
-                <Title order={4}>Cost Information</Title>
+                <Title order={4}>{t('sections.costInformation')}</Title>
               </Card.Section>
               <Stack p="md" gap="md">
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Estimated Cost</Text>
-                    <Text>{accident.estimatedCost ? formatCurrency(accident.estimatedCost) : 'Not estimated yet'}</Text>
+                    <Text fw={500}>{t('labels.estimatedCost')}</Text>
+                    <Text>
+                      {accident.estimatedCost ? formatCurrency(accident.estimatedCost) : t('labels.notEstimatedYet')}
+                    </Text>
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Safety Risk</Text>
+                    <Text fw={500}>{t('fields.safetyRisk')}</Text>
                     <Badge color={accident.safetyRisk ? 'red' : 'green'}>
-                      {accident.safetyRisk ? 'High Risk' : 'Safe'}
+                      {accident.safetyRisk ? t('labels.highRisk') : t('labels.safe')}
                     </Badge>
                   </Grid.Col>
                 </Grid>
 
                 {accident.damageLevel && (
                   <div>
-                    <Text fw={500}>Damage Level</Text>
+                    <Text fw={500}>{t('fields.damageLevel')}</Text>
                     <Text>{accident.damageLevel.replace(/_/g, ' ')}</Text>
                   </div>
                 )}
 
                 {accident.damageDescription && (
                   <div>
-                    <Text fw={500}>Damage Description</Text>
+                    <Text fw={500}>{t('fields.damageDescription')}</Text>
                     <Text>{accident.damageDescription}</Text>
                   </div>
                 )}
 
                 {accident.damagedComponents && accident.damagedComponents.length > 0 && (
                   <div>
-                    <Text fw={500}>Damaged Components</Text>
+                    <Text fw={500}>{t('fields.damagedComponents')}</Text>
                     <Group gap="xs">
                       {accident.damagedComponents.map((damagedComponent, index) => (
                         <Badge key={index} variant="light">
@@ -1777,7 +1870,7 @@ export default function AccidentDetailPage() {
                 {accident.costBreakdown && (
                   <div>
                     <Divider my="md" />
-                    <Text fw={500} mb="md">Detailed Cost Breakdown</Text>
+                    <Text fw={500} mb="md">{t('sections.detailedCostBreakdown')}</Text>
                     <Stack gap="xs">
                       {/* Calculate displayed components count for total */}
                       {(() => {
@@ -1803,14 +1896,14 @@ export default function AccidentDetailPage() {
                             {/* Show labor and transport costs */}
                             {accident.costBreakdown?.labor && (
                               <Group justify="space-between">
-                                <Text size="sm">Labor Cost:</Text>
+                                <Text size="sm">{t('labels.laborCost')}:</Text>
                                 <Text size="sm" fw={500}>{formatCurrency(accident.costBreakdown.labor)}</Text>
                               </Group>
                             )}
 
                             {accident.costBreakdown?.transport && (
                               <Group justify="space-between">
-                                <Text size="sm">Transport Cost:</Text>
+                                <Text size="sm">{t('labels.transportCost')}:</Text>
                                 <Text size="sm" fw={500}>{formatCurrency(accident.costBreakdown.transport)}</Text>
                               </Group>
                             )}
@@ -1818,7 +1911,7 @@ export default function AccidentDetailPage() {
                             {/* Show total loss cost */}
                             <Divider />
                             <Group justify="space-between">
-                              <Text size="sm" fw={600}>Total Loss Cost:</Text>
+                              <Text size="sm" fw={600}>{t('labels.totalLossCost')}:</Text>
                               <Text size="sm" fw={600}>
                                 {formatCurrency(
                                   (displayedComponents.length * 2000.00) +
@@ -1839,16 +1932,16 @@ export default function AccidentDetailPage() {
             {/* Third: Incident Information */}
             <Card withBorder>
               <Card.Section withBorder inheritPadding py="sm">
-                <Title order={4}>Incident Information</Title>
+                <Title order={4}>{t('sections.incidentInformation')}</Title>
               </Card.Section>
               <Stack p="md" gap="md">
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Accident Type</Text>
+                    <Text fw={500}>{t('fields.accidentType')}</Text>
                     <Text>{accident.accidentType.replace(/_/g, ' ')}</Text>
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Date & Time</Text>
+                    <Text fw={500}>{t('fields.dateTime')}</Text>
                     <Text>{formatDate(accident.accidentDate)} {accident.accidentTime}</Text>
                   </Grid.Col>
                 </Grid>
@@ -1856,11 +1949,11 @@ export default function AccidentDetailPage() {
                 <Divider />
 
                 <div>
-                  <Text fw={500}>Location</Text>
+                  <Text fw={500}>{t('fields.location')}</Text>
                   <Text>{accident.locationDescription}</Text>
                   {accident.latitude && accident.longitude && (
                     <Text size="sm" c="dimmed">
-                      Coordinates: {accident.latitude}, {accident.longitude}
+                      {t('fields.coordinates')}: {accident.latitude}, {accident.longitude}
                     </Text>
                   )}
                 </div>
@@ -1868,8 +1961,10 @@ export default function AccidentDetailPage() {
                 <Divider />
 
                 <div>
-                  <Text fw={500}>Pole Information</Text>
-                  <Text>Pole ID: {accident.poleId || 'Not specified'}</Text>
+                  <Text fw={500}>{t('fields.poleInformation')}</Text>
+                  <Text>
+                    {t('fields.poleId')}: {accident.poleId || t('labels.notSpecified')}
+                  </Text>
                 </div>
               </Stack>
             </Card>
@@ -1879,51 +1974,51 @@ export default function AccidentDetailPage() {
               <Card.Section withBorder inheritPadding py="sm">
                 <Title order={4}>
                   <IconCar size={16} style={{ marginRight: 8 }} />
-                  Vehicle & Insurance Information
+                  {t('sections.vehicleInsurance')}
                 </Title>
               </Card.Section>
               <Stack p="md" gap="md">
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Vehicle Plate Number</Text>
-                    <Text>{accident.vehiclePlateNumber || 'Not provided'}</Text>
+                    <Text fw={500}>{t('fields.vehiclePlateNumber')}</Text>
+                    <Text>{accident.vehiclePlateNumber || t('labels.notProvided')}</Text>
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Driver Name</Text>
-                    <Text>{accident.driverName || 'Not provided'}</Text>
-                  </Grid.Col>
-                </Grid>
-
-                <Grid>
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Insurance Company</Text>
-                    <Text>{accident.insuranceCompany || 'Not provided'}</Text>
-                  </Grid.Col>
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Claim Reference</Text>
-                    <Text>{accident.claimReferenceNumber || 'Not provided'}</Text>
+                    <Text fw={500}>{t('fields.driverName')}</Text>
+                    <Text>{accident.driverName || t('labels.notProvided')}</Text>
                   </Grid.Col>
                 </Grid>
 
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Driver Phone Number</Text>
-                    <Text>{accident.driverPhoneNumber || 'Not provided'}</Text>
+                    <Text fw={500}>{t('fields.insuranceCompany')}</Text>
+                    <Text>{accident.insuranceCompany || t('labels.notProvided')}</Text>
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Driver License Number</Text>
-                    <Text>{accident.driverLicenseNumber || 'Not provided'}</Text>
+                    <Text fw={500}>{t('fields.claimReference')}</Text>
+                    <Text>{accident.claimReferenceNumber || t('labels.notProvided')}</Text>
                   </Grid.Col>
                 </Grid>
 
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Driver National ID Number</Text>
-                    <Text>{accident.driverNationalIdNumber || 'Not provided'}</Text>
+                    <Text fw={500}>{t('fields.driverPhoneNumber')}</Text>
+                    <Text>{accident.driverPhoneNumber || t('labels.notProvided')}</Text>
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text fw={500}>Driver License File</Text>
-                    <Text>{accident.driverLicenseFileName || accident.driverLicenseFileUrl || 'Not provided'}</Text>
+                    <Text fw={500}>{t('fields.driverLicenseNumber')}</Text>
+                    <Text>{accident.driverLicenseNumber || t('labels.notProvided')}</Text>
+                  </Grid.Col>
+                </Grid>
+
+                <Grid>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <Text fw={500}>{t('fields.driverNationalIdNumber')}</Text>
+                    <Text>{accident.driverNationalIdNumber || t('labels.notProvided')}</Text>
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <Text fw={500}>{t('fields.driverLicenseFile')}</Text>
+                    <Text>{accident.driverLicenseFileName || accident.driverLicenseFileUrl || t('labels.notProvided')}</Text>
                   </Grid.Col>
                 </Grid>
               </Stack>
@@ -1932,9 +2027,7 @@ export default function AccidentDetailPage() {
             {/* Information Alert */}
             <Alert color="blue">
               <Text size="sm">
-                Insurance claims can be filed as soon as the accident is approved by finance.
-                Claims processing is independent of repair status and can happen in parallel with repairs.
-                Finance team can update claim status as it progresses through the insurance workflow.
+                {t('claimsInfo')}
               </Text>
             </Alert>
           </Stack>
@@ -1945,20 +2038,20 @@ export default function AccidentDetailPage() {
       <Modal
         opened={editOpened}
         onClose={closeEdit}
-        title="Edit Accident Details"
+        title={t('modals.edit.title')}
         size="lg"
       >
         <form onSubmit={editForm.onSubmit(handleEdit)}>
           <Stack gap="md">
             <Select
-              label="Accident Type"
-              placeholder="Select accident type"
+              label={t('fields.accidentType')}
+              placeholder={t('placeholders.selectAccidentType')}
               data={[
-                { value: 'VEHICLE_COLLISION', label: 'Vehicle Collision' },
-                { value: 'NATURAL_DISASTER', label: 'Natural Disaster' },
-                { value: 'VANDALISM', label: 'Vandalism' },
-                { value: 'TECHNICAL_FAILURE', label: 'Technical Failure' },
-                { value: 'OTHER', label: 'Other' },
+                { value: 'VEHICLE_COLLISION', label: t('accidentTypes.vehicleCollision') },
+                { value: 'NATURAL_DISASTER', label: t('accidentTypes.naturalDisaster') },
+                { value: 'VANDALISM', label: t('accidentTypes.vandalism') },
+                { value: 'TECHNICAL_FAILURE', label: t('accidentTypes.technicalFailure') },
+                { value: 'OTHER', label: t('accidentTypes.other') },
               ]}
               required
               {...editForm.getInputProps('accidentType')}
@@ -1966,13 +2059,13 @@ export default function AccidentDetailPage() {
 
             <Group grow>
               <TextInput
-                label="Accident Date"
+                label={t('fields.accidentDate')}
                 type="date"
                 required
                 {...editForm.getInputProps('accidentDate')}
               />
               <TextInput
-                label="Accident Time"
+                label={t('fields.accidentTime')}
                 type="time"
                 required
                 {...editForm.getInputProps('accidentTime')}
@@ -1980,16 +2073,16 @@ export default function AccidentDetailPage() {
             </Group>
 
             <Select
-              label="Pole ID"
-              placeholder="Select pole (optional)"
+              label={t('fields.poleId')}
+              placeholder={t('placeholders.selectPoleOptional')}
               data={poleOptions}
               clearable
               {...editForm.getInputProps('poleId')}
             />
 
             <Textarea
-              label="Location Description"
-              placeholder="Describe the accident location"
+              label={t('fields.locationDescription')}
+              placeholder={t('placeholders.accidentLocation')}
               required
               minRows={3}
               {...editForm.getInputProps('locationDescription')}
@@ -1997,19 +2090,19 @@ export default function AccidentDetailPage() {
 
             <Group grow>
               <TextInput
-                label="Latitude"
+                label={t('fields.latitude')}
                 type="number"
                 step="any"
-                placeholder="Optional (-90 to 90)"
+                placeholder={t('placeholders.latitudeOptional')}
                 min={-90}
                 max={90}
                 {...editForm.getInputProps('latitude')}
               />
               <TextInput
-                label="Longitude"
+                label={t('fields.longitude')}
                 type="number"
                 step="any"
-                placeholder="Optional (-180 to 180)"
+                placeholder={t('placeholders.longitudeOptional')}
                 min={-180}
                 max={180}
                 {...editForm.getInputProps('longitude')}
@@ -2018,57 +2111,57 @@ export default function AccidentDetailPage() {
 
             <Divider />
 
-            <Title order={4}>Vehicle & Insurance Information</Title>
+            <Title order={4}>{t('sections.vehicleInsurance')}</Title>
 
             <Group grow>
               <VehiclePlateInput
-                label="Vehicle Plate Number"
+                label={t('fields.vehiclePlateNumber')}
                 value={editForm.values.vehiclePlateNumber}
                 onChange={(value) => editForm.setFieldValue('vehiclePlateNumber', value)}
                 error={editForm.errors.vehiclePlateNumber}
-                placeholder="Enter plate number"
+                placeholder={t('placeholders.vehiclePlate')}
               />
               <TextInput
-                label="Driver Name"
-                placeholder="Enter driver name"
+                label={t('fields.driverName')}
+                placeholder={t('placeholders.driverName')}
                 {...editForm.getInputProps('driverName')}
               />
             </Group>
 
             <Group grow>
               <Select
-                label="Insurance Company"
-                placeholder="Select insurance company"
+                label={t('fields.insuranceCompany')}
+                placeholder={t('placeholders.selectInsuranceCompany')}
                 data={ETHIOPIAN_INSURANCE_COMPANY_OPTIONS}
                 searchable
                 clearable
                 {...editForm.getInputProps('insuranceCompany')}
               />
               <TextInput
-                label="Claim Reference Number"
-                placeholder="Enter claim reference"
+                label={t('fields.claimReferenceNumber')}
+                placeholder={t('placeholders.claimReference')}
                 {...editForm.getInputProps('claimReferenceNumber')}
               />
             </Group>
 
             <Group grow>
               <EthiopianPhoneInput
-                label="Driver Phone Number"
+                label={t('fields.driverPhoneNumber')}
                 value={editForm.values.driverPhoneNumber}
                 onChange={(value) => editForm.setFieldValue('driverPhoneNumber', value)}
                 error={editForm.errors.driverPhoneNumber}
               />
               <TextInput
-                label="Driver License Number"
-                placeholder="Enter driver license number"
+                label={t('fields.driverLicenseNumber')}
+                placeholder={t('placeholders.driverLicenseNumber')}
                 {...editForm.getInputProps('driverLicenseNumber')}
               />
             </Group>
 
             <Group grow align="end">
               <TextInput
-                label="Driver National ID Number"
-                placeholder="Enter driver national ID number"
+                label={t('fields.driverNationalIdNumber')}
+                placeholder={t('placeholders.driverNationalIdNumber')}
                 {...editForm.getInputProps('driverNationalIdNumber')}
               />
               <Button
@@ -2076,22 +2169,22 @@ export default function AccidentDetailPage() {
                 variant="light"
                 onClick={() =>
                   notifications.show({
-                    title: 'Coming Soon',
-                    message: 'National ID verification will be added in a future update.',
+                    title: t('notifications.comingSoon.title'),
+                    message: t('notifications.comingSoon.message'),
                     color: 'blue',
                   })
                 }
               >
-                Verify National ID
+                {t('actions.verifyNationalId')}
               </Button>
             </Group>
 
             <Group justify="flex-end" mt="md">
               <Button variant="light" onClick={closeEdit}>
-                Cancel
+                {t('actions.cancel')}
               </Button>
               <Button type="submit" loading={editMutation.isPending}>
-                Update Accident
+                {t('actions.updateAccident')}
               </Button>
             </Group>
           </Stack>
@@ -2102,29 +2195,29 @@ export default function AccidentDetailPage() {
       <Modal
         opened={damageAssessmentOpened}
         onClose={closeDamageAssessment}
-        title={accident?.status === 'APPROVED' ? 'Damage Assessment (Approved - View Only)' : 'Damage Assessment'}
+        title={accident?.status === 'APPROVED' ? t('modals.damageAssessment.viewOnlyTitle') : t('modals.damageAssessment.title')}
         size="lg"
       >
         <form onSubmit={damageForm.onSubmit(handleDamageAssessment)}>
           <Stack gap="md">
             {accident?.status === 'APPROVED' && (
               <Alert color="blue" variant="light">
-                This accident has been approved. The damage assessment is now view-only.
+                {t('modals.damageAssessment.viewOnlyNotice')}
               </Alert>
             )}
 
             <Select
-              label="Damage Level"
-              placeholder="Select damage level"
-              data={DAMAGE_LEVELS}
+              label={t('fields.damageLevel')}
+              placeholder={t('placeholders.selectDamageLevel')}
+              data={damageLevels}
               required
               disabled={accident?.status === 'APPROVED'}
               {...damageForm.getInputProps('damageLevel')}
             />
 
             <Textarea
-              label="Damage Description"
-              placeholder="Describe the damage in detail"
+              label={t('fields.damageDescription')}
+              placeholder={t('placeholders.damageDescription')}
               required
               minRows={4}
               disabled={accident?.status === 'APPROVED'}
@@ -2132,12 +2225,12 @@ export default function AccidentDetailPage() {
             />
 
             <Checkbox
-              label="Safety Risk - Does this pose an immediate safety risk?"
+              label={t('fields.safetyRiskQuestion')}
               disabled={accident?.status === 'APPROVED'}
               {...damageForm.getInputProps('safetyRisk', { type: 'checkbox' })}
             />
 
-            <Text fw={500}>Damaged Components</Text>
+            <Text fw={500}>{t('fields.damagedComponents')}</Text>
             <Checkbox.Group {...damageForm.getInputProps('damagedComponents')}>
               <Group mt="xs">
                 {damagedComponentsData?.map((component: any) => (
@@ -2153,14 +2246,14 @@ export default function AccidentDetailPage() {
 
             <Group justify="flex-end" mt="md">
               <Button variant="light" onClick={closeDamageAssessment}>
-                {accident?.status === 'APPROVED' ? 'Close' : 'Cancel'}
+                {accident?.status === 'APPROVED' ? t('actions.close') : t('actions.cancel')}
               </Button>
               <Button
                 type="submit"
                 loading={updateMutation.isPending}
                 disabled={accident?.status === 'APPROVED'}
               >
-                Complete Assessment
+                {t('actions.completeAssessment')}
               </Button>
             </Group>
           </Stack>
@@ -2171,35 +2264,35 @@ export default function AccidentDetailPage() {
       <Modal
         opened={approvalOpened}
         onClose={closeApproval}
-        title="Process Approval"
+        title={t('modals.approval.title')}
         size="md"
       >
         <form onSubmit={approvalForm.onSubmit(handleApproval)}>
           <Stack gap="md">
             <Select
-              label="Action"
-              placeholder="Select approval action"
+              label={t('fields.action')}
+              placeholder={t('placeholders.selectApprovalAction')}
               data={[
-                { value: 'APPROVE', label: 'Approve' },
-                { value: 'REJECT', label: 'Reject' },
+                { value: 'APPROVE', label: t('actions.approve') },
+                { value: 'REJECT', label: t('actions.reject') },
               ]}
               required
               {...approvalForm.getInputProps('action')}
             />
 
             <Textarea
-              label="Comments"
-              placeholder="Add any comments or notes"
+              label={t('fields.comments')}
+              placeholder={t('placeholders.comments')}
               minRows={3}
               {...approvalForm.getInputProps('comments')}
             />
 
             <Group justify="flex-end" mt="md">
               <Button variant="light" onClick={closeApproval}>
-                Cancel
+                {t('actions.cancel')}
               </Button>
               <Button type="submit" loading={approveMutation.isPending}>
-                Submit Approval
+                {t('actions.submitApproval')}
               </Button>
             </Group>
           </Stack>
@@ -2210,13 +2303,13 @@ export default function AccidentDetailPage() {
       <Modal
         opened={photoUploadOpened}
         onClose={closePhotoUpload}
-        title="Upload Additional Photos"
+        title={t('modals.photoUpload.title')}
         size="md"
       >
         <Stack gap="md">
           <FileInput
-            label="Select Photos"
-            placeholder="Choose photos to upload"
+            label={t('fields.selectPhotos')}
+            placeholder={t('placeholders.choosePhotos')}
             multiple
             accept="image/*,video/*"
             onChange={(files) => setSelectedPhotos(files || [])}
@@ -2224,20 +2317,20 @@ export default function AccidentDetailPage() {
 
           {selectedPhotos.length > 0 && (
             <Text size="sm" c="dimmed">
-              {selectedPhotos.length} file(s) selected
+              {t('labels.filesSelected', { count: selectedPhotos.length })}
             </Text>
           )}
 
           <Group justify="flex-end" mt="md">
             <Button variant="light" onClick={closePhotoUpload}>
-              Cancel
+              {t('actions.cancel')}
             </Button>
             <Button
               onClick={handlePhotoUpload}
               loading={photoUploadMutation.isPending}
               disabled={selectedPhotos.length === 0}
             >
-              Upload Photos
+              {t('actions.uploadPhotos')}
             </Button>
           </Group>
         </Stack>
@@ -2247,13 +2340,13 @@ export default function AccidentDetailPage() {
       <Modal
         opened={attachmentUploadOpened}
         onClose={closeAttachmentUpload}
-        title="Upload Attachments"
+        title={t('modals.attachmentUpload.title')}
         size="md"
       >
         <Stack gap="md">
           <FileInput
-            label="Select Files"
-            placeholder="Choose documents to upload"
+            label={t('fields.selectFiles')}
+            placeholder={t('placeholders.chooseDocuments')}
             multiple
             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
             onChange={(files) => setSelectedAttachments(files || [])}
@@ -2261,20 +2354,20 @@ export default function AccidentDetailPage() {
 
           {selectedAttachments.length > 0 && (
             <Text size="sm" c="dimmed">
-              {selectedAttachments.length} file(s) selected
+              {t('labels.filesSelected', { count: selectedAttachments.length })}
             </Text>
           )}
 
           <Group justify="flex-end" mt="md">
             <Button variant="light" onClick={closeAttachmentUpload}>
-              Cancel
+              {t('actions.cancel')}
             </Button>
             <Button
               onClick={handleAttachmentUpload}
               loading={attachmentUploadMutation.isPending}
               disabled={selectedAttachments.length === 0}
             >
-              Upload Attachments
+              {t('actions.uploadAttachments')}
             </Button>
           </Group>
         </Stack>

@@ -9,10 +9,10 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3011/api/v1',
+        target: 'http://localhost:3011',
         changeOrigin: true,
         secure: false,
-        // Don't rewrite, backend already has /api/v1 prefix
+        // Don't rewrite. Backend routes already use /api/v1 under the same /api prefix.
       },
     },
   },
@@ -21,5 +21,4 @@ export default defineConfig({
     allowedHosts: true, // Allow all hosts (e.g. smartpole.aaesaa.gov.et)
   },
 });
-
 

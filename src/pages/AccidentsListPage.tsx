@@ -40,6 +40,7 @@ import { useAuth } from '../hooks/useAuth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { useTranslation } from 'react-i18next';
 
 const ACCIDENT_TYPES = [
   'VEHICLE_COLLISION',
@@ -69,10 +70,7 @@ const CLAIM_STATUSES = [
   'PAID',
 ];
 
-const REPORTER_TYPES = [
-  { value: 'INTERNAL', label: 'Internal' },
-  { value: 'EXTERNAL', label: 'External' },
-];
+const REPORTER_TYPES = ['INTERNAL', 'EXTERNAL'] as const;
 
 function getAccidentStatusColor(status: string): string {
   switch (status?.toUpperCase()) {
@@ -115,6 +113,8 @@ function getClaimStatusColor(status: string): string {
 }
 
 export default function AccidentsListPage() {
+  const { t } = useTranslation('accidentsList');
+  const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -171,8 +171,8 @@ export default function AccidentsListPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accidents'] });
       notifications.show({
-        title: 'Success',
-        message: 'Accident report deleted successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.deleteSuccess'),
         color: 'green',
       });
       setDeleteModalOpen(false);
@@ -180,8 +180,8 @@ export default function AccidentsListPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to delete accident report',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.deleteError'),
         color: 'red',
       });
     },
@@ -209,8 +209,8 @@ export default function AccidentsListPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: 'Failed to download report',
+        title: t('notifications.errorTitle'),
+        message: t('notifications.downloadError'),
         color: 'red',
       });
     },
@@ -275,8 +275,8 @@ export default function AccidentsListPage() {
 
       if (!accidents || accidents.length === 0) {
         notifications.show({
-          title: 'No Data',
-          message: 'No accident data found to export.',
+          title: t('notifications.noDataTitle'),
+          message: t('notifications.noDataMessage'),
           color: 'orange',
         });
         return;
@@ -286,24 +286,24 @@ export default function AccidentsListPage() {
 
       // Add title
       doc.setFontSize(20);
-      doc.text('Accident Reports', 14, 22);
+      doc.text(t('export.pdfTitle'), 14, 22);
 
       // Add summary info
       doc.setFontSize(12);
-      doc.text(`Total Accidents: ${accidents.length}`, 14, 35);
-      doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, 14, 42);
+      doc.text(`${t('export.totalAccidents')}: ${accidents.length}`, 14, 35);
+      doc.text(`${t('export.reportGenerated')}: ${new Date().toLocaleDateString()}`, 14, 42);
 
       // Prepare table data with error handling
       const tableData = accidents.map((accident: any) => {
         try {
           return [
-            accident?.incidentId || 'N/A',
-            accident?.accidentDate ? formatDate(accident.accidentDate) : 'N/A',
-            accident?.accidentType ? accident.accidentType.replace(/_/g, ' ') : 'N/A',
-            accident?.status || 'N/A',
-            accident?.poleId || 'N/A',
-            accident?.vehiclePlateNumber || 'N/A',
-            accident?.driverName || 'N/A',
+            accident?.incidentId || t('labels.notAvailable'),
+            accident?.accidentDate ? formatDate(accident.accidentDate) : t('labels.notAvailable'),
+            accident?.accidentType ? accident.accidentType.replace(/_/g, ' ') : t('labels.notAvailable'),
+            accident?.status ? t(`status.${accident.status.toLowerCase()}`) : t('labels.notAvailable'),
+            accident?.poleId || t('labels.notAvailable'),
+            accident?.vehiclePlateNumber || t('labels.notAvailable'),
+            accident?.driverName || t('labels.notAvailable'),
             accident?.estimatedCost ? formatCurrency(accident.estimatedCost) : formatCurrency(0),
           ];
         } catch (error) {
@@ -316,7 +316,16 @@ export default function AccidentsListPage() {
 
       // Add table
       autoTable(doc, {
-        head: [['Incident ID', 'Date', 'Type', 'Status', 'Pole ID', 'Vehicle', 'Driver', 'Cost']],
+        head: [[
+          t('table.incidentId'),
+          t('table.date'),
+          t('table.type'),
+          t('table.status'),
+          t('table.poleId'),
+          t('table.vehicle'),
+          t('table.driver'),
+          t('table.cost'),
+        ]],
         body: tableData,
         startY: 55,
         styles: {
@@ -336,14 +345,14 @@ export default function AccidentsListPage() {
       doc.save(`accidents-${new Date().toISOString().split('T')[0]}.pdf`);
 
       notifications.show({
-        title: 'Export Successful',
-        message: `PDF exported with ${accidents.length} records.`,
+        title: t('notifications.exportSuccessTitle'),
+        message: t('notifications.exportSuccessMessage', { count: accidents.length }),
         color: 'green',
       });
     } catch (error) {
       notifications.show({
-        title: 'Export Error',
-        message: 'Failed to export data. Please try again.',
+        title: t('notifications.exportErrorTitle'),
+        message: t('notifications.exportErrorMessage'),
         color: 'red',
       });
     }
@@ -374,8 +383,8 @@ export default function AccidentsListPage() {
 
       if (!accidents || accidents.length === 0) {
         notifications.show({
-          title: 'No Data',
-          message: 'No accident data found to export.',
+          title: t('notifications.noDataTitle'),
+          message: t('notifications.noDataMessage'),
           color: 'orange',
         });
         return;
@@ -383,27 +392,27 @@ export default function AccidentsListPage() {
 
       // Prepare data for Excel
       const excelData = accidents.map((accident: any) => ({
-        'Incident ID': accident?.incidentId || 'N/A',
-        'Date': accident?.accidentDate ? formatDate(accident.accidentDate) : 'N/A',
-        'Time': accident?.accidentTime || 'N/A',
-        'Type': accident?.accidentType ? accident.accidentType.replace(/_/g, ' ') : 'N/A',
-        'Status': accident?.status || 'N/A',
-        'Pole ID': accident?.poleId || 'N/A',
-        'Latitude': accident?.latitude || 'N/A',
-        'Longitude': accident?.longitude || 'N/A',
-        'Location': accident?.locationDescription || 'N/A',
-        'Vehicle Plate': accident?.vehiclePlateNumber || 'N/A',
-        'Driver Name': accident?.driverName || 'N/A',
-        'Insurance Company': accident?.insuranceCompany || 'N/A',
-        'Claim Reference': accident?.claimReferenceNumber || 'N/A',
-        'Claim Status': accident?.claimStatus ? accident.claimStatus.replace(/_/g, ' ') : 'N/A',
-        'Damage Level': accident?.damageLevel || 'N/A',
-        'Damage Description': accident?.damageDescription || 'N/A',
-        'Safety Risk': accident?.safetyRisk ? 'Yes' : 'No',
-        'Estimated Cost': accident?.estimatedCost || 0,
-        'Reported By': accident?.reportedBy?.fullName || 'N/A',
-        'Reported Date': accident?.createdAt ? formatDate(accident.createdAt) : 'N/A',
-        'Updated Date': accident?.updatedAt ? formatDate(accident.updatedAt) : 'N/A',
+        [t('table.incidentId')]: accident?.incidentId || t('labels.notAvailable'),
+        [t('table.date')]: accident?.accidentDate ? formatDate(accident.accidentDate) : t('labels.notAvailable'),
+        [t('table.time')]: accident?.accidentTime || t('labels.notAvailable'),
+        [t('table.type')]: accident?.accidentType ? accident.accidentType.replace(/_/g, ' ') : t('labels.notAvailable'),
+        [t('table.status')]: accident?.status ? t(`status.${accident.status.toLowerCase()}`) : t('labels.notAvailable'),
+        [t('table.poleId')]: accident?.poleId || t('labels.notAvailable'),
+        [t('table.latitude')]: accident?.latitude || t('labels.notAvailable'),
+        [t('table.longitude')]: accident?.longitude || t('labels.notAvailable'),
+        [t('table.location')]: accident?.locationDescription || t('labels.notAvailable'),
+        [t('table.vehicle')]: accident?.vehiclePlateNumber || t('labels.notAvailable'),
+        [t('table.driver')]: accident?.driverName || t('labels.notAvailable'),
+        [t('table.insurance')]: accident?.insuranceCompany || t('labels.notAvailable'),
+        [t('table.claimReference')]: accident?.claimReferenceNumber || t('labels.notAvailable'),
+        [t('table.claimStatus')]: accident?.claimStatus ? t(`claimStatus.${accident.claimStatus.toLowerCase()}`) : t('labels.notAvailable'),
+        [t('table.damageLevel')]: accident?.damageLevel || t('labels.notAvailable'),
+        [t('table.damageDescription')]: accident?.damageDescription || t('labels.notAvailable'),
+        [t('table.safetyRisk')]: accident?.safetyRisk ? t('labels.yes') : t('labels.no'),
+        [t('table.estimatedCost')]: accident?.estimatedCost || 0,
+        [t('table.reportedBy')]: accident?.reportedBy?.fullName || t('labels.notAvailable'),
+        [t('table.reportedDate')]: accident?.createdAt ? formatDate(accident.createdAt) : t('labels.notAvailable'),
+        [t('table.updatedDate')]: accident?.updatedAt ? formatDate(accident.updatedAt) : t('labels.notAvailable'),
       }));
 
       // Create workbook and worksheet
@@ -416,14 +425,14 @@ export default function AccidentsListPage() {
       XLSX.writeFile(wb, fileName);
 
       notifications.show({
-        title: 'Export Successful',
-        message: `Excel exported with ${accidents.length} records.`,
+        title: t('notifications.exportSuccessTitle'),
+        message: t('notifications.exportSuccessMessage', { count: accidents.length }),
         color: 'green',
       });
     } catch (error) {
       notifications.show({
-        title: 'Export Error',
-        message: 'Failed to export data. Please try again.',
+        title: t('notifications.exportErrorTitle'),
+        message: t('notifications.exportErrorMessage'),
         color: 'red',
       });
     }
@@ -443,8 +452,8 @@ export default function AccidentsListPage() {
   if (error) {
     return (
       <Container size="xl" py="xl">
-        <Alert color="red" title="Error">
-          Failed to load accident reports. Please try again.
+        <Alert color="red" title={t('error.title')}>
+          {t('error.message')}
         </Alert>
       </Container>
     );
@@ -453,7 +462,7 @@ export default function AccidentsListPage() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>Accident Management</Title>
+        <Title order={2}>{t('title')}</Title>
         <Group>
           <Menu shadow="md" width={200}>
             <Menu.Target>
@@ -462,7 +471,7 @@ export default function AccidentsListPage() {
                 leftSection={<IconDownload size={16} />}
                 rightSection={<IconFileText size={14} />}
               >
-                Export Data
+                {t('actions.exportData')}
               </Button>
             </Menu.Target>
 
@@ -471,13 +480,13 @@ export default function AccidentsListPage() {
                 leftSection={<IconFileTypePdf size={16} />}
                 onClick={exportToPDF}
               >
-                Export as PDF
+                {t('actions.exportPdf')}
               </Menu.Item>
               <Menu.Item
                 leftSection={<IconFileTypeXls size={16} />}
                 onClick={exportToExcel}
               >
-                Export as Excel
+                {t('actions.exportExcel')}
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
@@ -487,7 +496,7 @@ export default function AccidentsListPage() {
               leftSection={<IconPlus size={16} />}
               onClick={() => navigate('/accidents/create')}
             >
-              Report Accident
+              {t('actions.reportAccident')}
             </Button>
           )}
         </Group>
@@ -497,7 +506,7 @@ export default function AccidentsListPage() {
       <Paper p="md" mb="md" withBorder>
         <Group justify="space-between" mb="md">
           <Title order={4}>
-            Filters
+            {t('filters.title')}
           </Title>
           {hasActiveFilters() && (
             <Button
@@ -507,56 +516,59 @@ export default function AccidentsListPage() {
               leftSection={<IconX size={16} />}
               onClick={resetFilters}
             >
-              Reset Filters
+              {t('actions.resetFilters')}
             </Button>
           )}
         </Group>
         <Group grow>
           <TextInput
-            placeholder="Search by incident ID, pole ID..."
+            placeholder={t('filters.searchPlaceholder')}
             value={filters.search}
             onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
             leftSection={<IconFilter size={16} />}
           />
           <Select
-            placeholder="Accident Type"
+            placeholder={t('filters.accidentType')}
             data={ACCIDENT_TYPES.map(type => ({
               value: type,
-              label: type.replace(/_/g, ' '),
+              label: t(`types.${type.toLowerCase()}`),
             }))}
             value={filters.accidentType}
             onChange={(value) => setFilters({ ...filters, accidentType: value || null, page: 1 })}
             clearable
           />
           <Select
-            placeholder="Status"
+            placeholder={t('filters.status')}
             data={ACCIDENT_STATUSES.map(status => ({
               value: status,
-              label: status.replace(/_/g, ' '),
+              label: t(`status.${status.toLowerCase()}`),
             }))}
             value={filters.status}
             onChange={(value) => setFilters({ ...filters, status: value || null, page: 1 })}
             clearable
           />
           <Select
-            placeholder="Claim Status"
+            placeholder={t('filters.claimStatus')}
             data={CLAIM_STATUSES.map(status => ({
               value: status,
-              label: status.replace(/_/g, ' '),
+              label: t(`claimStatus.${status.toLowerCase()}`),
             }))}
             value={filters.claimStatus}
             onChange={(value) => setFilters({ ...filters, claimStatus: value || null, page: 1 })}
             clearable
           />
           <Select
-            placeholder="Reporter Type"
-            data={REPORTER_TYPES}
+            placeholder={t('filters.reporterType')}
+            data={REPORTER_TYPES.map((value) => ({
+              value,
+              label: t(`reporterType.${value.toLowerCase()}`),
+            }))}
             value={filters.reporterType}
             onChange={(value) => setFilters({ ...filters, reporterType: value || null, page: 1 })}
             clearable
           />
           <TextInput
-            placeholder="Pole ID"
+            placeholder={t('filters.poleId')}
             value={filters.poleId}
             onChange={(e) => setFilters({ ...filters, poleId: e.target.value, page: 1 })}
           />
@@ -568,15 +580,15 @@ export default function AccidentsListPage() {
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Incident ID</Table.Th>
-              <Table.Th>Type</Table.Th>
-              <Table.Th>Date</Table.Th>
-              <Table.Th>Pole ID</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Claim Status</Table.Th>
-              <Table.Th>Reporter Type</Table.Th>
-              <Table.Th>Estimated Cost</Table.Th>
-              <Table.Th>Actions</Table.Th>
+              <Table.Th>{t('table.incidentId')}</Table.Th>
+              <Table.Th>{t('table.type')}</Table.Th>
+              <Table.Th>{t('table.date')}</Table.Th>
+              <Table.Th>{t('table.poleId')}</Table.Th>
+              <Table.Th>{t('table.status')}</Table.Th>
+              <Table.Th>{t('table.claimStatus')}</Table.Th>
+              <Table.Th>{t('table.reporterType')}</Table.Th>
+              <Table.Th>{t('table.estimatedCost')}</Table.Th>
+              <Table.Th>{t('table.actions')}</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -591,7 +603,7 @@ export default function AccidentsListPage() {
             ) : accidentsData?.data?.length === 0 ? (
               <Table.Tr>
                 <Table.Td colSpan={9} style={{ textAlign: 'center', padding: '2rem' }}>
-                  <Text c="dimmed">No accident reports found</Text>
+                  <Text c="dimmed">{t('emptyState')}</Text>
                 </Table.Td>
               </Table.Tr>
             ) : (
@@ -601,37 +613,37 @@ export default function AccidentsListPage() {
                     <Text fw={500}>{accident.incidentId}</Text>
                   </Table.Td>
                   <Table.Td>
-                    <Text>{accident.accidentType.replace(/_/g, ' ')}</Text>
+                    <Text>{t(`types.${accident.accidentType.toLowerCase()}`)}</Text>
                   </Table.Td>
                   <Table.Td>
                     <Text>{formatDate(accident.accidentDate)}</Text>
                   </Table.Td>
                   <Table.Td>
-                    <Text>{accident.poleId || 'N/A'}</Text>
+                    <Text>{accident.poleId || t('labels.notAvailable')}</Text>
                   </Table.Td>
                   <Table.Td>
                     <Badge color={getAccidentStatusColor(accident.status)}>
-                      {accident.status.replace(/_/g, ' ')}
+                      {t(`status.${accident.status.toLowerCase()}`)}
                     </Badge>
                   </Table.Td>
                   <Table.Td>
                     <Badge color={getClaimStatusColor(accident.claimStatus)}>
-                      {accident.claimStatus.replace(/_/g, ' ')}
+                      {t(`claimStatus.${accident.claimStatus.toLowerCase()}`)}
                     </Badge>
                   </Table.Td>
                   <Table.Td>
                     <Badge color={(accident.reporterType || accident.reportedByType || (accident.reportedBy ? 'INTERNAL' : 'EXTERNAL')) === 'EXTERNAL' ? 'orange' : 'blue'}>
-                      {accident.reporterType || accident.reportedByType || (accident.reportedBy ? 'INTERNAL' : 'EXTERNAL')}
+                      {t(`reporterType.${(accident.reporterType || accident.reportedByType || (accident.reportedBy ? 'INTERNAL' : 'EXTERNAL')).toLowerCase()}`)}
                     </Badge>
                   </Table.Td>
                   <Table.Td>
                     <Text>
-                      {accident.estimatedCost ? formatCurrency(accident.estimatedCost) : 'N/A'}
+                      {accident.estimatedCost ? formatCurrency(accident.estimatedCost) : t('labels.notAvailable')}
                     </Text>
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs">
-                      <Tooltip label="View Details">
+                      <Tooltip label={t('actions.viewDetails')}>
                         <ActionIcon
                           variant="light"
                           onClick={() => navigate(`/accidents/${accident.id}`)}
@@ -640,7 +652,7 @@ export default function AccidentsListPage() {
                         </ActionIcon>
                       </Tooltip>
 
-                      <Tooltip label="Download Incident Report">
+                      <Tooltip label={t('actions.downloadIncidentReport')}>
                         <ActionIcon
                           variant="light"
                           color="blue"
@@ -651,7 +663,7 @@ export default function AccidentsListPage() {
                         </ActionIcon>
                       </Tooltip>
 
-                      <Tooltip label="Download Damage Assessment">
+                      <Tooltip label={t('actions.downloadDamageAssessment')}>
                         <ActionIcon
                           variant="light"
                           color="orange"
@@ -662,7 +674,7 @@ export default function AccidentsListPage() {
                         </ActionIcon>
                       </Tooltip>
 
-                      <Tooltip label="Download Cost Estimate">
+                      <Tooltip label={t('actions.downloadCostEstimate')}>
                         <ActionIcon
                           variant="light"
                           color="green"
@@ -673,7 +685,7 @@ export default function AccidentsListPage() {
                         </ActionIcon>
                       </Tooltip>
 
-                      <Tooltip label="Delete">
+                      <Tooltip label={t('actions.delete')}>
                         <ActionIcon
                           variant="light"
                           color="red"
@@ -707,20 +719,20 @@ export default function AccidentsListPage() {
       <Modal
         opened={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
-        title="Confirm Delete"
+        title={t('deleteModal.title')}
         centered
       >
-        <Text>Are you sure you want to delete this accident report? This action cannot be undone.</Text>
+        <Text>{t('deleteModal.confirmation')}</Text>
         <Group justify="flex-end" mt="md">
           <Button variant="light" onClick={() => setDeleteModalOpen(false)}>
-            Cancel
+            {tCommon('actions.cancel')}
           </Button>
           <Button
             color="red"
             onClick={confirmDelete}
             loading={deleteMutation.isPending}
           >
-            Delete
+            {t('actions.delete')}
           </Button>
         </Group>
       </Modal>

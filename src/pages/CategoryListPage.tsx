@@ -23,8 +23,11 @@ import { IconPlus, IconEdit, IconTrash, IconEye, IconFilter, IconArrowsUpDown } 
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 export default function CategoryListPage() {
+  const { t } = useTranslation('categoriesList');
+  const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
   const { user } = useAuth();
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
@@ -146,8 +149,8 @@ export default function CategoryListPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Category deleted successfully',
+        title: t('notifications.deleteSuccessTitle'),
+        message: t('notifications.deleteSuccessMessage'),
         color: 'green',
       });
       refetch();
@@ -156,8 +159,8 @@ export default function CategoryListPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to delete category',
+        title: t('notifications.deleteErrorTitle'),
+        message: error.response?.data?.message || t('notifications.deleteErrorMessage'),
         color: 'red',
       });
     },
@@ -179,7 +182,7 @@ export default function CategoryListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title order={1}>Categories</Title>
+        <Title order={1}>{t('title')}</Title>
         <Group>
           {hasActiveFilters && (
             <Button
@@ -188,7 +191,7 @@ export default function CategoryListPage() {
               size="sm"
               onClick={resetFilters}
             >
-              Clear Filters
+              {t('actions.clearFilters')}
             </Button>
           )}
           {isAdmin && (
@@ -196,7 +199,7 @@ export default function CategoryListPage() {
               leftSection={<IconPlus size={16} />}
               onClick={() => navigate('/categories/new')}
             >
-              Add Category
+              {t('actions.addCategory')}
             </Button>
           )}
         </Group>
@@ -209,7 +212,9 @@ export default function CategoryListPage() {
               <Table.Tr>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>Name</Text>
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>
+                      {t('table.name')}
+                    </Text>
                     <Group gap="xs">
                       <ActionIcon
                         variant="subtle"
@@ -231,9 +236,9 @@ export default function CategoryListPage() {
                         </Popover.Target>
                         <Popover.Dropdown>
                           <Stack gap="sm">
-                            <Text size="sm" fw={500}>Filter by Name</Text>
+                            <Text size="sm" fw={500}>{t('filters.nameLabel')}</Text>
                             <TextInput
-                              placeholder="Enter category name..."
+                              placeholder={t('filters.namePlaceholder')}
                               value={nameFilter}
                               onChange={(e) => setNameFilter(e.currentTarget.value)}
                               size="sm"
@@ -244,7 +249,7 @@ export default function CategoryListPage() {
                                 variant="light"
                                 onClick={() => setNameFilter('')}
                               >
-                                Clear
+                                {t('actions.clear')}
                               </Button>
                             )}
                           </Stack>
@@ -253,10 +258,12 @@ export default function CategoryListPage() {
                     </Group>
                   </Group>
                 </Table.Th>
-                <Table.Th>Description</Table.Th>
+                <Table.Th>{t('table.description')}</Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>Status</Text>
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>
+                      {t('table.status')}
+                    </Text>
                     <Group gap="xs">
                       <ActionIcon
                         variant="subtle"
@@ -278,12 +285,12 @@ export default function CategoryListPage() {
                         </Popover.Target>
                         <Popover.Dropdown>
                           <Stack gap="sm">
-                            <Text size="sm" fw={500}>Filter by Status</Text>
+                            <Text size="sm" fw={500}>{t('filters.statusLabel')}</Text>
                             <Select
-                              placeholder="Select status"
+                              placeholder={t('filters.statusPlaceholder')}
                               data={[
-                                { value: 'ACTIVE', label: 'Active' },
-                                { value: 'INACTIVE', label: 'Inactive' }
+                                { value: 'ACTIVE', label: t('status.active') },
+                                { value: 'INACTIVE', label: t('status.inactive') }
                               ]}
                               value={statusFilter}
                               onChange={(value) => setStatusFilter(value || '')}
@@ -298,7 +305,9 @@ export default function CategoryListPage() {
                 </Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('createdAt')}>Created</Text>
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('createdAt')}>
+                      {t('table.created')}
+                    </Text>
                     <ActionIcon
                       variant="subtle"
                       color="gray"
@@ -309,7 +318,7 @@ export default function CategoryListPage() {
                     </ActionIcon>
                   </Group>
                 </Table.Th>
-                <Table.Th>Actions</Table.Th>
+                <Table.Th>{t('table.actions')}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -324,7 +333,7 @@ export default function CategoryListPage() {
               ) : !categories || categories.length === 0 ? (
                 <Table.Tr>
                   <Table.Td colSpan={5}>
-                    <Text c="dimmed" ta="center">No categories found</Text>
+                    <Text c="dimmed" ta="center">{t('emptyState')}</Text>
                   </Table.Td>
                 </Table.Tr>
               ) : (
@@ -335,12 +344,12 @@ export default function CategoryListPage() {
                     </Table.Td>
                     <Table.Td>
                       <Text size="xs" c="dimmed" style={{ opacity: 0.7 }}>
-                        {category.description || 'No description'}
+                        {category.description || t('labels.noDescription')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Badge color={category.isActive ? 'green' : 'red'}>
-                        {category.isActive ? 'Active' : 'Inactive'}
+                        {category.isActive ? t('status.active') : t('status.inactive')}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
@@ -392,14 +401,13 @@ export default function CategoryListPage() {
           setDeleteModalOpened(false);
           setSelectedCategory(null);
         }}
-        title="Delete Category"
+        title={t('deleteModal.title')}
         size="sm"
         centered
       >
         <Stack>
           <Text>
-            Are you sure you want to delete the category "{selectedCategory?.name}"?
-            This action cannot be undone.
+            {t('deleteModal.confirmation', { name: selectedCategory?.name })}
           </Text>
           <Group justify="flex-end" mt="xl">
             <Button
@@ -409,14 +417,14 @@ export default function CategoryListPage() {
                 setSelectedCategory(null);
               }}
             >
-              Cancel
+              {tCommon('actions.cancel')}
             </Button>
             <Button
               color="red"
               onClick={handleDeleteConfirm}
               loading={deleteMutation.isPending}
             >
-              Delete
+              {t('actions.delete')}
             </Button>
           </Group>
         </Stack>
@@ -424,4 +432,3 @@ export default function CategoryListPage() {
     </Container>
   );
 }
-

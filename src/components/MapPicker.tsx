@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import L, { Map as LeafletMap, Marker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { TextInput, Button, Stack, Group } from '@mantine/core';
@@ -35,6 +36,7 @@ const createPoleIcon = (status?: string) =>
 const selectedLocationIcon = createPoleIcon('OPERATIONAL');
 
 export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = false }: MapPickerProps) {
+  const { t } = useTranslation('mapPicker');
   const mapRef = useRef<LeafletMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
   const allPolesMarkersRef = useRef<Marker[]>([]);
@@ -227,7 +229,7 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
     <Stack gap="xs">
       <Group>
         <TextInput
-          placeholder="Search for a place..."
+          placeholder={t('searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={handleKeyPress}
@@ -238,7 +240,7 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
           loading={isSearching}
           leftSection={<IconSearch size={16} />}
         >
-          Search
+          {t('searchButton')}
         </Button>
       </Group>
       <div
@@ -248,4 +250,3 @@ export function MapPicker({ value, onChange, currentPoleCode, showAllPoles = fal
     </Stack>
   );
 }
-

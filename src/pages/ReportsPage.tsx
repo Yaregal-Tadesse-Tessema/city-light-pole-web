@@ -32,6 +32,7 @@ import {
 } from '@tabler/icons-react';
 import axios from 'axios';
 import { notifications } from '@mantine/notifications';
+import { useTranslation } from 'react-i18next';
 
 interface MaintenanceSchedule {
   id: string;
@@ -62,6 +63,7 @@ interface ReportFilters {
 }
 
 export default function ReportsPage() {
+  const { t } = useTranslation('reports');
   const [filters, setFilters] = useState<ReportFilters>({
     startDate: null,
     endDate: null,
@@ -105,15 +107,15 @@ export default function ReportsPage() {
 
     return {
       streets: [
-        { value: '', label: 'All Streets' },
+        { value: '', label: t('filters.allStreets') },
         ...Array.from(streets).sort().map(street => ({ value: street, label: street }))
       ],
       subcities: [
-        { value: '', label: 'All Subcities' },
+        { value: '', label: t('filters.allSubcities') },
         ...Array.from(subcities).sort().map(subcity => ({ value: subcity, label: subcity }))
       ],
     };
-  }, [schedulesData]);
+  }, [schedulesData, t]);
 
   // Filter and calculate totals
   const { filteredSchedules, totals } = useMemo(() => {
@@ -156,16 +158,26 @@ export default function ReportsPage() {
   }, [schedulesData, filters]);
 
   const handleExport = () => {
-    const csvContent = [
-      ['Asset Code', 'Street', 'Subcity', 'Pole Details', 'Description', 'Start Date', 'End Date', 'Status', 'Cost'],
+        const csvContent = [
+      [
+        t('table.assetCode'),
+        t('table.street'),
+        t('table.subcity'),
+        t('table.poleDetails'),
+        t('table.description'),
+        t('table.startDate'),
+        t('table.endDate'),
+        t('table.status'),
+        t('table.cost'),
+      ],
       ...filteredSchedules.map(schedule => [
         schedule.poleCode,
-        schedule.pole?.street || 'N/A',
-        schedule.pole?.subcity || 'N/A',
-        schedule.pole ? `${schedule.pole.poleType} • ${schedule.pole.lampType}` : 'N/A',
+        schedule.pole?.street || t('labels.notAvailable'),
+        schedule.pole?.subcity || t('labels.notAvailable'),
+        schedule.pole ? `${schedule.pole.poleType} - ${schedule.pole.lampType}` : t('labels.notAvailable'),
         schedule.description,
         new Date(schedule.startDate).toLocaleDateString(),
-        schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : 'N/A',
+        schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : t('labels.notAvailable'),
         schedule.status,
         Number(schedule.cost || schedule.estimatedCost || 0).toFixed(2),
       ]),
@@ -180,8 +192,8 @@ export default function ReportsPage() {
     window.URL.revokeObjectURL(url);
 
     notifications.show({
-      title: 'Export Successful',
-      message: 'Report has been downloaded',
+      title: t('notifications.exportSuccessTitle'),
+      message: t('notifications.exportSuccessMessage'),
       color: 'green',
     });
   };
@@ -209,21 +221,21 @@ export default function ReportsPage() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" mb="xl">
-        <Title order={2}>Maintenance Reports</Title>
+        <Title order={2}>{t('title')}</Title>
         <Group>
           <Button
             variant="light"
             leftSection={<IconRefresh size={16} />}
             onClick={() => refetch()}
           >
-            Refresh
+            {t('actions.refresh')}
           </Button>
           <Button
             leftSection={<IconDownload size={16} />}
             onClick={handleExport}
             disabled={filteredSchedules.length === 0}
           >
-            Export CSV
+            {t('actions.exportCsv')}
           </Button>
         </Group>
       </Group>
@@ -235,7 +247,7 @@ export default function ReportsPage() {
             <Group justify="space-between">
               <div>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                  Total Records
+                  {t('summary.totalRecords')}
                 </Text>
                 <Text size="xl" fw={700}>
                   {totals.count}
@@ -251,7 +263,7 @@ export default function ReportsPage() {
             <Group justify="space-between">
               <div>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                  Total Cost
+                  {t('summary.totalCost')}
                 </Text>
                 <Text size="xl" fw={700}>
                   {Number(totals.totalCost).toFixed(2)}
@@ -267,7 +279,7 @@ export default function ReportsPage() {
             <Group justify="space-between">
               <div>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                  In Progress
+                  {t('summary.inProgress')}
                 </Text>
                 <Text size="xl" fw={700}>
                   {filteredSchedules.filter(s => ['STARTED', 'PARTIALLY_STARTED', 'PAUSED'].includes(s.status)).length}
@@ -283,7 +295,7 @@ export default function ReportsPage() {
             <Group justify="space-between">
               <div>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                  Completed
+                  {t('summary.completed')}
                 </Text>
                 <Text size="xl" fw={700}>
                   {filteredSchedules.filter(s => s.status === 'COMPLETED').length}
@@ -299,9 +311,9 @@ export default function ReportsPage() {
       <Card withBorder radius="md" mb="xl">
         <Card.Section withBorder inheritPadding py="sm">
           <Group justify="space-between">
-            <Text fw={600}>Filters</Text>
+            <Text fw={600}>{t('filters.title')}</Text>
             <Button variant="subtle" size="xs" onClick={clearFilters}>
-              Clear All
+              {t('filters.clearAll')}
             </Button>
           </Group>
         </Card.Section>
@@ -310,8 +322,8 @@ export default function ReportsPage() {
           <Grid>
             <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
               <DatePickerInput
-                label="Start Date"
-                placeholder="Select start date"
+                label={t('filters.startDate')}
+                placeholder={t('filters.startDatePlaceholder')}
                 value={filters.startDate}
                 onChange={(date) => setFilters(prev => ({ ...prev, startDate: date }))}
                 leftSection={
@@ -442,8 +454,8 @@ export default function ReportsPage() {
 
             <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
               <DatePickerInput
-                label="End Date"
-                placeholder="Select end date"
+                label={t('filters.endDate')}
+                placeholder={t('filters.endDatePlaceholder')}
                 value={filters.endDate}
                 onChange={(date) => setFilters(prev => ({ ...prev, endDate: date }))}
                 leftSection={
@@ -574,8 +586,8 @@ export default function ReportsPage() {
 
             <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
               <Select
-                label="Subcity"
-                placeholder="Select subcity"
+                label={t('filters.subcity')}
+                placeholder={t('filters.subcityPlaceholder')}
                 data={filterOptions.subcities}
                 value={filters.subcity}
                 onChange={(value) => setFilters(prev => ({ ...prev, subcity: value || '' }))}
@@ -587,8 +599,8 @@ export default function ReportsPage() {
 
             <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
               <Select
-                label="Street"
-                placeholder="Select street"
+                label={t('filters.street')}
+                placeholder={t('filters.streetPlaceholder')}
                 data={filterOptions.streets}
                 value={filters.street}
                 onChange={(value) => setFilters(prev => ({ ...prev, street: value || '' }))}
@@ -600,12 +612,12 @@ export default function ReportsPage() {
 
             <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
               <Select
-                label="Status"
-                placeholder="Select status"
+                label={t('filters.status')}
+                placeholder={t('filters.statusPlaceholder')}
                 data={[
-                  { value: '', label: 'All Statuses' },
-                  { value: 'in_progress', label: 'In Progress' },
-                  { value: 'completed', label: 'Completed' },
+                  { value: '', label: t('filters.allStatuses') },
+                  { value: 'in_progress', label: t('status.inProgress') },
+                  { value: 'completed', label: t('status.completed') },
                 ]}
                 value={filters.status}
                 onChange={(value) => setFilters(prev => ({ ...prev, status: value || '' }))}
@@ -623,39 +635,41 @@ export default function ReportsPage() {
           <Table>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Asset Code</Table.Th>
-                <Table.Th>Street</Table.Th>
-                <Table.Th>Subcity</Table.Th>
-                <Table.Th>Pole Details</Table.Th>
-                <Table.Th>Description</Table.Th>
-                <Table.Th>Start Date</Table.Th>
-                <Table.Th>End Date</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Cost</Table.Th>
+                <Table.Th>{t('table.assetCode')}</Table.Th>
+                <Table.Th>{t('table.street')}</Table.Th>
+                <Table.Th>{t('table.subcity')}</Table.Th>
+                <Table.Th>{t('table.poleDetails')}</Table.Th>
+                <Table.Th>{t('table.description')}</Table.Th>
+                <Table.Th>{t('table.startDate')}</Table.Th>
+                <Table.Th>{t('table.endDate')}</Table.Th>
+                <Table.Th>{t('table.status')}</Table.Th>
+                <Table.Th>{t('table.cost')}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {filteredSchedules.length === 0 ? (
                 <Table.Tr>
                   <Table.Td colSpan={9} ta="center" py="xl">
-                    <Text c="dimmed">No maintenance records found matching the filters</Text>
+                    <Text c="dimmed">{t('emptyState')}</Text>
                   </Table.Td>
                 </Table.Tr>
               ) : (
                 filteredSchedules.map((schedule) => (
                   <Table.Tr key={schedule.id}>
                     <Table.Td fw={600}>{schedule.poleCode}</Table.Td>
-                    <Table.Td>{schedule.pole?.street || 'N/A'}</Table.Td>
-                    <Table.Td>{schedule.pole?.subcity || 'N/A'}</Table.Td>
+                    <Table.Td>{schedule.pole?.street || t('labels.notAvailable')}</Table.Td>
+                    <Table.Td>{schedule.pole?.subcity || t('labels.notAvailable')}</Table.Td>
                     <Table.Td>
-                      {schedule.pole ? `${schedule.pole.poleType} • ${schedule.pole.lampType}` : 'N/A'}
+                      {schedule.pole
+                        ? `${schedule.pole.poleType} - ${schedule.pole.lampType}`
+                        : t('labels.notAvailable')}
                     </Table.Td>
                     <Table.Td>
                       <Text lineClamp={2}>{schedule.description}</Text>
                     </Table.Td>
                     <Table.Td>{new Date(schedule.startDate).toLocaleDateString()}</Table.Td>
                     <Table.Td>
-                      {schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : '—'}
+                      {schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : t('labels.notAvailable')}
                     </Table.Td>
                     <Table.Td>
                       <Badge
@@ -685,3 +699,11 @@ export default function ReportsPage() {
     </Container>
   );
 }
+
+
+
+
+
+
+
+

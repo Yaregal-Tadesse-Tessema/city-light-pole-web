@@ -19,22 +19,10 @@ import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 import { MapPicker } from '../components/MapPicker';
-
-const MUSEUM_TYPES = [
-  { value: 'HISTORICAL', label: 'Historical' },
-  { value: 'ART', label: 'Art' },
-  { value: 'SCIENCE', label: 'Science' },
-  { value: 'CULTURAL', label: 'Cultural' },
-];
-
-const MUSEUM_STATUSES = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'FAULT_DAMAGED', label: 'Fault/Damaged' },
-  { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
-  { value: 'OPERATIONAL', label: 'Operational' },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function CreateMuseumPage() {
+  const { t } = useTranslation('createMuseum');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -52,10 +40,10 @@ export default function CreateMuseumPage() {
       status: 'ACTIVE',
     },
     validate: {
-      code: (value) => (!value ? 'Code is required' : null),
-      name: (value) => (!value ? 'Name is required' : null),
-      district: (value) => (!value ? 'Subcity is required' : null),
-      street: (value) => (!value ? 'Street is required' : null),
+      code: (value) => (!value ? t('validation.codeRequired') : null),
+      name: (value) => (!value ? t('validation.nameRequired') : null),
+      district: (value) => (!value ? t('validation.subcityRequired') : null),
+      street: (value) => (!value ? t('validation.streetRequired') : null),
     },
   });
 
@@ -92,23 +80,23 @@ export default function CreateMuseumPage() {
     },
     onSuccess: (data) => {
       notifications.show({
-        title: 'Success',
-        message: 'Museum registered successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.createSuccess'),
         color: 'green',
       });
       queryClient.invalidateQueries({ queryKey: ['museums'] });
       navigate(`/museums/${data.code}`);
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Failed to register museum';
+      const errorMessage = error.response?.data?.message || t('notifications.createError');
       setApiError(errorMessage);
       
       if (errorMessage.includes('code') && errorMessage.includes('already exists')) {
-        form.setFieldError('code', 'This code is already in use');
+        form.setFieldError('code', t('validation.codeExists'));
       }
       
       notifications.show({
-        title: 'Error',
+        title: t('notifications.errorTitle'),
         message: errorMessage,
         color: 'red',
       });
@@ -122,27 +110,27 @@ export default function CreateMuseumPage() {
 
   return (
     <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">Create New Museum</Title>
+      <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">{t('title')}</Title>
 
       <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
         <form onSubmit={handleSubmit}>
           <Stack>
             {apiError && (
-              <Alert color="red" title="Error" onClose={() => setApiError(null)} withCloseButton>
+              <Alert color="red" title={t('notifications.errorTitle')} onClose={() => setApiError(null)} withCloseButton>
                 {apiError}
               </Alert>
             )}
 
             <Group grow>
               <TextInput
-                label="Code"
-                placeholder="MU-001"
+                label={t('fields.code')}
+                placeholder={t('placeholders.code')}
                 required
                 {...form.getInputProps('code')}
               />
               <TextInput
-                label="Name"
-                placeholder="National Museum"
+                label={t('fields.name')}
+                placeholder={t('placeholders.name')}
                 required
                 {...form.getInputProps('name')}
               />
@@ -150,28 +138,28 @@ export default function CreateMuseumPage() {
 
             <Group grow>
               <Select
-                label="Subcity"
-                placeholder="Select subcity"
+                label={t('fields.subcity')}
+                placeholder={t('placeholders.subcity')}
                 required
                 data={[
-                  'Addis Ketema',
-                  'Akaky Kaliti',
-                  'Arada',
-                  'Bole',
-                  'Gullele',
-                  'Kirkos',
-                  'Kolfe Keranio',
-                  'Lideta',
-                  'Nifas Silk-Lafto',
-                  'Yeka',
-                  'Lemi Kura',
+                  t('subcities.addisKetema', { ns: 'dashboard' }),
+                  t('subcities.akakyKaliti', { ns: 'dashboard' }),
+                  t('subcities.arada', { ns: 'dashboard' }),
+                  t('subcities.bole', { ns: 'dashboard' }),
+                  t('subcities.gullele', { ns: 'dashboard' }),
+                  t('subcities.kirkos', { ns: 'dashboard' }),
+                  t('subcities.kolfeKeranio', { ns: 'dashboard' }),
+                  t('subcities.lideta', { ns: 'dashboard' }),
+                  t('subcities.nifasSilkLafto', { ns: 'dashboard' }),
+                  t('subcities.yeka', { ns: 'dashboard' }),
+                  t('subcities.lemiKura', { ns: 'dashboard' }),
                 ]}
                 searchable
                 {...form.getInputProps('district')}
               />
               <TextInput
-                label="Street"
-                placeholder="Main Street"
+                label={t('fields.street')}
+                placeholder={t('placeholders.street')}
                 required
                 {...form.getInputProps('street')}
               />
@@ -180,16 +168,16 @@ export default function CreateMuseumPage() {
             <Stack gap="xs">
               <Group grow>
                 <NumberInput
-                  label="GPS Latitude (Optional)"
-                  placeholder="Auto-filled from map"
+                  label={t('fields.gpsLatOptional')}
+                  placeholder={t('placeholders.gpsAuto')}
                   min={-90}
                   max={90}
                   value={form.values.gpsLat ?? undefined}
                   readOnly
                 />
                 <NumberInput
-                  label="GPS Longitude (Optional)"
-                  placeholder="Auto-filled from map"
+                  label={t('fields.gpsLngOptional')}
+                  placeholder={t('placeholders.gpsAuto')}
                   min={-180}
                   max={180}
                   value={form.values.gpsLng ?? undefined}
@@ -197,7 +185,7 @@ export default function CreateMuseumPage() {
                 />
               </Group>
               <Text size="sm" c="dimmed">
-                Click on the map to set coordinates (centered on Addis Ababa).
+                {t('helper.map')}
               </Text>
               <MapPicker
                 value={{ lat: form.values.gpsLat, lng: form.values.gpsLng }}
@@ -212,30 +200,30 @@ export default function CreateMuseumPage() {
             </Stack>
 
             <Select
-              label="Museum Type"
-              data={MUSEUM_TYPES}
+              label={t('fields.museumType')}
+              data={t('museumTypes', { returnObjects: true }) as { value: string; label: string }[]}
               {...form.getInputProps('museumType')}
             />
 
             <Textarea
-              label="Description (Optional)"
-              placeholder="Historical museum showcasing Ethiopian heritage"
+              label={t('fields.descriptionOptional')}
+              placeholder={t('placeholders.description')}
               rows={4}
               {...form.getInputProps('description')}
             />
 
             <Select
-              label="Status"
-              data={MUSEUM_STATUSES}
+              label={t('fields.status')}
+              data={t('statuses', { returnObjects: true }) as { value: string; label: string }[]}
               {...form.getInputProps('status')}
             />
 
             <Group justify="flex-end" mt="xl">
               <Button variant="outline" onClick={() => navigate('/museums')}>
-                Cancel
+                {t('actions.cancel')}
               </Button>
               <Button type="submit" loading={createMutation.isPending}>
-                Register Museum
+                {t('actions.submit')}
               </Button>
             </Group>
           </Stack>

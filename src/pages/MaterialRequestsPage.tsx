@@ -25,18 +25,13 @@ import { IconEye, IconCheck, IconX, IconTrash, IconPackage, IconEdit, IconFilter
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
-const getRequestCode = (request: any) => request.code ?? '—';
-
-const STATUSES = [
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'AWAITING_DELIVERY', label: 'Awaiting Delivery' },
-  { value: 'DELIVERED', label: 'Delivered' },
-  { value: 'REJECTED', label: 'Rejected' },
-  { value: 'FULFILLED', label: 'Fulfilled' },
-];
+const STATUS_VALUES = ['PENDING', 'AWAITING_DELIVERY', 'DELIVERED', 'REJECTED', 'FULFILLED'] as const;
 
 export default function MaterialRequestsPage() {
+  const { t } = useTranslation('materialRequests');
+  const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -49,6 +44,20 @@ export default function MaterialRequestsPage() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [receiveNotes, setReceiveNotes] = useState('');
   const [receiveModalOpened, setReceiveModalOpened] = useState(false);
+  const getRequestCode = (request: any) => request.code ?? t('labels.notAvailable');
+  const statusOptions = STATUS_VALUES.map((value) => ({
+    value,
+    label: t(`status.${value.toLowerCase()}`),
+  }));
+  const statusLabels: Record<string, string> = {
+    PENDING: t('status.pending'),
+    AWAITING_DELIVERY: t('status.awaitingDelivery'),
+    DELIVERED: t('status.delivered'),
+    REJECTED: t('status.rejected'),
+    FULFILLED: t('status.fulfilled'),
+    APPROVED: t('status.approved'),
+  };
+  const formatStatus = (status: string) => statusLabels[status] || status;
 
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('createdAt');
@@ -188,10 +197,10 @@ export default function MaterialRequestsPage() {
     },
     onSuccess: (data, variables) => {
       notifications.show({
-        title: 'Success',
+        title: t('notifications.successTitle'),
         message: variables.approve
-          ? 'Material request approved successfully'
-          : 'Material request rejected',
+          ? t('notifications.approveSuccess')
+          : t('notifications.rejectSuccess'),
         color: variables.approve ? 'green' : 'orange',
       });
       queryClient.invalidateQueries({ queryKey: ['material-requests'] });
@@ -202,8 +211,8 @@ export default function MaterialRequestsPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to process request',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.processError'),
         color: 'red',
       });
     },
@@ -226,8 +235,8 @@ export default function MaterialRequestsPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Material request updated successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.updateSuccess'),
         color: 'green',
       });
       queryClient.invalidateQueries({ queryKey: ['material-requests'] });
@@ -236,8 +245,8 @@ export default function MaterialRequestsPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to update material request',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.updateError'),
         color: 'red',
       });
     },
@@ -254,8 +263,8 @@ export default function MaterialRequestsPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Material request deleted successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.deleteSuccess'),
         color: 'green',
       });
       queryClient.invalidateQueries({ queryKey: ['material-requests'] });
@@ -264,8 +273,8 @@ export default function MaterialRequestsPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to delete material request',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.deleteError'),
         color: 'red',
       });
     },
@@ -289,8 +298,8 @@ export default function MaterialRequestsPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Material request marked as received successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.receivedSuccess'),
         color: 'green',
       });
       queryClient.invalidateQueries({ queryKey: ['material-requests'] });
@@ -301,8 +310,8 @@ export default function MaterialRequestsPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to mark material request as received',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.receivedError'),
         color: 'red',
       });
     },
@@ -347,8 +356,8 @@ export default function MaterialRequestsPage() {
     if (!selectedRequest) return;
     if (!approve && !rejectionReason.trim()) {
       notifications.show({
-        title: 'Error',
-        message: 'Please provide a rejection reason',
+        title: t('notifications.errorTitle'),
+        message: t('notifications.requireRejectionReason'),
         color: 'red',
       });
       return;
@@ -403,17 +412,17 @@ export default function MaterialRequestsPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title order={1}>Material Requests</Title>
+        <Title order={1}>{t('title')}</Title>
         <Group gap="md">
           <Button
             leftSection={<IconPlus size={16} />}
             onClick={() => navigate('/maintenance')}
           >
-            Add Material Request
+            {t('actions.addRequest')}
           </Button>
           <Select
-            placeholder="Filter by status"
-            data={STATUSES}
+            placeholder={t('filters.statusPlaceholder')}
+            data={statusOptions}
             value={statusFilter}
             onChange={setStatusFilter}
             clearable
@@ -430,7 +439,7 @@ export default function MaterialRequestsPage() {
                 setItemsCountFilter('');
               }}
             >
-              Clear Filters
+              {t('actions.clearFilters')}
             </Button>
           )}
         </Group>
@@ -443,7 +452,9 @@ export default function MaterialRequestsPage() {
               <Table.Tr>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('code')}>Code</Text>
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('code')}>
+                      {t('table.code')}
+                    </Text>
                     <Popover position="bottom" withArrow shadow="md">
                       <Popover.Target>
                         <ActionIcon variant="subtle" color="gray" size="sm">
@@ -452,7 +463,7 @@ export default function MaterialRequestsPage() {
                       </Popover.Target>
                       <Popover.Dropdown>
                         <TextInput
-                          placeholder="Filter by Code..."
+                          placeholder={t('filters.codePlaceholder')}
                           value={codeFilter}
                           onChange={(event) => setCodeFilter(event.currentTarget.value)}
                           size="sm"
@@ -469,11 +480,13 @@ export default function MaterialRequestsPage() {
                     </ActionIcon>
                   </Group>
                 </Table.Th>
-                <Table.Th>Pole Code</Table.Th>
-                <Table.Th>Maintenance Code</Table.Th>
+                <Table.Th>{t('table.poleCode')}</Table.Th>
+                <Table.Th>{t('table.maintenanceCode')}</Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('requestedBy')}>Requested By</Text>
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('requestedBy')}>
+                      {t('table.requestedBy')}
+                    </Text>
                     <Popover position="bottom" withArrow shadow="md">
                       <Popover.Target>
                         <ActionIcon variant="subtle" color="gray" size="sm">
@@ -482,7 +495,7 @@ export default function MaterialRequestsPage() {
                       </Popover.Target>
                       <Popover.Dropdown>
                         <TextInput
-                          placeholder="Filter by Requested By..."
+                          placeholder={t('filters.requestedByPlaceholder')}
                           value={requestedByFilter}
                           onChange={(event) => setRequestedByFilter(event.currentTarget.value)}
                           size="sm"
@@ -501,7 +514,9 @@ export default function MaterialRequestsPage() {
                 </Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('itemsCount')}>Items Count</Text>
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('itemsCount')}>
+                      {t('table.itemsCount')}
+                    </Text>
                     <Popover position="bottom" withArrow shadow="md">
                       <Popover.Target>
                         <ActionIcon variant="subtle" color="gray" size="sm">
@@ -510,7 +525,7 @@ export default function MaterialRequestsPage() {
                       </Popover.Target>
                       <Popover.Dropdown>
                         <TextInput
-                          placeholder="Filter by Items Count..."
+                          placeholder={t('filters.itemsCountPlaceholder')}
                           value={itemsCountFilter}
                           onChange={(event) => setItemsCountFilter(event.currentTarget.value)}
                           size="sm"
@@ -527,9 +542,9 @@ export default function MaterialRequestsPage() {
                     </ActionIcon>
                   </Group>
                 </Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Request Date</Table.Th>
-                <Table.Th>Actions</Table.Th>
+                <Table.Th>{t('table.status')}</Table.Th>
+                <Table.Th>{t('table.requestDate')}</Table.Th>
+                <Table.Th>{t('table.actions')}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -544,7 +559,7 @@ export default function MaterialRequestsPage() {
               ) : !requests || requests.length === 0 ? (
                 <Table.Tr>
                   <Table.Td colSpan={8}>
-                    <Text c="dimmed" ta="center">No material requests found</Text>
+                    <Text c="dimmed" ta="center">{t('emptyState')}</Text>
                   </Table.Td>
                 </Table.Tr>
               ) : (
@@ -563,25 +578,25 @@ export default function MaterialRequestsPage() {
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">
-                        {request.maintenanceSchedule?.poleCode || 'N/A'}
+                        {request.maintenanceSchedule?.poleCode || t('labels.notAvailable')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">
-                        {request.maintenanceSchedule?.maintenanceCode || 'N/A'}
+                        {request.maintenanceSchedule?.maintenanceCode || t('labels.notAvailable')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">
-                        {request.requestedBy?.fullName || 'Unknown'}
+                        {request.requestedBy?.fullName || t('labels.unknown')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      <Text size="sm">{request.items?.length || 0} items</Text>
+                      <Text size="sm">{t('labels.itemsCount', { count: request.items?.length || 0 })}</Text>
                     </Table.Td>
                     <Table.Td>
                       <Badge color={getStatusColor(request.status)}>
-                        {request.status}
+                        {formatStatus(request.status)}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
@@ -597,7 +612,7 @@ export default function MaterialRequestsPage() {
                           leftSection={<IconEye size={14} />}
                           onClick={() => handleViewDetails(request)}
                         >
-                          View
+                          {t('actions.view')}
                         </Button>
                         {canApprove(request) && (
                           <Button
@@ -607,7 +622,7 @@ export default function MaterialRequestsPage() {
                             leftSection={<IconCheck size={14} />}
                             onClick={() => handleApproveClick(request)}
                           >
-                            Review
+                            {t('actions.review')}
                           </Button>
                         )}
                         {request.status === 'AWAITING_DELIVERY' && (
@@ -618,7 +633,7 @@ export default function MaterialRequestsPage() {
                             leftSection={<IconPackage size={14} />}
                             onClick={() => handleReceiveClick(request)}
                           >
-                            Receive
+                            {t('actions.receive')}
                           </Button>
                         )}
                         {canEdit(request) && (
@@ -629,7 +644,7 @@ export default function MaterialRequestsPage() {
                             leftSection={<IconEdit size={14} />}
                             onClick={() => handleEditClick(request)}
                           >
-                            Edit
+                            {t('actions.edit')}
                           </Button>
                         )}
                         {canDelete(request) && (
@@ -640,7 +655,7 @@ export default function MaterialRequestsPage() {
                             leftSection={<IconTrash size={14} />}
                             onClick={() => handleDeleteClick(request)}
                           >
-                            Delete
+                            {t('actions.delete')}
                           </Button>
                         )}
                       </Group>
@@ -660,76 +675,76 @@ export default function MaterialRequestsPage() {
           setDetailModalOpened(false);
           setSelectedRequest(null);
         }}
-        title="Material Request Details"
+        title={t('detailModal.title')}
         size="lg"
         centered
       >
         {selectedRequest && (
           <Stack>
             <Group justify="space-between">
-              <Text fw={600}>Code:</Text>
+              <Text fw={600}>{t('detailModal.code')}:</Text>
               <Text size="sm">{getRequestCode(selectedRequest)}</Text>
             </Group>
             <Group justify="space-between">
-              <Text fw={600}>Maintenance Schedule:</Text>
+              <Text fw={600}>{t('detailModal.maintenanceSchedule')}:</Text>
               <Text size="sm">#{selectedRequest.maintenanceScheduleId}</Text>
             </Group>
             <Group justify="space-between">
-              <Text fw={600}>Requested By:</Text>
+              <Text fw={600}>{t('detailModal.requestedBy')}:</Text>
               <Text size="sm">
-                {selectedRequest.requestedBy?.fullName || 'Unknown'}
+                {selectedRequest.requestedBy?.fullName || t('labels.unknown')}
               </Text>
             </Group>
             <Group justify="space-between">
-              <Text fw={600}>Status:</Text>
+              <Text fw={600}>{t('detailModal.status')}:</Text>
               <Badge color={getStatusColor(selectedRequest.status)}>
-                {selectedRequest.status}
+                {formatStatus(selectedRequest.status)}
               </Badge>
             </Group>
             <Group justify="space-between">
-              <Text fw={600}>Request Date:</Text>
+              <Text fw={600}>{t('detailModal.requestDate')}:</Text>
               <Text size="sm">
                 {new Date(selectedRequest.createdAt).toLocaleString()}
               </Text>
             </Group>
             {selectedRequest.approvedBy && (
               <Group justify="space-between">
-                <Text fw={600}>Approved By:</Text>
+                <Text fw={600}>{t('detailModal.approvedBy')}:</Text>
                 <Text size="sm">
-                  {selectedRequest.approvedBy?.fullName || 'Unknown'}
+                  {selectedRequest.approvedBy?.fullName || t('labels.unknown')}
                 </Text>
               </Group>
             )}
             {selectedRequest.approvedAt && (
               <Group justify="space-between">
-                <Text fw={600}>Approved At:</Text>
+                <Text fw={600}>{t('detailModal.approvedAt')}:</Text>
                 <Text size="sm">
                   {new Date(selectedRequest.approvedAt).toLocaleString()}
                 </Text>
               </Group>
             )}
             {selectedRequest.rejectionReason && (
-              <Alert color="red" title="Rejection Reason">
+              <Alert color="red" title={t('detailModal.rejectionReasonTitle')}>
                 {selectedRequest.rejectionReason}
               </Alert>
             )}
             {selectedRequest.notes && (
               <div>
-                <Text fw={600} mb="xs">Notes:</Text>
+                <Text fw={600} mb="xs">{t('detailModal.notes')}:</Text>
                 <Text size="sm">{selectedRequest.notes}</Text>
               </div>
             )}
 
             <div>
-              <Text fw={600} mb="xs">Requested Items:</Text>
+              <Text fw={600} mb="xs">{t('detailModal.itemsTitle')}:</Text>
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Item</Table.Th>
-                    <Table.Th>Quantity</Table.Th>
-                    <Table.Th>Available</Table.Th>
-                    <Table.Th>Type</Table.Th>
-                    <Table.Th>Status</Table.Th>
+                    <Table.Th>{t('detailModal.table.item')}</Table.Th>
+                    <Table.Th>{t('detailModal.table.quantity')}</Table.Th>
+                    <Table.Th>{t('detailModal.table.available')}</Table.Th>
+                    <Table.Th>{t('detailModal.table.type')}</Table.Th>
+                    <Table.Th>{t('detailModal.table.status')}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -740,7 +755,7 @@ export default function MaterialRequestsPage() {
                       </Table.Td>
                       <Table.Td>{item.requestedQuantity}</Table.Td>
                       <Table.Td>
-                        {item.availableQuantity} available
+                        {t('detailModal.availableCount', { count: item.availableQuantity })}
                       </Table.Td>
                       <Table.Td>
                         <Badge
@@ -761,7 +776,7 @@ export default function MaterialRequestsPage() {
                               : 'yellow'
                           }
                         >
-                          {item.status}
+                          {formatStatus(item.status)}
                         </Badge>
                       </Table.Td>
                     </Table.Tr>
@@ -781,27 +796,23 @@ export default function MaterialRequestsPage() {
           setSelectedRequest(null);
           setRejectionReason('');
         }}
-        title="Review Material Request"
+        title={t('reviewModal.title')}
         size="md"
         centered
       >
         {selectedRequest && (
           <Stack>
-            <Alert color="blue">
-              Review the material request and approve or reject it. If approved,
-              available items will be deducted from stock and purchase requests
-              will be created for unavailable items.
-            </Alert>
+            <Alert color="blue">{t('reviewModal.info')}</Alert>
 
             <div>
-              <Text fw={600} mb="xs">Requested Items:</Text>
+              <Text fw={600} mb="xs">{t('reviewModal.itemsTitle')}:</Text>
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Item</Table.Th>
-                    <Table.Th>Quantity</Table.Th>
-                    <Table.Th>Available</Table.Th>
-                    <Table.Th>Type</Table.Th>
+                    <Table.Th>{t('reviewModal.table.item')}</Table.Th>
+                    <Table.Th>{t('reviewModal.table.quantity')}</Table.Th>
+                    <Table.Th>{t('reviewModal.table.available')}</Table.Th>
+                    <Table.Th>{t('reviewModal.table.type')}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -812,7 +823,7 @@ export default function MaterialRequestsPage() {
                       </Table.Td>
                       <Table.Td>{item.requestedQuantity}</Table.Td>
                       <Table.Td>
-                        {item.availableQuantity} available
+                        {t('reviewModal.availableCount', { count: item.availableQuantity })}
                       </Table.Td>
                       <Table.Td>
                         <Badge
@@ -828,8 +839,8 @@ export default function MaterialRequestsPage() {
             </div>
 
             <Textarea
-              label="Rejection Reason (if rejecting)"
-              placeholder="Enter reason for rejection..."
+              label={t('reviewModal.rejectionReasonLabel')}
+              placeholder={t('reviewModal.rejectionReasonPlaceholder')}
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               minRows={3}
@@ -844,7 +855,7 @@ export default function MaterialRequestsPage() {
                   setRejectionReason('');
                 }}
               >
-                Cancel
+                {tCommon('actions.cancel')}
               </Button>
               <Button
                 color="red"
@@ -853,7 +864,7 @@ export default function MaterialRequestsPage() {
                 onClick={() => handleApprove(false)}
                 loading={approveMutation.isPending}
               >
-                Reject
+                {t('actions.reject')}
               </Button>
               <Button
                 color="green"
@@ -861,7 +872,7 @@ export default function MaterialRequestsPage() {
                 onClick={() => handleApprove(true)}
                 loading={approveMutation.isPending}
               >
-                Approve
+                {t('actions.approve')}
               </Button>
             </Group>
           </Stack>
@@ -875,19 +886,17 @@ export default function MaterialRequestsPage() {
           setEditModalOpened(false);
           setSelectedRequest(null);
         }}
-        title="Edit Material Request"
+        title={t('editModal.title')}
         size="lg"
         centered
       >
         {selectedRequest && (
           <Stack>
-            <Alert color="orange">
-              You can only edit PENDING material requests. Approved requests cannot be modified.
-            </Alert>
+            <Alert color="orange">{t('editModal.info')}</Alert>
 
             <TextInput
-              label="Description"
-              placeholder="Maintenance description"
+              label={t('editModal.descriptionLabel')}
+              placeholder={t('editModal.descriptionPlaceholder')}
               defaultValue={selectedRequest.description || ''}
               // TODO: Implement edit form
             />
@@ -900,7 +909,7 @@ export default function MaterialRequestsPage() {
                   setSelectedRequest(null);
                 }}
               >
-                Cancel
+                {tCommon('actions.cancel')}
               </Button>
               <Button
                 color="green"
@@ -908,13 +917,13 @@ export default function MaterialRequestsPage() {
                 onClick={() => {
                   // TODO: Implement edit functionality
                   notifications.show({
-                    title: 'Info',
-                    message: 'Edit functionality will be implemented soon',
+                    title: t('notifications.infoTitle'),
+                    message: t('notifications.editNotImplemented'),
                     color: 'blue',
                   });
                 }}
               >
-                Update
+                {t('actions.update')}
               </Button>
             </Group>
           </Stack>
@@ -929,26 +938,26 @@ export default function MaterialRequestsPage() {
           setSelectedRequest(null);
           setReceiveNotes('');
         }}
-        title="Receive Materials"
+        title={t('receiveModal.title')}
         centered
       >
         <Stack>
           <Text size="sm" c="dimmed">
-            Confirm that you have received the materials for this request. This will mark the material request as delivered and start the maintenance work.
+            {t('receiveModal.info')}
           </Text>
           {selectedRequest && (
             <Paper p="sm" withBorder bg="gray.0">
-              <Text size="sm" fw={600}>Code:</Text>
+              <Text size="sm" fw={600}>{t('receiveModal.code')}:</Text>
               <Text size="sm">{getRequestCode(selectedRequest)}</Text>
-              <Text size="sm" fw={600} mt="xs">Pole Code:</Text>
-              <Text size="sm">{selectedRequest.maintenanceSchedule?.poleCode || 'N/A'}</Text>
-              <Text size="sm" fw={600} mt="xs">Items:</Text>
-              <Text size="sm">{selectedRequest.items?.length || 0} items</Text>
+              <Text size="sm" fw={600} mt="xs">{t('receiveModal.poleCode')}:</Text>
+              <Text size="sm">{selectedRequest.maintenanceSchedule?.poleCode || t('labels.notAvailable')}</Text>
+              <Text size="sm" fw={600} mt="xs">{t('receiveModal.items')}:</Text>
+              <Text size="sm">{t('labels.itemsCount', { count: selectedRequest.items?.length || 0 })}</Text>
             </Paper>
           )}
           <Textarea
-            label="Delivery Notes (Optional)"
-            placeholder="Add any notes about the delivery..."
+            label={t('receiveModal.notesLabel')}
+            placeholder={t('receiveModal.notesPlaceholder')}
             value={receiveNotes}
             onChange={(event) => setReceiveNotes(event.currentTarget.value)}
             minRows={3}
@@ -962,14 +971,14 @@ export default function MaterialRequestsPage() {
                 setReceiveNotes('');
               }}
             >
-              Cancel
+              {tCommon('actions.cancel')}
             </Button>
             <Button
               color="purple"
               onClick={handleReceive}
               loading={receiveMutation.isPending}
             >
-              Mark as Received
+              {t('actions.markReceived')}
             </Button>
           </Group>
         </Stack>
@@ -982,22 +991,22 @@ export default function MaterialRequestsPage() {
           setDeleteModalOpened(false);
           setSelectedRequest(null);
         }}
-        title="Delete Material Request"
+        title={t('deleteModal.title')}
         centered
       >
         <Stack>
           <Text>
-            Are you sure you want to delete this material request? This action cannot be undone.
+            {t('deleteModal.confirmation')}
           </Text>
           {selectedRequest && (
             <Paper p="sm" withBorder bg="gray.0">
-              <Text size="sm" fw={700}>Code:</Text>
+              <Text size="sm" fw={700}>{t('deleteModal.code')}:</Text>
               <Text size="sm">{getRequestCode(selectedRequest)}</Text>
-              <Text size="sm" fw={700} mt="xs">Description:</Text>
-              <Text size="sm">{selectedRequest.description || 'No description'}</Text>
-              <Text size="sm" fw={700} mt="xs">Status:</Text>
+              <Text size="sm" fw={700} mt="xs">{t('deleteModal.description')}:</Text>
+              <Text size="sm">{selectedRequest.description || t('labels.noDescription')}</Text>
+              <Text size="sm" fw={700} mt="xs">{t('deleteModal.status')}:</Text>
               <Badge color={getStatusColor(selectedRequest.status)}>
-                {selectedRequest.status}
+                {formatStatus(selectedRequest.status)}
               </Badge>
             </Paper>
           )}
@@ -1009,7 +1018,7 @@ export default function MaterialRequestsPage() {
                 setSelectedRequest(null);
               }}
             >
-              Cancel
+              {tCommon('actions.cancel')}
             </Button>
             <Button
               color="red"
@@ -1017,7 +1026,7 @@ export default function MaterialRequestsPage() {
               onClick={handleDeleteConfirm}
               loading={deleteMutation.isPending}
             >
-              Delete
+              {t('actions.delete')}
             </Button>
           </Group>
         </Stack>
@@ -1025,5 +1034,4 @@ export default function MaterialRequestsPage() {
     </Container>
   );
 }
-
 

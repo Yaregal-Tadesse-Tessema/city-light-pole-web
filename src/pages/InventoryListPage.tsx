@@ -25,10 +25,13 @@ import { IconEdit, IconTrash, IconEye, IconFilter, IconArrowsUpDown } from '@tab
 import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 // Categories will be loaded dynamically from API
 
 export default function InventoryListPage() {
+  const { t } = useTranslation('inventoryList');
+  const { t: tCommon } = useTranslation('common');
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -224,8 +227,8 @@ export default function InventoryListPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Inventory item deleted successfully',
+        title: t('notifications.deleteSuccessTitle'),
+        message: t('notifications.deleteSuccessMessage'),
         color: 'green',
       });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
@@ -234,8 +237,8 @@ export default function InventoryListPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to delete inventory item',
+        title: t('notifications.deleteErrorTitle'),
+        message: error.response?.data?.message || t('notifications.deleteErrorMessage'),
         color: 'red',
       });
     },
@@ -260,21 +263,21 @@ export default function InventoryListPage() {
 
     if (currentStock <= minThreshold) {
       console.log(`Showing LOW STOCK: ${currentStock} <= ${minThreshold}`);
-      return { color: 'red', label: 'Low Stock' };
+      return { color: 'red', label: t('status.lowStock') };
     }
     if (currentStock <= minThreshold * 1.5) {
       console.log(`Showing WARNING: ${currentStock} <= ${minThreshold * 1.5}`);
-      return { color: 'yellow', label: 'Warning' };
+      return { color: 'yellow', label: t('status.warning') };
     }
     console.log(`Showing IN STOCK: ${currentStock} > ${minThreshold * 1.5}`);
-    return { color: 'green', label: 'In Stock' };
+    return { color: 'green', label: t('status.inStock') };
   };
 
 
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title order={1}>Inventory Management</Title>
+        <Title order={1}>{t('title')}</Title>
         <Group>
           {hasActiveFilters && (
             <Button
@@ -283,12 +286,12 @@ export default function InventoryListPage() {
               size="md"
               onClick={resetFilters}
             >
-              Clear Filters
+              {t('actions.clearFilters')}
             </Button>
           )}
           {user?.role === 'ADMIN' && (
             <Button onClick={() => navigate('/inventory/new')} size="md">
-              Add Inventory Item
+              {t('actions.addItem')}
             </Button>
           )}
         </Group>
@@ -297,7 +300,7 @@ export default function InventoryListPage() {
       <Paper p={{ base: 'xs', sm: 'md' }} withBorder mb="md">
         <Stack gap="md">
           <TextInput
-            placeholder="Search by code, name, or description"
+            placeholder={t('filters.searchPlaceholder')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -306,7 +309,7 @@ export default function InventoryListPage() {
           />
           <Group grow>
             <Select
-              placeholder="Category"
+              placeholder={t('filters.categoryPlaceholder')}
               data={categoryOptions}
               value={categoryId}
               onChange={(value) => {
@@ -317,11 +320,11 @@ export default function InventoryListPage() {
               disabled={categoriesLoading}
             />
             <Select
-              placeholder="Stock Status"
+              placeholder={t('filters.stockStatusPlaceholder')}
               data={[
-                { value: 'low', label: 'Low Stock' },
-                { value: 'warning', label: 'Warning' },
-                { value: 'in_stock', label: 'In Stock' },
+                { value: 'low', label: t('status.lowStock') },
+                { value: 'warning', label: t('status.warning') },
+                { value: 'in_stock', label: t('status.inStock') },
               ]}
               value={lowStock}
               onChange={(value) => {
@@ -349,7 +352,9 @@ export default function InventoryListPage() {
               <Table.Tr>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('code')}>Code</Text>
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('code')}>
+                      {t('table.code')}
+                    </Text>
                     <Group gap="xs">
                       <ActionIcon
                         variant="subtle"
@@ -371,9 +376,9 @@ export default function InventoryListPage() {
                         </Popover.Target>
                         <Popover.Dropdown>
                           <Stack gap="sm">
-                            <Text size="sm" fw={500}>Filter by Code</Text>
+                            <Text size="sm" fw={500}>{t('filters.codeLabel')}</Text>
                             <TextInput
-                              placeholder="Enter code..."
+                              placeholder={t('filters.codePlaceholder')}
                               value={codeFilter}
                               onChange={(e) => setCodeFilter(e.currentTarget.value)}
                               size="sm"
@@ -384,7 +389,7 @@ export default function InventoryListPage() {
                                 variant="light"
                                 onClick={() => setCodeFilter('')}
                               >
-                                Clear
+                                {t('actions.clear')}
                               </Button>
                             )}
                           </Stack>
@@ -395,7 +400,9 @@ export default function InventoryListPage() {
                 </Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>Name</Text>
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>
+                      {t('table.name')}
+                    </Text>
                     <Group gap="xs">
                       <ActionIcon
                         variant="subtle"
@@ -417,9 +424,9 @@ export default function InventoryListPage() {
                         </Popover.Target>
                         <Popover.Dropdown>
                           <Stack gap="sm">
-                            <Text size="sm" fw={500}>Filter by Name</Text>
+                            <Text size="sm" fw={500}>{t('filters.nameLabel')}</Text>
                             <TextInput
-                              placeholder="Enter name..."
+                              placeholder={t('filters.namePlaceholder')}
                               value={nameFilter}
                               onChange={(e) => setNameFilter(e.currentTarget.value)}
                               size="sm"
@@ -430,7 +437,7 @@ export default function InventoryListPage() {
                                 variant="light"
                                 onClick={() => setNameFilter('')}
                               >
-                                Clear
+                                {t('actions.clear')}
                               </Button>
                             )}
                           </Stack>
@@ -441,7 +448,9 @@ export default function InventoryListPage() {
                 </Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('category')}>Category</Text>
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('category')}>
+                      {t('table.category')}
+                    </Text>
                     <Group gap="xs">
                       <ActionIcon
                         variant="subtle"
@@ -463,9 +472,9 @@ export default function InventoryListPage() {
                         </Popover.Target>
                         <Popover.Dropdown>
                           <Stack gap="sm">
-                            <Text size="sm" fw={500}>Filter by Category</Text>
+                            <Text size="sm" fw={500}>{t('filters.categoryLabel')}</Text>
                             <TextInput
-                              placeholder="Enter category..."
+                              placeholder={t('filters.categoryPlaceholderInput')}
                               value={categoryFilter}
                               onChange={(e) => setCategoryFilter(e.currentTarget.value)}
                               size="sm"
@@ -476,7 +485,7 @@ export default function InventoryListPage() {
                                 variant="light"
                                 onClick={() => setCategoryFilter('')}
                               >
-                                Clear
+                                {t('actions.clear')}
                               </Button>
                             )}
                           </Stack>
@@ -485,11 +494,13 @@ export default function InventoryListPage() {
                     </Group>
                   </Group>
                 </Table.Th>
-                <Table.Th>Current Stock</Table.Th>
-                <Table.Th>Min Threshold</Table.Th>
+                <Table.Th>{t('table.currentStock')}</Table.Th>
+                <Table.Th>{t('table.minThreshold')}</Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>Status</Text>
+                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>
+                      {t('table.status')}
+                    </Text>
                     <Group gap="xs">
                       <ActionIcon
                         variant="subtle"
@@ -511,10 +522,10 @@ export default function InventoryListPage() {
                         </Popover.Target>
                         <Popover.Dropdown>
                           <Stack gap="sm">
-                            <Text size="sm" fw={500}>Filter by Status</Text>
+                            <Text size="sm" fw={500}>{t('filters.statusLabel')}</Text>
                             <Select
-                              placeholder="Select status"
-                              data={['In Stock', 'Warning', 'Low Stock']}
+                              placeholder={t('filters.statusPlaceholder')}
+                              data={[t('status.inStock'), t('status.warning'), t('status.lowStock')]}
                               value={statusFilter}
                               onChange={(value) => setStatusFilter(value || '')}
                               clearable
@@ -526,8 +537,8 @@ export default function InventoryListPage() {
                     </Group>
                   </Group>
                 </Table.Th>
-                <Table.Th>Unit Cost</Table.Th>
-                {user?.role === 'ADMIN' && <Table.Th>Actions</Table.Th>}
+                <Table.Th>{t('table.unitCost')}</Table.Th>
+                {user?.role === 'ADMIN' && <Table.Th>{t('table.actions')}</Table.Th>}
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -540,7 +551,7 @@ export default function InventoryListPage() {
               ) : paginatedItems?.length === 0 ? (
                 <Table.Tr>
                   <Table.Td colSpan={user?.role === 'ADMIN' ? 8 : 7}>
-                    <Text c="dimmed" ta="center">No inventory items found</Text>
+                    <Text c="dimmed" ta="center">{t('emptyState')}</Text>
                   </Table.Td>
                 </Table.Tr>
               ) : (
@@ -554,7 +565,7 @@ export default function InventoryListPage() {
                     >
                       <Table.Td>{item.code}</Table.Td>
                       <Table.Td>{item.name}</Table.Td>
-                      <Table.Td>{item.category?.name || 'No category'}</Table.Td>
+                      <Table.Td>{item.category?.name || t('labels.noCategory')}</Table.Td>
                       <Table.Td>
                         <Text fw={500}>{item.currentStock} {item.unitOfMeasure}</Text>
                       </Table.Td>
@@ -563,7 +574,7 @@ export default function InventoryListPage() {
                         <Badge color={stockStatus.color}>{stockStatus.label}</Badge>
                       </Table.Td>
                       <Table.Td>
-                        {item.unitCost ? `${Number(item.unitCost).toFixed(2)}` : 'N/A'}
+                        {item.unitCost ? `${Number(item.unitCost).toFixed(2)}` : t('labels.notAvailable')}
                       </Table.Td>
                       {user?.role === 'ADMIN' && (
                         <Table.Td onClick={(e) => e.stopPropagation()}>
@@ -604,7 +615,11 @@ export default function InventoryListPage() {
       {totalPages > 0 && (
         <Group justify="space-between" align="center" mt="md">
           <Text size="sm" c="dimmed">
-            Showing {paginatedItems.length > 0 ? ((page - 1) * 10 + 1) : 0} - {Math.min(page * 10, totalItems)} of {totalItems} items
+            {t('pagination.showing', {
+              start: paginatedItems.length > 0 ? (page - 1) * 10 + 1 : 0,
+              end: Math.min(page * 10, totalItems),
+              total: totalItems,
+            })}
           </Text>
           <Pagination
             value={page}
@@ -617,21 +632,19 @@ export default function InventoryListPage() {
       <Modal
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
-        title="Delete Inventory Item"
+        title={t('deleteModal.title')}
         centered
       >
-        <Text>Are you sure you want to delete this inventory item? This action cannot be undone.</Text>
+        <Text>{t('deleteModal.confirmation')}</Text>
         <Group justify="flex-end" mt="xl">
           <Button variant="outline" onClick={closeDeleteModal}>
-            Cancel
+            {tCommon('actions.cancel')}
           </Button>
           <Button color="red" onClick={handleDeleteConfirm} loading={deleteMutation.isPending}>
-            Delete
+            {t('actions.delete')}
           </Button>
         </Group>
       </Modal>
     </Container>
   );
 }
-
-

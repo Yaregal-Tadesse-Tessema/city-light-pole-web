@@ -17,8 +17,11 @@ import {
 } from '@mantine/core';
 import { IconPlus, IconEye } from '@tabler/icons-react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 export default function PoleReplacementsListPage() {
+  const { t } = useTranslation('replacementsList');
+  const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const pageSize = 10;
@@ -64,21 +67,21 @@ export default function PoleReplacementsListPage() {
   return (
     <Container size="xl" pt="xl">
       <Group justify="space-between" mb="xl">
-        <Title order={1}>Replaced Poles</Title>
+        <Title order={1}>{t('title')}</Title>
         <Button
           leftSection={<IconPlus size={16} />}
           onClick={() => navigate('/replacements/new')}
         >
-          Create New Replacement
+          {t('actions.create')}
         </Button>
       </Group>
 
       {error && (
         <Alert color="red" mb="md">
-          <Text fw={600}>Error loading pole replacements:</Text>
-          <Text>{error.message || 'Unknown error'}</Text>
+          <Text fw={600}>{t('errors.loadTitle')}</Text>
+          <Text>{error.message || t('errors.unknown')}</Text>
           <Text size="sm" c="dimmed" mt="xs">
-            Check the browser console for more details.
+            {t('errors.checkConsole')}
           </Text>
         </Alert>
       )}
@@ -88,34 +91,34 @@ export default function PoleReplacementsListPage() {
           <Table highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Pole Code</Table.Th>
-                <Table.Th>Subcity</Table.Th>
-                <Table.Th>Street</Table.Th>
-                <Table.Th>Pole Type</Table.Th>
-                <Table.Th>Lamp Type</Table.Th>
-                <Table.Th>Power Rating</Table.Th>
-                <Table.Th>LED Display</Table.Th>
-                <Table.Th>Actions</Table.Th>
+                <Table.Th>{t('table.poleCode')}</Table.Th>
+                <Table.Th>{t('table.subcity')}</Table.Th>
+                <Table.Th>{t('table.street')}</Table.Th>
+                <Table.Th>{t('table.poleType')}</Table.Th>
+                <Table.Th>{t('table.lampType')}</Table.Th>
+                <Table.Th>{t('table.powerRating')}</Table.Th>
+                <Table.Th>{t('table.ledDisplay')}</Table.Th>
+                <Table.Th>{t('table.actions')}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {isLoading ? (
                 <Table.Tr>
-                  <Table.Td colSpan={8}>Loading...</Table.Td>
+                  <Table.Td colSpan={8}>{tCommon('loading')}</Table.Td>
                 </Table.Tr>
               ) : replacements.length === 0 ? (
                 <Table.Tr>
                   <Table.Td colSpan={8}>
                     <Stack align="center" py="xl">
-                      <Text c="dimmed">No replaced poles found</Text>
+                      <Text c="dimmed">{t('emptyState.title')}</Text>
                       <Text size="sm" c="dimmed" mb="md">
-                        Poles that have been replaced will appear here
+                        {t('emptyState.subtitle')}
                       </Text>
                       <Button
                         leftSection={<IconPlus size={16} />}
                         onClick={() => navigate('/replacements/new')}
                       >
-                        Create First Replacement
+                        {t('emptyState.cta')}
                       </Button>
                     </Stack>
                   </Table.Td>
@@ -132,12 +135,14 @@ export default function PoleReplacementsListPage() {
                       <Badge variant="light">{pole.poleType}</Badge>
                     </Table.Td>
                     <Table.Td>{pole.lampType}</Table.Td>
-                    <Table.Td>{pole.powerRatingWatt ? `${pole.powerRatingWatt}W` : 'N/A'}</Table.Td>
+                    <Table.Td>
+                      {pole.powerRatingWatt ? `${pole.powerRatingWatt}W` : t('labels.notAvailable')}
+                    </Table.Td>
                     <Table.Td>
                       {pole.hasLedDisplay ? (
-                        <Badge color="blue" variant="light">Yes</Badge>
+                        <Badge color="blue" variant="light">{t('labels.yes')}</Badge>
                       ) : (
-                        <Badge color="gray" variant="light">No</Badge>
+                        <Badge color="gray" variant="light">{t('labels.no')}</Badge>
                       )}
                     </Table.Td>
                     <Table.Td>
@@ -145,7 +150,7 @@ export default function PoleReplacementsListPage() {
                         variant="light"
                         color="blue"
                         onClick={() => navigate(`/poles/${pole.code}`)}
-                        title="View Pole Details"
+                        title={t('actions.viewDetails')}
                       >
                         <IconEye size={16} />
                       </ActionIcon>

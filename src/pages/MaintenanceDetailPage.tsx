@@ -44,6 +44,7 @@ import {
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 import MaterialRequestModal from '../components/MaterialRequestModal';
+import { useTranslation } from 'react-i18next';
 
 const SCHEDULE_STATUSES = ['REQUESTED', 'STARTED', 'PAUSED', 'COMPLETED'];
 
@@ -67,6 +68,7 @@ export default function MaintenanceDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useTranslation('maintenanceDetail');
 
   const [editModalOpened, setEditModalOpened] = useState(false);
   const [materialRequestModalOpened, setMaterialRequestModalOpened] = useState(false);
@@ -162,8 +164,8 @@ export default function MaintenanceDetailPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Maintenance schedule updated successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.updateSuccess'),
         color: 'green',
       });
       setEditModalOpened(false);
@@ -172,8 +174,8 @@ export default function MaintenanceDetailPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to update maintenance schedule',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.updateError'),
         color: 'red',
       });
     },
@@ -200,8 +202,8 @@ export default function MaintenanceDetailPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Material request created successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.materialRequestSuccess'),
         color: 'green',
       });
       setMaterialRequestModalOpened(false);
@@ -211,8 +213,8 @@ export default function MaintenanceDetailPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to create material request',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.materialRequestError'),
         color: 'red',
       });
     },
@@ -239,42 +241,42 @@ export default function MaintenanceDetailPage() {
   };
 
   const getAssetInfo = (schedule: any) => {
-    if (!schedule) return '—';
+    if (!schedule) return t('labels.none');
 
     if (schedule.pole) {
-      return `${schedule.pole.poleType || '—'} • ${schedule.pole.lampType || '—'} • ${schedule.pole.heightMeters ?? '—'}m`;
+      return `${schedule.pole.poleType || t('labels.none')} - ${schedule.pole.lampType || t('labels.none')} - ${schedule.pole.heightMeters ?? t('labels.none')}m`;
     } else if (schedule.park) {
-      return `${schedule.park.parkType || '—'} • ${schedule.park.areaHectares ?? '—'} ha`;
+      return `${schedule.park.parkType || t('labels.none')} - ${schedule.park.areaHectares ?? t('labels.none')} ha`;
     } else if (schedule.parkingLot) {
-      return `${schedule.parkingLot.parkingType || '—'} • cap ${schedule.parkingLot.capacity ?? '—'}`;
+      return `${schedule.parkingLot.parkingType || t('labels.none')} - ${t('labels.capacity')} ${schedule.parkingLot.capacity ?? t('labels.none')}`;
     } else if (schedule.museum) {
-      return schedule.museum.museumType || '—';
+      return schedule.museum.museumType || t('labels.none');
     } else if (schedule.publicToilet) {
-      return `${schedule.publicToilet.toiletType || '—'} • ${schedule.publicToilet.hasPaidAccess ? 'paid' : 'free'}`;
+      return `${schedule.publicToilet.toiletType || t('labels.none')} - ${schedule.publicToilet.hasPaidAccess ? t('labels.paid') : t('labels.free')}`;
     } else if (schedule.footballField) {
-      return `${schedule.footballField.fieldType || '—'} • cap ${schedule.footballField.capacity ?? '—'}`;
+      return `${schedule.footballField.fieldType || t('labels.none')} - ${t('labels.capacity')} ${schedule.footballField.capacity ?? t('labels.none')}`;
     } else if (schedule.riverSideProject) {
-      return schedule.riverSideProject.projectType || '—';
+      return schedule.riverSideProject.projectType || t('labels.none');
     }
 
-    return '—';
+    return t('labels.none');
   };
 
   const getAssetDistrict = (schedule: any) => {
-    if (!schedule) return '—';
+    if (!schedule) return t('labels.none');
 
-    if (schedule.pole) return schedule.pole.subcity || '—';
+    if (schedule.pole) return schedule.pole.subcity || t('labels.none');
     return schedule.park?.district ||
            schedule.parkingLot?.district ||
            schedule.museum?.district ||
            schedule.publicToilet?.district ||
            schedule.footballField?.district ||
            schedule.riverSideProject?.district ||
-           '—';
+           t('labels.none');
   };
 
   const getAssetStreet = (schedule: any) => {
-    if (!schedule) return '—';
+    if (!schedule) return t('labels.none');
 
     return schedule.pole?.street ||
            schedule.park?.street ||
@@ -283,7 +285,7 @@ export default function MaintenanceDetailPage() {
            schedule.publicToilet?.street ||
            schedule.footballField?.street ||
            schedule.riverSideProject?.street ||
-           '—';
+           t('labels.none');
   };
 
   const getAssetCode = (schedule: any) => {
@@ -294,7 +296,7 @@ export default function MaintenanceDetailPage() {
            schedule?.publicToiletCode ||
            schedule?.footballFieldCode ||
            schedule?.riverSideProjectCode ||
-           '—';
+           t('labels.none');
   };
 
   if (isLoading) {
@@ -310,8 +312,8 @@ export default function MaintenanceDetailPage() {
   if (!schedule) {
     return (
       <Container size="xl" py="xl">
-        <Alert color="red" title="Error">
-          Maintenance schedule not found
+        <Alert color="red" title={t('error.title')}>
+          {t('error.notFound')}
         </Alert>
       </Container>
     );
@@ -325,14 +327,14 @@ export default function MaintenanceDetailPage() {
           leftSection={<IconArrowLeft size={16} />}
           onClick={() => navigate('/maintenance')}
         >
-          Back to Maintenance
+          {t('actions.backToMaintenance')}
         </Button>
       </Group>
 
       <Stack gap="lg">
         <Paper withBorder p="lg">
           <Group justify="space-between" mb="md">
-            <Title order={2}>Maintenance Schedule Details</Title>
+            <Title order={2}>{t('title')}</Title>
             <Group>
               {canEdit(schedule) && (
                 <Button
@@ -340,7 +342,7 @@ export default function MaintenanceDetailPage() {
                   leftSection={<IconEdit size={16} />}
                   onClick={() => setEditModalOpened(true)}
                 >
-                  Edit Schedule
+                  {t('actions.editSchedule')}
                 </Button>
               )}
               {canRequestMaterials(schedule) && (
@@ -353,7 +355,7 @@ export default function MaintenanceDetailPage() {
                     setMaterialRequestModalOpened(true);
                   }}
                 >
-                  Request Materials
+                  {t('actions.requestMaterials')}
                 </Button>
               )}
             </Group>
@@ -363,27 +365,27 @@ export default function MaintenanceDetailPage() {
             <Grid.Col span={6}>
               <Stack gap="sm">
                 <Group>
-                  <Text fw={600}>Asset Code:</Text>
+                  <Text fw={600}>{t('fields.assetCode')}:</Text>
                   <Badge color="blue">{getAssetCode(schedule)}</Badge>
                 </Group>
 
                 <Group>
-                  <Text fw={600}>Maintenance Code:</Text>
+                  <Text fw={600}>{t('fields.maintenanceCode')}:</Text>
                   <Badge color="green">{schedule.maintenanceCode}</Badge>
                 </Group>
 
                 <Group>
-                  <Text fw={600}>District:</Text>
+                  <Text fw={600}>{t('fields.district')}:</Text>
                   <Text>{getAssetDistrict(schedule)}</Text>
                 </Group>
 
                 <Group>
-                  <Text fw={600}>Street:</Text>
+                  <Text fw={600}>{t('fields.street')}:</Text>
                   <Text>{getAssetStreet(schedule)}</Text>
                 </Group>
 
                 <Group>
-                  <Text fw={600}>Asset Details:</Text>
+                  <Text fw={600}>{t('fields.assetDetails')}:</Text>
                   <Text>{getAssetInfo(schedule)}</Text>
                 </Group>
               </Stack>
@@ -392,30 +394,30 @@ export default function MaintenanceDetailPage() {
             <Grid.Col span={6}>
               <Stack gap="sm">
                 <Group>
-                  <Text fw={600}>Maintenance:</Text>
+                  <Text fw={600}>{t('fields.maintenance')}:</Text>
                   <Text>{schedule.description}</Text>
                 </Group>
 
                 <Group>
-                  <Text fw={600}>Frequency:</Text>
-                  <Text>{schedule.frequency}</Text>
+                  <Text fw={600}>{t('fields.frequency')}:</Text>
+                  <Text>{t(`frequency.${schedule.frequency}`, schedule.frequency)}</Text>
                 </Group>
 
                 <Group>
-                  <Text fw={600}>Start Date:</Text>
-                  <Text>{schedule.startDate ? new Date(schedule.startDate).toLocaleDateString() : '—'}</Text>
+                  <Text fw={600}>{t('fields.startDate')}:</Text>
+                  <Text>{schedule.startDate ? new Date(schedule.startDate).toLocaleDateString() : t('labels.none')}</Text>
                 </Group>
 
                 <Group>
-                  <Text fw={600}>End Date:</Text>
-                  <Text>{schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : '—'}</Text>
+                  <Text fw={600}>{t('fields.endDate')}:</Text>
+                  <Text>{schedule.endDate ? new Date(schedule.endDate).toLocaleDateString() : t('labels.none')}</Text>
                 </Group>
               </Stack>
             </Grid.Col>
           </Grid>
 
           <Group mt="md">
-            <Text fw={600}>Status:</Text>
+            <Text fw={600}>{t('fields.status')}:</Text>
             <Badge color={getStatusColor(schedule.status)} size="lg">
               {schedule.status}
             </Badge>
@@ -423,7 +425,7 @@ export default function MaintenanceDetailPage() {
 
           {schedule.remark && (
             <Group mt="md">
-              <Text fw={600}>Remark:</Text>
+              <Text fw={600}>{t('fields.remark')}:</Text>
               <Text>{schedule.remark}</Text>
             </Group>
           )}
@@ -431,10 +433,10 @@ export default function MaintenanceDetailPage() {
 
         <Tabs defaultValue="materials">
           <Tabs.List>
-            <Tabs.Tab value="materials">Material Requests</Tabs.Tab>
-            <Tabs.Tab value="all-requests">Material Purchase Requests</Tabs.Tab>
+            <Tabs.Tab value="materials">{t('tabs.materialRequests')}</Tabs.Tab>
+            <Tabs.Tab value="all-requests">{t('tabs.purchaseRequests')}</Tabs.Tab>
             {schedule.issueId && (
-              <Tabs.Tab value="issue">Related Issue</Tabs.Tab>
+              <Tabs.Tab value="issue">{t('tabs.relatedIssue')}</Tabs.Tab>
             )}
           </Tabs.List>
 
@@ -443,23 +445,23 @@ export default function MaintenanceDetailPage() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Code</Table.Th>
-                    <Table.Th>Items Count</Table.Th>
-                    <Table.Th>Status</Table.Th>
-                    <Table.Th>Request Date</Table.Th>
-                    <Table.Th>Actions</Table.Th>
+                    <Table.Th>{t('table.headers.code')}</Table.Th>
+                    <Table.Th>{t('table.headers.itemsCount')}</Table.Th>
+                    <Table.Th>{t('table.headers.status')}</Table.Th>
+                    <Table.Th>{t('table.headers.requestDate')}</Table.Th>
+                    <Table.Th>{t('table.headers.actions')}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
                   {materialRequests?.length === 0 ? (
                     <Table.Tr>
-                      <Table.Td colSpan={5}>No material requests found</Table.Td>
+                      <Table.Td colSpan={5}>{t('table.empty.materialRequests')}</Table.Td>
                     </Table.Tr>
                   ) : (
                     materialRequests?.map((request: any) => (
                       <Table.Tr key={request.id}>
-                        <Table.Td>{request.code ?? '—'}</Table.Td>
-                        <Table.Td>{request.items?.length || 0} items</Table.Td>
+                        <Table.Td>{request.code ?? t('labels.none')}</Table.Td>
+                        <Table.Td>{t('table.items', { count: request.items?.length || 0 })}</Table.Td>
                         <Table.Td>
                           <Badge color={getStatusColor(request.status)}>{request.status}</Badge>
                         </Table.Td>
@@ -470,7 +472,7 @@ export default function MaintenanceDetailPage() {
                             variant="light"
                             onClick={() => navigate(`/material-requests/${request.id}`)}
                           >
-                            View Details
+                            {t('actions.viewDetails')}
                           </Button>
                         </Table.Td>
                       </Table.Tr>
@@ -485,29 +487,29 @@ export default function MaintenanceDetailPage() {
             <Paper withBorder>
               <Group mb="md">
                 <IconShoppingCart size={20} color="var(--mantine-color-green-6)" />
-                <Title order={4} c="green">Material Purchase Requests</Title>
+                <Title order={4} c="green">{t('sections.purchaseRequests')}</Title>
               </Group>
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Request ID</Table.Th>
-                    <Table.Th>Items Count</Table.Th>
-                    <Table.Th>Total Cost</Table.Th>
-                    <Table.Th>Status</Table.Th>
-                    <Table.Th>Request Date</Table.Th>
-                    <Table.Th>Actions</Table.Th>
+                    <Table.Th>{t('table.headers.requestId')}</Table.Th>
+                    <Table.Th>{t('table.headers.itemsCount')}</Table.Th>
+                    <Table.Th>{t('table.headers.totalCost')}</Table.Th>
+                    <Table.Th>{t('table.headers.status')}</Table.Th>
+                    <Table.Th>{t('table.headers.requestDate')}</Table.Th>
+                    <Table.Th>{t('table.headers.actions')}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
                   {purchaseRequests?.length === 0 ? (
                     <Table.Tr>
-                      <Table.Td colSpan={6}>No purchase requests found</Table.Td>
+                      <Table.Td colSpan={6}>{t('table.empty.purchaseRequests')}</Table.Td>
                     </Table.Tr>
                   ) : (
                     purchaseRequests?.map((request: any) => (
                       <Table.Tr key={request.id}>
                         <Table.Td>{request.id.substring(0, 8)}...</Table.Td>
-                        <Table.Td>{request.items?.length || 0} items</Table.Td>
+                        <Table.Td>{t('table.items', { count: request.items?.length || 0 })}</Table.Td>
                         <Table.Td>${(() => {
                           const total = request.items?.reduce((sum: number, item: any) => {
                             const cost = typeof item.totalCost === 'number' ? item.totalCost : 0;
@@ -525,7 +527,7 @@ export default function MaintenanceDetailPage() {
                             variant="light"
                             onClick={() => navigate('/purchase-requests')}
                           >
-                            View All
+                            {t('actions.viewAll')}
                           </Button>
                         </Table.Td>
                       </Table.Tr>
@@ -546,12 +548,12 @@ export default function MaintenanceDetailPage() {
                 ) : relatedIssue ? (
                   <Stack>
                     <Group>
-                      <Text fw={600}>Issue ID:</Text>
+                      <Text fw={600}>{t('issue.fields.issueId')}:</Text>
                       <Badge color="red">{relatedIssue.id.substring(0, 8)}...</Badge>
                     </Group>
 
                     <Group>
-                      <Text fw={600}>Asset Code:</Text>
+                      <Text fw={600}>{t('issue.fields.assetCode')}:</Text>
                       <Badge color="blue">
                         {relatedIssue.pole?.code ||
                          relatedIssue.park?.code ||
@@ -560,12 +562,12 @@ export default function MaintenanceDetailPage() {
                          relatedIssue.publicToilet?.code ||
                          relatedIssue.footballField?.code ||
                          relatedIssue.riverSideProject?.code ||
-                         'N/A'}
+                         t('labels.na')}
                       </Badge>
                     </Group>
 
                     <Group>
-                      <Text fw={600}>Severity:</Text>
+                      <Text fw={600}>{t('issue.fields.severity')}:</Text>
                       <Badge
                         color={
                           relatedIssue.severity === 'LOW'
@@ -582,42 +584,42 @@ export default function MaintenanceDetailPage() {
                     </Group>
 
                     <div>
-                      <Text fw={600} mb="xs">Description:</Text>
+                      <Text fw={600} mb="xs">{t('issue.fields.description')}:</Text>
                       <Text>{relatedIssue.description}</Text>
                     </div>
 
                     {relatedIssue.resolutionNotes && (
                       <div>
-                        <Text fw={600} mb="xs">Resolution Notes:</Text>
+                        <Text fw={600} mb="xs">{t('issue.fields.resolutionNotes')}:</Text>
                         <Text>{relatedIssue.resolutionNotes}</Text>
                       </div>
                     )}
 
                     <Group>
-                      <Text fw={600}>Status:</Text>
+                      <Text fw={600}>{t('issue.fields.status')}:</Text>
                       <Badge color={getStatusColor(relatedIssue.status)}>{relatedIssue.status}</Badge>
                     </Group>
 
                     <Group>
-                      <Text fw={600}>Reported By:</Text>
-                      <Text>{relatedIssue.reportedBy?.fullName || 'Unknown'}</Text>
+                      <Text fw={600}>{t('issue.fields.reportedBy')}:</Text>
+                      <Text>{relatedIssue.reportedBy?.fullName || t('labels.unknown')}</Text>
                     </Group>
 
                     <Group>
-                      <Text fw={600}>Created:</Text>
+                      <Text fw={600}>{t('issue.fields.created')}:</Text>
                       <Text>{new Date(relatedIssue.createdAt).toLocaleDateString()}</Text>
                     </Group>
 
                     {relatedIssue.updatedAt && (
                       <Group>
-                        <Text fw={600}>Updated:</Text>
+                        <Text fw={600}>{t('issue.fields.updated')}:</Text>
                         <Text>{new Date(relatedIssue.updatedAt).toLocaleDateString()}</Text>
                       </Group>
                     )}
                   </Stack>
                 ) : (
                   <Alert color="yellow">
-                    Issue details not found
+                    {t('issue.notFound')}
                   </Alert>
                 )}
               </Paper>
@@ -630,7 +632,7 @@ export default function MaintenanceDetailPage() {
       <Modal
         opened={editModalOpened}
         onClose={() => setEditModalOpened(false)}
-        title="Edit Maintenance Schedule"
+        title={t('modal.title')}
         size="lg"
         centered
       >
@@ -649,14 +651,14 @@ export default function MaintenanceDetailPage() {
         }}>
           <Stack>
             <TextInput
-              label="Description"
+              label={t('form.description')}
               name="description"
               required
               defaultValue={schedule.description}
             />
 
             <TextInput
-              label="Start Date"
+              label={t('form.startDate')}
               name="startDate"
               type="date"
               required
@@ -664,14 +666,14 @@ export default function MaintenanceDetailPage() {
             />
 
             <TextInput
-              label="End Date (optional)"
+              label={t('form.endDateOptional')}
               name="endDate"
               type="date"
               defaultValue={schedule.endDate ? schedule.endDate.split('T')[0] : ''}
             />
 
             <Select
-              label="Status"
+              label={t('form.status')}
               name="status"
               data={SCHEDULE_STATUSES}
               required
@@ -679,24 +681,24 @@ export default function MaintenanceDetailPage() {
             />
 
             <NumberInput
-              label="Estimated Cost (optional)"
+              label={t('form.estimatedCostOptional')}
               name="estimatedCost"
               min={0}
               defaultValue={schedule.estimatedCost || ''}
             />
 
             <Textarea
-              label="Remark"
+              label={t('form.remark')}
               name="remark"
               defaultValue={schedule.remark || ''}
             />
 
             <Group justify="flex-end">
               <Button variant="outline" onClick={() => setEditModalOpened(false)}>
-                Cancel
+                {t('actions.cancel')}
               </Button>
               <Button type="submit" loading={updateMutation.isPending}>
-                Update Schedule
+                {t('actions.updateSchedule')}
               </Button>
             </Group>
           </Stack>
@@ -721,3 +723,9 @@ export default function MaintenanceDetailPage() {
     </Container>
   );
 }
+
+
+
+
+
+

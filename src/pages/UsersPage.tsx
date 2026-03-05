@@ -25,6 +25,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 const SYSTEM_ROLES = [
   { value: 'ADMIN', label: 'ADMIN' },
@@ -42,6 +43,8 @@ const USER_STATUSES = [
 ];
 
 export default function UsersPage() {
+  const { t } = useTranslation('users');
+  const { t: tCommon } = useTranslation('common');
   const { user, loading } = useAuth();
   const queryClient = useQueryClient();
   const [roleModalOpened, setRoleModalOpened] = useState(false);
@@ -64,11 +67,11 @@ export default function UsersPage() {
       role: 'SUPERVISOR_VIEWER',
     },
     validate: {
-      fullName: (value) => (!value ? 'Full name is required' : null),
-      email: (value) => (!value ? 'Email is required' : null),
+      fullName: (value) => (!value ? t('validation.fullNameRequired') : null),
+      email: (value) => (!value ? t('validation.emailRequired') : null),
       password: (value) =>
-        value.length < 6 ? 'Password must be at least 6 characters' : null,
-      role: (value) => (!value ? 'Role is required' : null),
+        value.length < 6 ? t('validation.passwordLength') : null,
+      role: (value) => (!value ? t('validation.roleRequired') : null),
     },
   });
 
@@ -81,10 +84,10 @@ export default function UsersPage() {
       status: 'ACTIVE',
     },
     validate: {
-      fullName: (value) => (!value ? 'Full name is required' : null),
-      email: (value) => (!value ? 'Email is required' : null),
-      role: (value) => (!value ? 'Role is required' : null),
-      status: (value) => (!value ? 'Status is required' : null),
+      fullName: (value) => (!value ? t('validation.fullNameRequired') : null),
+      email: (value) => (!value ? t('validation.emailRequired') : null),
+      role: (value) => (!value ? t('validation.roleRequired') : null),
+      status: (value) => (!value ? t('validation.statusRequired') : null),
     },
   });
 
@@ -155,8 +158,8 @@ export default function UsersPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'User created successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.createSuccess'),
         color: 'green',
       });
       setCreateModalOpened(false);
@@ -165,8 +168,8 @@ export default function UsersPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to create user',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.createError'),
         color: 'red',
       });
     },
@@ -196,8 +199,8 @@ export default function UsersPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'User updated successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.updateSuccess'),
         color: 'green',
       });
       setUpdateModalOpened(false);
@@ -207,8 +210,8 @@ export default function UsersPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to update user',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.updateError'),
         color: 'red',
       });
     },
@@ -238,8 +241,8 @@ export default function UsersPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: `${selectedRoles.length} role(s) assigned successfully`,
+        title: t('notifications.successTitle'),
+        message: t('notifications.rolesAssigned', { count: selectedRoles.length }),
         color: 'green',
       });
       setRoleModalOpened(false);
@@ -250,8 +253,8 @@ export default function UsersPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to assign roles',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.assignRolesError'),
         color: 'red',
       });
     },
@@ -268,8 +271,8 @@ export default function UsersPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Role removed successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.removeRoleSuccess'),
         color: 'green',
       });
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -277,8 +280,8 @@ export default function UsersPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to remove role',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.removeRoleError'),
         color: 'red',
       });
     },
@@ -332,7 +335,7 @@ export default function UsersPage() {
   if (loading) {
     return (
       <Container size="xl" py={{ base: 'md', sm: 'xl' }}>
-        <Text c="dimmed">Loading...</Text>
+        <Text c="dimmed">{tCommon('loading')}</Text>
       </Container>
     );
   }
@@ -344,9 +347,9 @@ export default function UsersPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }}>
-        <Title size="h2">Users</Title>
+        <Title size="h2">{t('title')}</Title>
         <Button leftSection={<IconPlus size={16} />} onClick={() => setCreateModalOpened(true)}>
-          Create User
+          {t('actions.createUser')}
         </Button>
       </Group>
 
@@ -355,30 +358,30 @@ export default function UsersPage() {
           <Table>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Email</Table.Th>
-                <Table.Th>Phone</Table.Th>
-                <Table.Th>System Role</Table.Th>
-                <Table.Th>Notification Roles</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Actions</Table.Th>
+                <Table.Th>{t('table.name')}</Table.Th>
+                <Table.Th>{t('table.email')}</Table.Th>
+                <Table.Th>{t('table.phone')}</Table.Th>
+                <Table.Th>{t('table.systemRole')}</Table.Th>
+                <Table.Th>{t('table.notificationRoles')}</Table.Th>
+                <Table.Th>{t('table.status')}</Table.Th>
+                <Table.Th>{t('table.actions')}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {isLoading ? (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>Loading...</Table.Td>
+                  <Table.Td colSpan={7}>{tCommon('loading')}</Table.Td>
                 </Table.Tr>
               ) : users?.length === 0 ? (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>No users found</Table.Td>
+                  <Table.Td colSpan={7}>{t('emptyState')}</Table.Td>
                 </Table.Tr>
               ) : (
                 users?.map((u: any) => (
                   <Table.Tr key={u.id}>
                     <Table.Td>{u.fullName}</Table.Td>
                     <Table.Td>{u.email}</Table.Td>
-                    <Table.Td>{u.phone || '-'}</Table.Td>
+                    <Table.Td>{u.phone || t('labels.notAvailable')}</Table.Td>
                     <Table.Td>
                       <Badge color={getRoleColor(u.role)}>{u.role.replace('_', ' ')}</Badge>
                     </Table.Td>
@@ -406,7 +409,7 @@ export default function UsersPage() {
                           ))
                         ) : (
                           <Text size="sm" c="dimmed">
-                            No notification roles
+                            {t('labels.noNotificationRoles')}
                           </Text>
                         )}
                       </Group>
@@ -416,12 +419,12 @@ export default function UsersPage() {
                     </Table.Td>
                     <Table.Td>
                       <Group gap="xs">
-                        <Tooltip label="Edit user">
+                        <Tooltip label={t('actions.editUser')}>
                           <ActionIcon color="grape" variant="light" onClick={() => openUpdateModal(u)}>
                             <IconEdit size={16} />
                           </ActionIcon>
                         </Tooltip>
-                        <Tooltip label="Manage notification roles">
+                        <Tooltip label={t('actions.manageNotificationRoles')}>
                           <ActionIcon color="blue" variant="light" onClick={() => openRoleModal(u)}>
                             <IconUserCog size={16} />
                           </ActionIcon>
@@ -442,22 +445,22 @@ export default function UsersPage() {
           setCreateModalOpened(false);
           createForm.reset();
         }}
-        title="Create User"
+        title={t('createModal.title')}
         size="md"
       >
         <form onSubmit={createForm.onSubmit((values) => createUserMutation.mutate(values))}>
           <Stack>
-            <TextInput label="Full Name" required {...createForm.getInputProps('fullName')} />
-            <TextInput label="Email" required type="email" {...createForm.getInputProps('email')} />
-            <TextInput label="Phone (Optional)" {...createForm.getInputProps('phone')} />
-            <PasswordInput label="Password" required {...createForm.getInputProps('password')} />
-            <Select label="System Role" data={SYSTEM_ROLES} required {...createForm.getInputProps('role')} />
+            <TextInput label={t('form.fullName')} required {...createForm.getInputProps('fullName')} />
+            <TextInput label={t('form.email')} required type="email" {...createForm.getInputProps('email')} />
+            <TextInput label={t('form.phoneOptional')} {...createForm.getInputProps('phone')} />
+            <PasswordInput label={t('form.password')} required {...createForm.getInputProps('password')} />
+            <Select label={t('form.systemRole')} data={SYSTEM_ROLES} required {...createForm.getInputProps('role')} />
             <Group justify="flex-end">
               <Button variant="light" onClick={() => setCreateModalOpened(false)}>
-                Cancel
+                {tCommon('actions.cancel')}
               </Button>
               <Button type="submit" loading={createUserMutation.isPending}>
-                Create
+                {t('actions.create')}
               </Button>
             </Group>
           </Stack>
@@ -471,7 +474,9 @@ export default function UsersPage() {
           setSelectedUser(null);
           updateForm.reset();
         }}
-        title={`Update User${selectedUser ? `: ${selectedUser.fullName}` : ''}`}
+        title={t('updateModal.title', {
+          name: selectedUser?.fullName ? `: ${selectedUser.fullName}` : '',
+        })}
         size="md"
       >
         <form
@@ -481,11 +486,11 @@ export default function UsersPage() {
           })}
         >
           <Stack>
-            <TextInput label="Full Name" required {...updateForm.getInputProps('fullName')} />
-            <TextInput label="Email" required type="email" {...updateForm.getInputProps('email')} />
-            <TextInput label="Phone (Optional)" {...updateForm.getInputProps('phone')} />
-            <Select label="System Role" data={SYSTEM_ROLES} required {...updateForm.getInputProps('role')} />
-            <Select label="Status" data={USER_STATUSES} required {...updateForm.getInputProps('status')} />
+            <TextInput label={t('form.fullName')} required {...updateForm.getInputProps('fullName')} />
+            <TextInput label={t('form.email')} required type="email" {...updateForm.getInputProps('email')} />
+            <TextInput label={t('form.phoneOptional')} {...updateForm.getInputProps('phone')} />
+            <Select label={t('form.systemRole')} data={SYSTEM_ROLES} required {...updateForm.getInputProps('role')} />
+            <Select label={t('form.status')} data={USER_STATUSES} required {...updateForm.getInputProps('status')} />
             <Group justify="flex-end">
               <Button
                 variant="light"
@@ -495,10 +500,10 @@ export default function UsersPage() {
                   updateForm.reset();
                 }}
               >
-                Cancel
+                {tCommon('actions.cancel')}
               </Button>
               <Button type="submit" loading={updateUserMutation.isPending}>
-                Update
+                {t('actions.update')}
               </Button>
             </Group>
           </Stack>
@@ -512,18 +517,18 @@ export default function UsersPage() {
           setSelectedUser(null);
           setSelectedRoles([]);
         }}
-        title={`Manage Roles for ${selectedUser?.fullName}`}
+        title={t('rolesModal.title', { name: selectedUser?.fullName })}
         size="md"
       >
         <LoadingOverlay visible={rolesLoading} />
         <Stack>
           <Text size="sm" c="dimmed">
-            Assign notification roles to this user. Select multiple roles to assign them all at once.
+            {t('rolesModal.helpText')}
           </Text>
 
           <MultiSelect
-            label="Select Roles to Assign"
-            placeholder="Choose roles"
+            label={t('rolesModal.selectLabel')}
+            placeholder={t('rolesModal.selectPlaceholder')}
             data={
               roles?.map((role: any) => ({
                 value: role.id,
@@ -547,14 +552,14 @@ export default function UsersPage() {
                 setSelectedRoles([]);
               }}
             >
-              Cancel
+              {tCommon('actions.cancel')}
             </Button>
             <Button
               onClick={handleAssignRole}
               loading={assignMultipleRolesMutation.isPending}
               disabled={selectedRoles.length === 0}
             >
-              Assign Roles ({selectedRoles.length})
+              {t('actions.assignRoles', { count: selectedRoles.length })}
             </Button>
           </Group>
         </Stack>

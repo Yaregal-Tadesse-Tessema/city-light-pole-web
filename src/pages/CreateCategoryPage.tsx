@@ -14,8 +14,10 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 export default function CreateCategoryPage() {
+  const { t } = useTranslation('createCategory');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export default function CreateCategoryPage() {
       description: '',
     },
     validate: {
-      name: (value) => (!value ? 'Name is required' : null),
+      name: (value) => (!value ? t('validation.nameRequired') : null),
     },
   });
 
@@ -43,23 +45,23 @@ export default function CreateCategoryPage() {
     },
     onSuccess: (data) => {
       notifications.show({
-        title: 'Success',
-        message: 'Category created successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.createSuccess'),
         color: 'green',
       });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       navigate('/categories');
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Failed to create category';
+      const errorMessage = error.response?.data?.message || t('notifications.createError');
       setApiError(errorMessage);
 
       if (errorMessage.includes('already exists')) {
-        form.setFieldError('name', 'This category name already exists');
+        form.setFieldError('name', t('validation.nameExists'));
       }
 
       notifications.show({
-        title: 'Error',
+        title: t('notifications.errorTitle'),
         message: errorMessage,
         color: 'red',
       });
@@ -79,37 +81,37 @@ export default function CreateCategoryPage() {
 
   return (
     <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-      <Title mb={{ base: 'md', sm: 'xl' }} order={1}>Create Category</Title>
+      <Title mb={{ base: 'md', sm: 'xl' }} order={1}>{t('title')}</Title>
 
       <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
         <form onSubmit={handleSubmit}>
           <Stack>
             {apiError && (
-              <Alert color="red" title="Error" onClose={() => setApiError(null)} withCloseButton>
+              <Alert color="red" title={t('notifications.errorTitle')} onClose={() => setApiError(null)} withCloseButton>
                 {apiError}
               </Alert>
             )}
 
             <TextInput
-              label="Category Name"
-              placeholder="e.g., Light Bulbs"
+              label={t('fields.name')}
+              placeholder={t('placeholders.name')}
               required
               {...form.getInputProps('name')}
             />
 
             <Textarea
-              label="Description (Optional)"
-              placeholder="Describe what this category contains..."
+              label={t('fields.descriptionOptional')}
+              placeholder={t('placeholders.description')}
               minRows={3}
               {...form.getInputProps('description')}
             />
 
             <Button.Group>
               <Button variant="outline" onClick={() => navigate('/categories')}>
-                Cancel
+                {t('actions.cancel')}
               </Button>
               <Button type="submit" loading={createMutation.isPending}>
-                Create Category
+                {t('actions.create')}
               </Button>
             </Button.Group>
           </Stack>

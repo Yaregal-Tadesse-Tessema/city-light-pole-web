@@ -19,24 +19,12 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
-import { ErrorBoundary } from '../components/ErrorBoundary';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { MapPicker } from '../components/MapPicker';
-
-const PARK_TYPES = [
-  { value: 'COMMUNITY', label: 'Community' },
-  { value: 'RECREATIONAL', label: 'Recreational' },
-  { value: 'SPORTS', label: 'Sports' },
-  { value: 'URBAN', label: 'Urban' },
-];
-
-const PARK_STATUSES = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'FAULT_DAMAGED', label: 'Fault/Damaged' },
-  { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
-  { value: 'OPERATIONAL', label: 'Operational' },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function CreateParkPage() {
+  const { t } = useTranslation('createPark');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -57,35 +45,35 @@ export default function CreateParkPage() {
       status: 'ACTIVE',
     },
     validate: {
-      code: (value) => (!value ? 'Code is required' : null),
-      name: (value) => (!value ? 'Name is required' : null),
-      district: (value) => (!value ? 'Subcity is required' : null),
-      street: (value) => (!value ? 'Street is required' : null),
+      code: (value) => (!value ? t('validation.codeRequired') : null),
+      name: (value) => (!value ? t('validation.nameRequired') : null),
+      district: (value) => (!value ? t('validation.subcityRequired') : null),
+      street: (value) => (!value ? t('validation.streetRequired') : null),
       gpsLat: (value) => {
         if (value !== undefined && value !== null) {
-          if (value < -90 || value > 90) return 'Latitude must be between -90 and 90';
+          if (value < -90 || value > 90) return t('validation.latitudeRange');
         }
         return null;
       },
       gpsLng: (value) => {
         if (value !== undefined && value !== null) {
-          if (value < -180 || value > 180) return 'Longitude must be between -180 and 180';
+          if (value < -180 || value > 180) return t('validation.longitudeRange');
         }
         return null;
       },
       areaHectares: (value) => {
         if (value === undefined || value === null) {
-          return 'Area is required';
+          return t('validation.areaRequired');
         }
-        if (value <= 0) return 'Area must be greater than 0';
+        if (value <= 0) return t('validation.areaMin');
         return null;
       },
       entranceFee: (value, values) => {
         if (values.hasPaidEntrance && (value === undefined || value === null)) {
-          return 'Entrance fee is required when paid entrance is enabled';
+          return t('validation.entranceFeeRequired');
         }
         if (values.hasPaidEntrance && value !== undefined && value !== null && value <= 0) {
-          return 'Entrance fee must be greater than 0';
+          return t('validation.entranceFeeMin');
         }
         return null;
       },
@@ -132,23 +120,23 @@ export default function CreateParkPage() {
     },
     onSuccess: (data) => {
       notifications.show({
-        title: 'Success',
-        message: 'Public park registered successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.createSuccess'),
         color: 'green',
       });
       queryClient.invalidateQueries({ queryKey: ['parks'] });
       navigate(`/parks/${data.code}`);
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Failed to register park';
+      const errorMessage = error.response?.data?.message || t('notifications.createError');
       setApiError(errorMessage);
       
       if (errorMessage.includes('code') && errorMessage.includes('already exists')) {
-        form.setFieldError('code', 'This code is already in use');
+        form.setFieldError('code', t('validation.codeExists'));
       }
       
       notifications.show({
-        title: 'Error',
+        title: t('notifications.errorTitle'),
         message: errorMessage,
         color: 'red',
       });
@@ -163,27 +151,27 @@ export default function CreateParkPage() {
   return (
     <ErrorBoundary>
       <Container size="md" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
-        <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">Create New Public Park</Title>
+        <Title mb={{ base: 'md', sm: 'xl' }} order={1} size="h2">{t('title')}</Title>
 
         <Paper withBorder p={{ base: 'xs', sm: 'xl' }}>
           <form onSubmit={handleSubmit}>
           <Stack>
             {apiError && (
-              <Alert color="red" title="Error" onClose={() => setApiError(null)} withCloseButton>
+              <Alert color="red" title={t('notifications.errorTitle')} onClose={() => setApiError(null)} withCloseButton>
                 {apiError}
               </Alert>
             )}
 
             <Group grow>
               <TextInput
-                label="Code"
-                placeholder="PK-001"
+                label={t('fields.code')}
+                placeholder={t('placeholders.code')}
                 required
                 {...form.getInputProps('code')}
               />
               <TextInput
-                label="Name"
-                placeholder="Central Park"
+                label={t('fields.name')}
+                placeholder={t('placeholders.name')}
                 required
                 {...form.getInputProps('name')}
               />
@@ -191,28 +179,28 @@ export default function CreateParkPage() {
 
             <Group grow>
               <Select
-                label="Subcity"
-                placeholder="Select subcity"
+                label={t('fields.subcity')}
+                placeholder={t('placeholders.subcity')}
                 required
                 data={[
-                  'Addis Ketema',
-                  'Akaky Kaliti',
-                  'Arada',
-                  'Bole',
-                  'Gullele',
-                  'Kirkos',
-                  'Kolfe Keranio',
-                  'Lideta',
-                  'Nifas Silk-Lafto',
-                  'Yeka',
-                  'Lemi Kura',
+                  t('subcities.addisKetema', { ns: 'dashboard' }),
+                  t('subcities.akakyKaliti', { ns: 'dashboard' }),
+                  t('subcities.arada', { ns: 'dashboard' }),
+                  t('subcities.bole', { ns: 'dashboard' }),
+                  t('subcities.gullele', { ns: 'dashboard' }),
+                  t('subcities.kirkos', { ns: 'dashboard' }),
+                  t('subcities.kolfeKeranio', { ns: 'dashboard' }),
+                  t('subcities.lideta', { ns: 'dashboard' }),
+                  t('subcities.nifasSilkLafto', { ns: 'dashboard' }),
+                  t('subcities.yeka', { ns: 'dashboard' }),
+                  t('subcities.lemiKura', { ns: 'dashboard' }),
                 ]}
                 searchable
                 {...form.getInputProps('district')}
               />
               <TextInput
-                label="Street"
-                placeholder="Main Street"
+                label={t('fields.street')}
+                placeholder={t('placeholders.street')}
                 required
                 {...form.getInputProps('street')}
               />
@@ -221,16 +209,16 @@ export default function CreateParkPage() {
             <Stack gap="xs">
               <Group grow>
                 <NumberInput
-                  label="GPS Latitude (Optional)"
-                  placeholder="Auto-filled from map"
+                  label={t('fields.gpsLatOptional')}
+                  placeholder={t('placeholders.gpsAuto')}
                   min={-90}
                   max={90}
                   value={form.values.gpsLat ?? undefined}
                   readOnly
                 />
                 <NumberInput
-                  label="GPS Longitude (Optional)"
-                  placeholder="Auto-filled from map"
+                  label={t('fields.gpsLngOptional')}
+                  placeholder={t('placeholders.gpsAuto')}
                   min={-180}
                   max={180}
                   value={form.values.gpsLng ?? undefined}
@@ -238,7 +226,7 @@ export default function CreateParkPage() {
                 />
               </Group>
               <Text size="sm" c="dimmed">
-                Click on the map to set coordinates (centered on Addis Ababa).
+                {t('helper.map')}
               </Text>
               <ErrorBoundary>
                 <MapPicker
@@ -256,13 +244,13 @@ export default function CreateParkPage() {
 
             <Group grow>
               <Select
-                label="Park Type"
-                data={PARK_TYPES}
+                label={t('fields.parkType')}
+                data={t('parkTypes', { returnObjects: true }) as { value: string; label: string }[]}
                 {...form.getInputProps('parkType')}
               />
               <NumberInput
-                label="Area (Hectares)"
-                placeholder="5.5"
+                label={t('fields.areaHectares')}
+                placeholder={t('placeholders.areaHectares')}
                 required
                 min={0.01}
                 decimalScale={2}
@@ -277,14 +265,14 @@ export default function CreateParkPage() {
             </Group>
 
             <Switch
-              label="Has Paid Entrance"
+              label={t('fields.hasPaidEntrance')}
               {...form.getInputProps('hasPaidEntrance', { type: 'checkbox' })}
             />
 
             {form.values.hasPaidEntrance && (
               <NumberInput
-                label="Entrance Fee (ETB)"
-                placeholder="50.00"
+                label={t('fields.entranceFee')}
+                placeholder={t('placeholders.entranceFee')}
                 required
                 min={0.01}
                 decimalScale={2}
@@ -299,24 +287,24 @@ export default function CreateParkPage() {
             )}
 
             <Textarea
-              label="Description (Optional)"
-              placeholder="Beautiful community park with playground and walking trails"
+              label={t('fields.descriptionOptional')}
+              placeholder={t('placeholders.description')}
               rows={4}
               {...form.getInputProps('description')}
             />
 
             <Select
-              label="Status"
-              data={PARK_STATUSES}
+              label={t('fields.status')}
+              data={t('statuses', { returnObjects: true }) as { value: string; label: string }[]}
               {...form.getInputProps('status')}
             />
 
             <Group justify="flex-end" mt="xl">
               <Button variant="outline" onClick={() => navigate('/parks')}>
-                Cancel
+                {t('actions.cancel')}
               </Button>
               <Button type="submit" loading={createMutation.isPending}>
-                Register Public Park
+                {t('actions.submit')}
               </Button>
             </Group>
           </Stack>

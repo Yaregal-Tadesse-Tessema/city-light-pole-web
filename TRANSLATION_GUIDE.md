@@ -19,6 +19,10 @@
 - Document any new namespace addition in this guide with the reason it exists.
 - If a string includes dynamic data, pass parameters to `t` via interpolation (e.g., `t('greeting', { name: user.name })`).
 
+## Namespace Notes
+- `maintenance`: Maintenance schedules, filters, and related modals on the maintenance page.
+- `issuesList`: Issues list page, filters, and attachment workflows.
+
 ## Quality Checklist
 - Run `npm run build` after adjusting translations to catch TypeScript/JSX errors.
 - Switch languages via the selector to ensure the UI refreshes using the new keys.

@@ -18,8 +18,10 @@ import {
 import { IconEdit, IconArrowLeft } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
 import { componentsApi } from '../api/components';
+import { useTranslation } from 'react-i18next';
 
 export default function ComponentDetailPage() {
+  const { t } = useTranslation('componentDetail');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -58,7 +60,7 @@ export default function ComponentDetailPage() {
   if (!component) {
     return (
       <Container size="md" py="xl">
-        <Text>Component not found</Text>
+        <Text>{t('state.notFound')}</Text>
       </Container>
     );
   }
@@ -71,11 +73,11 @@ export default function ComponentDetailPage() {
           leftSection={<IconArrowLeft size={16} />}
           onClick={() => navigate('/components')}
         >
-          Back to Components
+          {t('actions.backToComponents')}
         </Button>
         {user?.role === 'ADMIN' && (
           <Button leftSection={<IconEdit size={16} />} onClick={() => navigate(`/components/${id}/edit`)}>
-            Edit
+            {t('actions.edit')}
           </Button>
         )}
       </Group>
@@ -86,64 +88,66 @@ export default function ComponentDetailPage() {
 
       <Tabs defaultValue="details">
         <Tabs.List>
-          <Tabs.Tab value="details">Details</Tabs.Tab>
-          <Tabs.Tab value="history">Installation History</Tabs.Tab>
-          <Tabs.Tab value="poles">Poles</Tabs.Tab>
+          <Tabs.Tab value="details">{t('tabs.details')}</Tabs.Tab>
+          <Tabs.Tab value="history">{t('tabs.installationHistory')}</Tabs.Tab>
+          <Tabs.Tab value="poles">{t('tabs.poles')}</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="details" pt="xl">
           <Paper p="md" withBorder>
             <Stack gap="md">
               <Group>
-                <Text fw={700}>Type:</Text>
+                <Text fw={700}>{t('fields.type')}:</Text>
                 <Badge variant="light">{component.type?.replace(/_/g, ' ')}</Badge>
               </Group>
               <Group>
-                <Text fw={700}>Status:</Text>
-                <Badge color={component.isActive ? 'green' : 'gray'}>{component.isActive ? 'Active' : 'Inactive'}</Badge>
+                <Text fw={700}>{t('fields.status')}:</Text>
+                <Badge color={component.isActive ? 'green' : 'gray'}>
+                  {component.isActive ? t('status.active') : t('status.inactive')}
+                </Badge>
               </Group>
               {component.model && (
                 <Group>
-                  <Text fw={700}>Model:</Text>
+                  <Text fw={700}>{t('fields.model')}:</Text>
                   <Text>{component.model}</Text>
                 </Group>
               )}
               {component.partNumber && (
                 <Group>
-                  <Text fw={700}>Part Number:</Text>
+                  <Text fw={700}>{t('fields.partNumber')}:</Text>
                   <Text>{component.partNumber}</Text>
                 </Group>
               )}
               {component.description && (
                 <Group>
-                  <Text fw={700}>Description:</Text>
+                  <Text fw={700}>{t('fields.description')}:</Text>
                   <Text>{component.description}</Text>
                 </Group>
               )}
               {(component.manufacturerName || component.manufacturerPhone || component.manufacturerEmail) && (
                 <Stack gap="xs">
-                  <Text fw={700}>Manufacturer Information</Text>
+                  <Text fw={700}>{t('sections.manufacturerInfo')}</Text>
                   {component.manufacturerName && (
                     <Group>
-                      <Text fw={500} c="dimmed">Name:</Text>
+                      <Text fw={500} c="dimmed">{t('fields.manufacturerName')}:</Text>
                       <Text>{component.manufacturerName}</Text>
                     </Group>
                   )}
                   {component.manufacturerPhone && (
                     <Group>
-                      <Text fw={500} c="dimmed">Phone:</Text>
+                      <Text fw={500} c="dimmed">{t('fields.manufacturerPhone')}:</Text>
                       <Text>{component.manufacturerPhone}</Text>
                     </Group>
                   )}
                   {component.manufacturerEmail && (
                     <Group>
-                      <Text fw={500} c="dimmed">Email:</Text>
+                      <Text fw={500} c="dimmed">{t('fields.manufacturerEmail')}:</Text>
                       <Text>{component.manufacturerEmail}</Text>
                     </Group>
                   )}
                   {(component.manufacturerContact && !component.manufacturerPhone && !component.manufacturerEmail) && (
                     <Group>
-                      <Text fw={500} c="dimmed">Contact:</Text>
+                      <Text fw={500} c="dimmed">{t('fields.manufacturerContact')}:</Text>
                       <Text>{component.manufacturerContact}</Text>
                     </Group>
                   )}
@@ -151,19 +155,19 @@ export default function ComponentDetailPage() {
               )}
               {component.manufacturerCountry && (
                 <Group>
-                  <Text fw={700}>Manufacturer Country:</Text>
+                  <Text fw={700}>{t('fields.manufacturerCountry')}:</Text>
                   <Text>{component.manufacturerCountry}</Text>
                 </Group>
               )}
               {component.powerUsageWatt != null && (
                 <Group>
-                  <Text fw={700}>Power (W):</Text>
-                  <Text>{component.powerUsageWatt}W</Text>
+                  <Text fw={700}>{t('fields.power')}:</Text>
+                  <Text>{t('units.watts', { value: component.powerUsageWatt })}</Text>
                 </Group>
               )}
               {component.serialNumber && (
                 <Group>
-                  <Text fw={700}>Serial Number:</Text>
+                  <Text fw={700}>{t('fields.serialNumber')}:</Text>
                   <Text>{component.serialNumber}</Text>
                 </Group>
               )}
@@ -178,16 +182,16 @@ export default function ComponentDetailPage() {
                 <Loader size="sm" />
               </Center>
             ) : historyItems.length === 0 ? (
-              <Text c="dimmed">No installation history</Text>
+              <Text c="dimmed">{t('history.empty')}</Text>
             ) : (
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Pole</Table.Th>
-                    <Table.Th>Quantity</Table.Th>
-                    <Table.Th>Status</Table.Th>
-                    <Table.Th>Installed</Table.Th>
-                    <Table.Th>Removed</Table.Th>
+                    <Table.Th>{t('history.table.pole')}</Table.Th>
+                    <Table.Th>{t('history.table.quantity')}</Table.Th>
+                    <Table.Th>{t('history.table.status')}</Table.Th>
+                    <Table.Th>{t('history.table.installed')}</Table.Th>
+                    <Table.Th>{t('history.table.removed')}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -206,8 +210,8 @@ export default function ComponentDetailPage() {
                       <Table.Td>
                         <Badge size="sm">{h.status}</Badge>
                       </Table.Td>
-                      <Table.Td>{h.installationDate ? new Date(h.installationDate).toLocaleDateString() : '—'}</Table.Td>
-                      <Table.Td>{h.removedDate ? new Date(h.removedDate).toLocaleDateString() : '—'}</Table.Td>
+                      <Table.Td>{h.installationDate ? new Date(h.installationDate).toLocaleDateString() : t('labels.none')}</Table.Td>
+                      <Table.Td>{h.removedDate ? new Date(h.removedDate).toLocaleDateString() : t('labels.none')}</Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
@@ -223,15 +227,15 @@ export default function ComponentDetailPage() {
                 <Loader size="sm" />
               </Center>
             ) : poles.length === 0 ? (
-              <Text c="dimmed">Not installed on any poles</Text>
+              <Text c="dimmed">{t('poles.empty')}</Text>
             ) : (
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Pole Code</Table.Th>
-                    <Table.Th>Quantity</Table.Th>
-                    <Table.Th>Status</Table.Th>
-                    <Table.Th>Installation Date</Table.Th>
+                    <Table.Th>{t('poles.table.poleCode')}</Table.Th>
+                    <Table.Th>{t('poles.table.quantity')}</Table.Th>
+                    <Table.Th>{t('poles.table.status')}</Table.Th>
+                    <Table.Th>{t('poles.table.installationDate')}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -250,7 +254,7 @@ export default function ComponentDetailPage() {
                       <Table.Td>
                         <Badge size="sm">{p.status}</Badge>
                       </Table.Td>
-                      <Table.Td>{p.installationDate ? new Date(p.installationDate).toLocaleDateString() : '—'}</Table.Td>
+                      <Table.Td>{p.installationDate ? new Date(p.installationDate).toLocaleDateString() : t('labels.none')}</Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
@@ -262,3 +266,4 @@ export default function ComponentDetailPage() {
     </Container>
   );
 }
+

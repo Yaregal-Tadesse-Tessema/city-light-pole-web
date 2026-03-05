@@ -31,6 +31,7 @@ import {
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
+import { toApiV1Url } from '../config/api';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -51,13 +52,10 @@ export default function LandingPage() {
     description: translatedFeatures[index]?.description || '',
   }));
 
-  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3011').replace(/\/$/, '');
-  const apiV1BaseUrl = apiBaseUrl.endsWith('/api/v1') ? apiBaseUrl : `${apiBaseUrl}/api/v1`;
-
   const { data: incidentsTotal = 0 } = useQuery({
     queryKey: ['landing', 'public-accidents-total'],
     queryFn: async () => {
-      const res = await axios.get(`${apiV1BaseUrl}/public/accidents?page=1&limit=1`);
+      const res = await axios.get(toApiV1Url('/public/accidents?page=1&limit=1'));
       return Number(res.data?.total || 0);
     },
   });
@@ -65,7 +63,7 @@ export default function LandingPage() {
   const { data: issuesTotal = 0 } = useQuery({
     queryKey: ['landing', 'public-issues-total'],
     queryFn: async () => {
-      const res = await axios.get(`${apiV1BaseUrl}/public/issues?page=1&limit=1`);
+      const res = await axios.get(toApiV1Url('/public/issues?page=1&limit=1'));
       return Number(res.data?.total || 0);
     },
   });
@@ -73,7 +71,7 @@ export default function LandingPage() {
   const { data: inProgressMaintenance = 0 } = useQuery({
     queryKey: ['landing', 'in-progress-maintenance'],
     queryFn: async () => {
-      const res = await axios.get(`${apiV1BaseUrl}/poles?status=UNDER_MAINTENANCE&page=1&limit=1`);
+      const res = await axios.get(toApiV1Url('/poles?status=UNDER_MAINTENANCE&page=1&limit=1'));
       return Number(res.data?.total || 0);
     },
   });
@@ -84,7 +82,7 @@ export default function LandingPage() {
       const token = localStorage.getItem('access_token');
       if (!token) return 0;
 
-      const res = await axios.get(`${apiV1BaseUrl}/reports/summary`, {
+      const res = await axios.get(toApiV1Url('/reports/summary'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },

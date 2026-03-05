@@ -1,0 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;500;600;700&display=swap');
+
+/* Ensure Ethiopic glyphs render correctly across the UI */
+:root {
+  font-family: "Noto Sans Ethiopic", "Noto Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}

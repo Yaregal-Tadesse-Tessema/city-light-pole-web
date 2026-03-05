@@ -17,6 +17,7 @@ import {
 import { notifications } from '@mantine/notifications';
 import { IconTrash, IconPlus } from '@tabler/icons-react';
 import { componentsApi, poleComponentsApi, COMPONENT_STATUSES } from '../api/components';
+import { useTranslation } from 'react-i18next';
 
 interface PoleComponentModalProps {
   opened: boolean;
@@ -27,8 +28,6 @@ interface PoleComponentModalProps {
   onSuccess?: () => void;
 }
 
-const STATUS_OPTIONS = COMPONENT_STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, ' ') }));
-
 export default function PoleComponentModal({
   opened,
   onClose,
@@ -38,12 +37,18 @@ export default function PoleComponentModal({
   onSuccess,
 }: PoleComponentModalProps) {
   const queryClient = useQueryClient();
+  const { t } = useTranslation('poleComponentModal');
   const [componentId, setComponentId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [installationDate, setInstallationDate] = useState('');
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState(assignment?.status || 'INSTALLED');
   const [removeQuantity, setRemoveQuantity] = useState<number | undefined>(undefined);
+
+  const statusOptions = COMPONENT_STATUSES.map((status) => ({
+    value: status,
+    label: t(`statuses.${status}`, { defaultValue: status.replace(/_/g, ' ') }),
+  }));
 
   useEffect(() => {
     if (assignment && (mode === 'edit' || mode === 'remove')) {
@@ -124,7 +129,7 @@ export default function PoleComponentModal({
         
         const componentIdStr = componentId ? String(componentId) : null;
         if (componentIdStr && activeIds.has(componentIdStr)) {
-          throw new Error('Cannot add a component that is already active on this pole');
+          throw new Error(t('errors.alreadyActive'));
         }
       }
 
@@ -136,7 +141,11 @@ export default function PoleComponentModal({
       });
     },
     onSuccess: () => {
-      notifications.show({ title: 'Success', message: 'Component assigned', color: 'green' });
+      notifications.show({
+        title: t('notifications.add.successTitle'),
+        message: t('notifications.add.successMessage'),
+        color: 'green',
+      });
       queryClient.invalidateQueries({ queryKey: ['pole-components', poleCode] });
       queryClient.invalidateQueries({ queryKey: ['pole', poleCode] });
       onSuccess?.();
@@ -144,7 +153,11 @@ export default function PoleComponentModal({
       resetForm();
     },
     onError: (e: any) => {
-      notifications.show({ title: 'Error', message: e.response?.data?.message || e.message || 'Failed', color: 'red' });
+      notifications.show({
+        title: t('notifications.add.errorTitle'),
+        message: e.response?.data?.message || e.message || t('notifications.add.errorMessage'),
+        color: 'red',
+      });
     },
   });
 
@@ -167,7 +180,7 @@ export default function PoleComponentModal({
           return activeIds.has(String(i.componentId));
         });
         if (invalidItems.length > 0) {
-          throw new Error('Cannot add components that are already active on this pole');
+          throw new Error(t('errors.alreadyActiveBulk'));
         }
       }
 
@@ -181,7 +194,11 @@ export default function PoleComponentModal({
       );
     },
     onSuccess: () => {
-      notifications.show({ title: 'Success', message: 'Components assigned', color: 'green' });
+      notifications.show({
+        title: t('notifications.bulkAdd.successTitle'),
+        message: t('notifications.bulkAdd.successMessage'),
+        color: 'green',
+      });
       queryClient.invalidateQueries({ queryKey: ['pole-components', poleCode] });
       queryClient.invalidateQueries({ queryKey: ['pole', poleCode] });
       onSuccess?.();
@@ -189,7 +206,11 @@ export default function PoleComponentModal({
       setBulkItems([]);
     },
     onError: (e: any) => {
-      notifications.show({ title: 'Error', message: e.response?.data?.message || e.message || 'Failed', color: 'red' });
+      notifications.show({
+        title: t('notifications.bulkAdd.errorTitle'),
+        message: e.response?.data?.message || e.message || t('notifications.bulkAdd.errorMessage'),
+        color: 'red',
+      });
     },
   });
 
@@ -197,14 +218,22 @@ export default function PoleComponentModal({
     mutationFn: () =>
       poleComponentsApi.update(poleCode, assignment?.componentId || assignment?.component?.id, { quantity, status, notes }),
     onSuccess: () => {
-      notifications.show({ title: 'Success', message: 'Assignment updated', color: 'green' });
+      notifications.show({
+        title: t('notifications.update.successTitle'),
+        message: t('notifications.update.successMessage'),
+        color: 'green',
+      });
       queryClient.invalidateQueries({ queryKey: ['pole-components', poleCode] });
       queryClient.invalidateQueries({ queryKey: ['pole', poleCode] });
       onSuccess?.();
       onClose();
     },
     onError: (e: any) => {
-      notifications.show({ title: 'Error', message: e.response?.data?.message || 'Failed', color: 'red' });
+      notifications.show({
+        title: t('notifications.update.errorTitle'),
+        message: e.response?.data?.message || t('notifications.update.errorMessage'),
+        color: 'red',
+      });
     },
   });
 
@@ -212,14 +241,22 @@ export default function PoleComponentModal({
     mutationFn: () =>
       poleComponentsApi.remove(poleCode, assignment?.componentId || assignment?.component?.id, removeQuantity),
     onSuccess: () => {
-      notifications.show({ title: 'Success', message: 'Component removed', color: 'green' });
+      notifications.show({
+        title: t('notifications.remove.successTitle'),
+        message: t('notifications.remove.successMessage'),
+        color: 'green',
+      });
       queryClient.invalidateQueries({ queryKey: ['pole-components', poleCode] });
       queryClient.invalidateQueries({ queryKey: ['pole', poleCode] });
       onSuccess?.();
       onClose();
     },
     onError: (e: any) => {
-      notifications.show({ title: 'Error', message: e.response?.data?.message || 'Failed', color: 'red' });
+      notifications.show({
+        title: t('notifications.remove.errorTitle'),
+        message: e.response?.data?.message || t('notifications.remove.errorMessage'),
+        color: 'red',
+      });
     },
   });
 
@@ -245,10 +282,10 @@ export default function PoleComponentModal({
   };
 
   const getTitle = () => {
-    if (mode === 'add') return 'Add Component to Pole';
-    if (mode === 'addBulk') return 'Bulk Add Components';
-    if (mode === 'edit') return 'Update Assignment';
-    return 'Remove Component';
+    if (mode === 'add') return t('titles.add');
+    if (mode === 'addBulk') return t('titles.bulkAdd');
+    if (mode === 'edit') return t('titles.edit');
+    return t('titles.remove');
   };
 
   return (
@@ -257,33 +294,33 @@ export default function PoleComponentModal({
         {mode === 'add' && (
           <>
             <Select
-              label="Component"
-              placeholder="Select component"
+              label={t('form.component')}
+              placeholder={t('form.selectComponent')}
               data={componentOptions}
               value={componentId}
               onChange={setComponentId}
               searchable
               required
             />
-            <NumberInput label="Quantity" min={1} value={quantity} onChange={(v) => setQuantity(Number(v) || 1)} />
+            <NumberInput label={t('form.quantity')} min={1} value={quantity} onChange={(v) => setQuantity(Number(v) || 1)} />
             <TextInput
               type="date"
-              label="Installation Date"
+              label={t('form.installationDate')}
               value={installationDate}
               onChange={(e) => setInstallationDate(e.currentTarget.value)}
               required
             />
-            <Textarea label="Notes" value={notes} onChange={(e) => setNotes(e.currentTarget.value)} />
+            <Textarea label={t('form.notes')} value={notes} onChange={(e) => setNotes(e.currentTarget.value)} />
             <Group justify="flex-end">
               <Button variant="outline" onClick={onClose}>
-                Cancel
+                {t('buttons.cancel')}
               </Button>
               <Button
                 onClick={() => addMutation.mutate()}
                 loading={addMutation.isPending}
                 disabled={!componentId || !installationDate}
               >
-                Add
+                {t('buttons.add')}
               </Button>
             </Group>
           </>
@@ -292,15 +329,15 @@ export default function PoleComponentModal({
         {mode === 'addBulk' && (
           <>
             <Button variant="light" leftSection={<IconPlus size={16} />} onClick={addBulkRow}>
-              Add Row
+              {t('buttons.addRow')}
             </Button>
             {bulkItems.length > 0 && (
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Component</Table.Th>
-                    <Table.Th>Qty</Table.Th>
-                    <Table.Th>Date</Table.Th>
+                    <Table.Th>{t('form.componentColumn')}</Table.Th>
+                    <Table.Th>{t('form.qtyColumn')}</Table.Th>
+                    <Table.Th>{t('form.dateColumn')}</Table.Th>
                     <Table.Th />
                   </Table.Tr>
                 </Table.Thead>
@@ -312,7 +349,7 @@ export default function PoleComponentModal({
                           data={componentOptions}
                           value={row.componentId}
                           onChange={(v) => updateBulkRow(idx, 'componentId', v)}
-                          placeholder="Select"
+                          placeholder={t('form.selectRowComponent')}
                           searchable
                         />
                       </Table.Td>
@@ -343,14 +380,14 @@ export default function PoleComponentModal({
             )}
             <Group justify="flex-end">
               <Button variant="outline" onClick={onClose}>
-                Cancel
+                {t('buttons.cancel')}
               </Button>
               <Button
                 onClick={() => bulkAddMutation.mutate()}
                 loading={bulkAddMutation.isPending}
                 disabled={bulkItems.length === 0 || bulkItems.some((i) => !i.componentId)}
               >
-                Add All
+                {t('buttons.addAll')}
               </Button>
             </Group>
           </>
@@ -362,24 +399,24 @@ export default function PoleComponentModal({
               {assignment.component?.name} ({assignment.component?.type})
             </Text>
             <NumberInput
-              label="Quantity"
+              label={t('form.quantity')}
               min={1}
               value={quantity}
               onChange={(v) => setQuantity(Number(v) || 1)}
             />
             <Select
-              label="Status"
-              data={STATUS_OPTIONS}
+              label={t('form.status')}
+              data={statusOptions}
               value={status}
               onChange={(v) => setStatus(v || 'INSTALLED')}
             />
-            <Textarea label="Notes" value={notes} onChange={(e) => setNotes(e.currentTarget.value)} />
+            <Textarea label={t('form.notes')} value={notes} onChange={(e) => setNotes(e.currentTarget.value)} />
             <Group justify="flex-end">
               <Button variant="outline" onClick={onClose}>
-                Cancel
+                {t('buttons.cancel')}
               </Button>
               <Button onClick={() => updateMutation.mutate()} loading={updateMutation.isPending}>
-                Update
+                {t('buttons.update')}
               </Button>
             </Group>
           </>
@@ -388,26 +425,26 @@ export default function PoleComponentModal({
         {mode === 'remove' && assignment && (
           <>
             <Text size="sm" c="dimmed">
-              {assignment.component?.name} â€” Current quantity: {assignment.quantity}
+              {assignment.component?.name} — {t('info.currentQuantity', { quantity: assignment.quantity })}
             </Text>
             <NumberInput
-              label="Quantity to remove (leave empty to remove all)"
+              label={t('form.removeQuantityLabel')}
               min={1}
               max={assignment.quantity}
               value={removeQuantity ?? ''}
               onChange={(v) => setRemoveQuantity(v ? Number(v) : undefined)}
-              placeholder={`Max: ${assignment.quantity}`}
+              placeholder={t('form.removeQuantityPlaceholder', { max: assignment.quantity })}
             />
             <Group justify="flex-end">
               <Button variant="outline" onClick={onClose}>
-                Cancel
+                {t('buttons.cancel')}
               </Button>
               <Button
                 color="red"
                 onClick={() => removeMutation.mutate()}
                 loading={removeMutation.isPending}
               >
-                Remove
+                {t('buttons.remove')}
               </Button>
             </Group>
           </>

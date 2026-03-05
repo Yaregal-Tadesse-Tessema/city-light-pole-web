@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -24,6 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconEdit, IconTrash, IconHistory, IconEye, IconFilter, IconArrowUp, IconArrowDown, IconArrowsSort } from '@tabler/icons-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import apiClient from '../api/client';
 import axios from 'axios';
@@ -32,6 +33,9 @@ export default function PolesListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useTranslation('polesList');
+  const { t: tCommon } = useTranslation('common');
+  const { t: tDashboard } = useTranslation('dashboard');
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -116,8 +120,8 @@ export default function PolesListPage() {
               return {
                 code: replacement.oldPoleCode,
                 status: 'REPLACED',
-                subcity: 'Unknown',
-                street: 'Unknown',
+                subcity: t('labels.unknown'),
+                street: t('labels.unknown'),
                 replacementInfo: {
                   newPoleCode: replacement.newPoleCode,
                   replacementDate: replacement.replacementDate,
@@ -155,20 +159,24 @@ export default function PolesListPage() {
     },
   });
 
-  // Hardcoded list of subcities for filter dropdown
-  const SUBCITIES = [
-    'Addis Ketema',
-    'Akaky Kaliti',
-    'Arada',
-    'Bole',
-    'Gullele',
-    'Kirkos',
-    'Kolfe Keranio',
-    'Lideta',
-    'Nifas Silk-Lafto',
-    'Yeka',
-    'Lemi Kura',
-  ];
+  const subcityOptions = useMemo(() => ([
+    { value: 'Addis Ketema', label: tDashboard('subcities.addisKetema') },
+    { value: 'Akaky Kaliti', label: tDashboard('subcities.akakyKaliti') },
+    { value: 'Arada', label: tDashboard('subcities.arada') },
+    { value: 'Bole', label: tDashboard('subcities.bole') },
+    { value: 'Gullele', label: tDashboard('subcities.gullele') },
+    { value: 'Kirkos', label: tDashboard('subcities.kirkos') },
+    { value: 'Kolfe Keranio', label: tDashboard('subcities.kolfeKeranio') },
+    { value: 'Lideta', label: tDashboard('subcities.lideta') },
+    { value: 'Nifas Silk-Lafto', label: tDashboard('subcities.nifasSilkLafto') },
+    { value: 'Yeka', label: tDashboard('subcities.yeka') },
+    { value: 'Lemi Kura', label: tDashboard('subcities.lemiKura') },
+  ]), [tDashboard]);
+
+  const subcityLabelMap = useMemo(
+    () => new Map(subcityOptions.map((item) => [item.value, item.label])),
+    [subcityOptions],
+  );
 
   const STREETS = [
     'Africa Avenue',
@@ -337,10 +345,28 @@ export default function PolesListPage() {
     'African Union Road',
   ];
 
+  const statusOptions = useMemo(() => ([
+    { value: 'OPERATIONAL', label: t('statusLabels.OPERATIONAL') },
+    { value: 'FAULT_DAMAGED', label: t('statusLabels.FAULT_DAMAGED') },
+    { value: 'UNDER_MAINTENANCE', label: t('statusLabels.UNDER_MAINTENANCE') },
+    { value: 'REPLACED', label: t('statusLabels.REPLACED') },
+  ]), [t]);
+
+  const getStatusLabel = (status?: string) =>
+    status ? t(`statusLabels.${status}`, { defaultValue: status }) : t('labels.none');
+
+  const getMaintenanceStatusLabel = (status?: string) =>
+    status ? t(`maintenanceStatuses.${status}`, { defaultValue: status }) : t('labels.none');
+
+  const getSubcityLabel = (value?: string) =>
+    value ? (subcityLabelMap.get(value) || value) : t('labels.unknown');
+
   // Use server-side paginated data directly
   const paginatedPoles = data?.items || [];
   const totalItems = data?.total || 0;
   const totalPages = Math.ceil(totalItems / limit);
+  const showingFrom = paginatedPoles.length > 0 ? (page - 1) * limit + 1 : 0;
+  const showingTo = paginatedPoles.length > 0 ? Math.min(page * limit, totalItems) : 0;
 
   // Handle sort click
   const handleSort = (column: 'subcity' | 'street' | 'localAreaName' | 'localAreaNameAm') => {
@@ -376,8 +402,8 @@ export default function PolesListPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Pole deleted successfully',
+        title: t('notifications.deleteSuccessTitle'),
+        message: t('notifications.deleteSuccessMessage'),
         color: 'green',
       });
       queryClient.invalidateQueries({ queryKey: ['poles'] });
@@ -386,8 +412,8 @@ export default function PolesListPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to delete pole',
+        title: t('notifications.deleteErrorTitle'),
+        message: error.response?.data?.message || t('notifications.deleteErrorMessage'),
         color: 'red',
       });
     },
@@ -427,13 +453,13 @@ export default function PolesListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title order={1}>Light Poles</Title>
+        <Title order={1}>{t('title')}</Title>
         {isAdmin && (
           <Button 
             onClick={() => navigate('/poles/new')}
             size="md"
           >
-            Register Light Pole
+            {t('registerButton')}
           </Button>
         )}
       </Group>
@@ -441,7 +467,7 @@ export default function PolesListPage() {
       <Paper p={{ base: 'xs', sm: 'md' }} withBorder mb="md">
         <Stack gap="md">
           <TextInput
-            placeholder="Search by code, street, subcity, or local area"
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -450,8 +476,8 @@ export default function PolesListPage() {
           />
           <Group grow>
             <Select
-              placeholder="Subcity"
-              data={SUBCITIES}
+              placeholder={t('filters.subcityPlaceholder')}
+              data={subcityOptions}
               value={subcity}
               onChange={(value) => {
                 setSubcity(value);
@@ -461,8 +487,8 @@ export default function PolesListPage() {
               searchable
             />
             <Select
-              placeholder="Status"
-              data={['OPERATIONAL', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE', 'REPLACED']}
+              placeholder={t('filters.statusPlaceholder')}
+              data={statusOptions}
               value={status}
               onChange={(value) => {
                 setStatus(value);
@@ -473,7 +499,7 @@ export default function PolesListPage() {
           </Group>
           <Group grow>
             <TextInput
-              placeholder="Filter local area (English)"
+              placeholder={t('filters.localArea')}
               value={localAreaNameFilter}
               onChange={(e) => {
                 setLocalAreaNameFilter(e.target.value);
@@ -481,7 +507,7 @@ export default function PolesListPage() {
               }}
             />
             <TextInput
-              placeholder="Filter local area (Amharic)"
+              placeholder={t('filters.localAreaAm')}
               value={localAreaNameAmFilter}
               onChange={(e) => {
                 setLocalAreaNameAmFilter(e.target.value);
@@ -497,10 +523,10 @@ export default function PolesListPage() {
           <Table highlightOnHover>
             <Table.Thead>
             <Table.Tr>
-              <Table.Th>Code</Table.Th>
+              <Table.Th>{t('tableHeaders.code')}</Table.Th>
               <Table.Th onClick={(e) => e.stopPropagation()}>
                 <Group gap="xs" wrap="nowrap">
-                  <Text>Subcity</Text>
+                  <Text>{t('tableHeaders.subcity')}</Text>
                   <Popover position="bottom" withArrow shadow="md" withinPortal>
                     <Popover.Target>
                       <ActionIcon
@@ -513,10 +539,10 @@ export default function PolesListPage() {
                     </Popover.Target>
                     <Popover.Dropdown>
                       <Stack gap="xs">
-                        <Text size="sm" fw={600}>Filter by Subcity</Text>
+                        <Text size="sm" fw={600}>{t('filters.filterBySubcity')}</Text>
                         <Select
-                          placeholder="Select subcity"
-                          data={SUBCITIES}
+                          placeholder={t('filters.selectSubcity')}
+                          data={subcityOptions}
                           value={subcity}
                           onChange={(value) => {
                             setSubcity(value);
@@ -551,7 +577,7 @@ export default function PolesListPage() {
               </Table.Th>
               <Table.Th onClick={(e) => e.stopPropagation()}>
                 <Group gap="xs" wrap="nowrap">
-                  <Text>Street</Text>
+                  <Text>{t('tableHeaders.street')}</Text>
                   <Popover position="bottom" withArrow shadow="md" withinPortal>
                     <Popover.Target>
                       <ActionIcon
@@ -564,9 +590,9 @@ export default function PolesListPage() {
                     </Popover.Target>
                     <Popover.Dropdown>
                       <Stack gap="xs">
-                        <Text size="sm" fw={600}>Filter by Street</Text>
+                        <Text size="sm" fw={600}>{t('filters.filterByStreet')}</Text>
                         <Select
-                          placeholder="Select street"
+                          placeholder={t('filters.selectStreet')}
                           data={STREETS}
                           value={streetFilter}
                           onChange={(value) => {
@@ -603,7 +629,7 @@ export default function PolesListPage() {
               </Table.Th>
               <Table.Th onClick={(e) => e.stopPropagation()}>
                 <Group gap="xs" wrap="nowrap">
-                  <Text>Local Area</Text>
+                  <Text>{t('tableHeaders.localArea')}</Text>
                   <ActionIcon
                     size="sm"
                     variant="subtle"
@@ -625,10 +651,10 @@ export default function PolesListPage() {
                   </ActionIcon>
                 </Group>
               </Table.Th>
-              <Table.Th>Power Rating</Table.Th>
+              <Table.Th>{t('tableHeaders.powerRating')}</Table.Th>
               <Table.Th onClick={(e) => e.stopPropagation()}>
                 <Group gap="xs" wrap="nowrap">
-                  <Text>Status</Text>
+                  <Text>{t('tableHeaders.status')}</Text>
                   <Popover position="bottom" withArrow shadow="md" withinPortal>
                     <Popover.Target>
                       <ActionIcon
@@ -641,10 +667,10 @@ export default function PolesListPage() {
                     </Popover.Target>
                     <Popover.Dropdown>
                       <Stack gap="xs">
-                        <Text size="sm" fw={600}>Filter by Status</Text>
+                        <Text size="sm" fw={600}>{t('filters.filterByStatus')}</Text>
                         <Select
-                          placeholder="Select status"
-                          data={['OPERATIONAL', 'FAULT_DAMAGED', 'UNDER_MAINTENANCE', 'REPLACED']}
+                          placeholder={t('filters.selectStatus')}
+                          data={statusOptions}
                           value={status}
                           onChange={(value) => {
                             setStatus(value);
@@ -657,12 +683,12 @@ export default function PolesListPage() {
                   </Popover>
                 </Group>
               </Table.Th>
-              <Table.Th>Actions</Table.Th>
+              <Table.Th>{t('tableHeaders.actions')}</Table.Th>
               {status === 'REPLACED' && (
                 <>
-                  <Table.Th>New Pole Code</Table.Th>
-                  <Table.Th>Replacement Date</Table.Th>
-                  <Table.Th>Reason</Table.Th>
+                  <Table.Th>{t('tableHeaders.newPoleCode')}</Table.Th>
+                  <Table.Th>{t('tableHeaders.replacementDate')}</Table.Th>
+                  <Table.Th>{t('tableHeaders.reason')}</Table.Th>
                 </>
               )}
             </Table.Tr>
@@ -670,11 +696,11 @@ export default function PolesListPage() {
           <Table.Tbody>
             {isLoading ? (
               <Table.Tr>
-                <Table.Td colSpan={status === 'REPLACED' ? 10 : 7}>Loading...</Table.Td>
+                <Table.Td colSpan={status === 'REPLACED' ? 10 : 7}>{tCommon('loading')}</Table.Td>
               </Table.Tr>
             ) : paginatedPoles.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={status === 'REPLACED' ? 10 : 7}>No poles found</Table.Td>
+                <Table.Td colSpan={status === 'REPLACED' ? 10 : 7}>{t('noPoles')}</Table.Td>
               </Table.Tr>
             ) : (
               paginatedPoles.map((pole: any) => (
@@ -684,15 +710,15 @@ export default function PolesListPage() {
                   onClick={() => navigate(`/poles/${pole.code}`)}
                 >
                   <Table.Td>{pole.code}</Table.Td>
-                  <Table.Td>{pole.subcity}</Table.Td>
+                  <Table.Td>{getSubcityLabel(pole.subcity)}</Table.Td>
                   <Table.Td>{pole.street}</Table.Td>
                   <Table.Td>
-                    {[pole.localAreaName, pole.localAreaNameAm].filter(Boolean).join(' / ') || '-'}
+                    {[pole.localAreaName, pole.localAreaNameAm].filter(Boolean).join(' / ') || t('labels.none')}
                   </Table.Td>
-                  <Table.Td>{pole.powerRatingWatt ? `${pole.powerRatingWatt}W` : '-'}</Table.Td>
+                  <Table.Td>{pole.powerRatingWatt ? `${pole.powerRatingWatt}W` : t('labels.none')}</Table.Td>
                   <Table.Td>
                     <Badge color={getStatusColor(pole.status)}>
-                      {pole.status}
+                      {getStatusLabel(pole.status)}
                     </Badge>
                   </Table.Td>
                   <Table.Td onClick={(e) => e.stopPropagation()}>
@@ -701,7 +727,7 @@ export default function PolesListPage() {
                         variant="light"
                         color="blue"
                         size="sm"
-                        title="View"
+                        title={t('actionTitles.view')}
                         onClick={() => navigate(`/poles/${pole.code}`)}
                       >
                         <IconEye size={16} />
@@ -710,7 +736,7 @@ export default function PolesListPage() {
                         variant="light"
                         color="blue"
                         size="sm"
-                        title="Show History"
+                        title={t('actionTitles.history')}
                         onClick={() => handleShowHistory(pole.code)}
                       >
                         <IconHistory size={16} />
@@ -720,6 +746,7 @@ export default function PolesListPage() {
                           <ActionIcon
                             color="blue"
                             variant="light"
+                            title={t('actionTitles.edit')}
                             onClick={() => navigate(`/poles/${pole.code}/edit`)}
                           >
                             <IconEdit size={16} />
@@ -727,6 +754,7 @@ export default function PolesListPage() {
                           <ActionIcon
                             color="red"
                             variant="light"
+                            title={t('actionTitles.delete')}
                             onClick={() => handleDeleteClick(pole.code)}
                           >
                             <IconTrash size={16} />
@@ -759,7 +787,7 @@ export default function PolesListPage() {
       {totalPages > 0 && (
         <Group justify="space-between" align="center" mt="md">
           <Text size="sm" c="dimmed">
-            Showing {paginatedPoles.length > 0 ? ((page - 1) * limit + 1) : 0} - {Math.min(page * limit, totalItems)} of {totalItems} poles
+            {t('summary', { from: showingFrom, to: showingTo, total: totalItems })}
           </Text>
           <Pagination
             value={page}
@@ -772,16 +800,16 @@ export default function PolesListPage() {
       <Modal
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
-        title="Delete Light Pole"
+        title={t('deleteModal.title')}
         centered
       >
-        <Text>Are you sure you want to delete this light pole? This action cannot be undone.</Text>
+        <Text>{t('deleteModal.description')}</Text>
         <Group justify="flex-end" mt="xl">
           <Button variant="outline" onClick={closeDeleteModal}>
-            Cancel
+            {t('deleteModal.cancel')}
           </Button>
           <Button color="red" onClick={handleDeleteConfirm} loading={deleteMutation.isPending}>
-            Delete
+            {t('deleteModal.confirm')}
           </Button>
         </Group>
       </Modal>
@@ -792,7 +820,7 @@ export default function PolesListPage() {
           closeHistoryModal();
           setSelectedPoleCode(null);
         }}
-        title={`Maintenance History - ${selectedPoleCode}`}
+        title={t('historyModal.title', { code: selectedPoleCode || '' })}
         size="xl"
         centered
       >
@@ -803,39 +831,39 @@ export default function PolesListPage() {
         ) : maintenanceHistory && maintenanceHistory.length > 0 ? (
           <Table>
             <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Description</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Cost</Table.Th>
-                <Table.Th>Start Date</Table.Th>
-                <Table.Th>End Date</Table.Th>
-              </Table.Tr>
+                <Table.Tr>
+                  <Table.Th>{t('historyModal.tableHeaders.description')}</Table.Th>
+                  <Table.Th>{t('historyModal.tableHeaders.status')}</Table.Th>
+                  <Table.Th>{t('historyModal.tableHeaders.cost')}</Table.Th>
+                  <Table.Th>{t('historyModal.tableHeaders.startDate')}</Table.Th>
+                  <Table.Th>{t('historyModal.tableHeaders.endDate')}</Table.Th>
+                </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {maintenanceHistory.map((log: any) => (
                 <Table.Tr key={log.id}>
                   <Table.Td>{log.description}</Table.Td>
                   <Table.Td>
-                    <Badge>{log.status}</Badge>
+                    <Badge>{getMaintenanceStatusLabel(log.status)}</Badge>
                   </Table.Td>
                   <Table.Td>
                     {log.estimatedCost && parseFloat(log.estimatedCost) > 0
                       ? `${parseFloat(log.estimatedCost).toFixed(2)}`
                       : log.cost && parseFloat(log.cost) > 0
                       ? `${parseFloat(log.cost).toFixed(2)}`
-                      : '-'}
+                      : t('labels.none')}
                   </Table.Td>
                   <Table.Td>
                     {log.startDate
                       ? new Date(log.startDate).toLocaleDateString()
-                      : '-'}
+                      : t('labels.none')}
                   </Table.Td>
                   <Table.Td>
                     {log.completedDate
                       ? new Date(log.completedDate).toLocaleDateString()
                       : log.endDate
                       ? new Date(log.endDate).toLocaleDateString()
-                      : '-'}
+                      : t('labels.none')}
                   </Table.Td>
                 </Table.Tr>
               ))}
@@ -843,7 +871,7 @@ export default function PolesListPage() {
           </Table>
         ) : (
           <Text c="dimmed" ta="center" p="xl">
-            No maintenance history found for this pole.
+            {t('historyModal.noHistory')}
           </Text>
         )}
       </Modal>

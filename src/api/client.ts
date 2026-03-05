@@ -1,24 +1,15 @@
 import axios from 'axios';
-
-// Backend API base URL
-// Accepts either:
-// - http://host:port              (we'll append /api/v1)
-// - http://host:port/api/v1       (used as-is)
-const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3011';
-const normalizedBaseURL = RAW_BASE_URL.replace(/\/$/, '');
-const apiV1BaseURL = normalizedBaseURL.endsWith('/api/v1')
-  ? normalizedBaseURL
-  : `${normalizedBaseURL}/api/v1`;
+import { API_V1_BASE_URL } from '../config/api';
 
 export const apiClient = axios.create({
-  baseURL: apiV1BaseURL,
+  baseURL: API_V1_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
 // Debug: Log the baseURL to verify it's set correctly
-console.log('API Base URL:', apiV1BaseURL);
+console.log('API Base URL:', API_V1_BASE_URL);
 
 // Request interceptor to add auth token and log URLs
 apiClient.interceptors.request.use(
@@ -69,5 +60,4 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
-
 

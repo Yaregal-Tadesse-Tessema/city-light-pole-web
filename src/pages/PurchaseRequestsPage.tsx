@@ -25,17 +25,13 @@ import { notifications } from '@mantine/notifications';
 import { IconEye, IconCheck, IconX, IconPackage, IconFilter, IconArrowsUpDown, IconSortAscending, IconSortDescending, IconBox } from '@tabler/icons-react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
-const STATUSES = [
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'REJECTED', label: 'Rejected' },
-  { value: 'WAITING_FOR_PURCHASE', label: 'Waiting for Purchase' },
-  { value: 'IN_STOCK', label: 'In Stock' },
-  { value: 'DELIVERED', label: 'Delivered' },
-];
+const STATUS_VALUES = ['PENDING', 'APPROVED', 'REJECTED', 'WAITING_FOR_PURCHASE', 'IN_STOCK', 'DELIVERED'] as const;
 
 export default function PurchaseRequestsPage() {
+  const { t } = useTranslation('purchaseRequests');
+  const { t: tCommon } = useTranslation('common');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -48,6 +44,21 @@ export default function PurchaseRequestsPage() {
   const [receiveNotes, setReceiveNotes] = useState('');
   const [grnCode, setGrnCode] = useState('');
   const [receivingCode, setReceivingCode] = useState('');
+  const statusOptions = STATUS_VALUES.map((value) => ({
+    value,
+    label: t(`status.${value.toLowerCase()}`),
+  }));
+  const statusLabels: Record<string, string> = {
+    PENDING: t('status.pending'),
+    APPROVED: t('status.approved'),
+    REJECTED: t('status.rejected'),
+    WAITING_FOR_PURCHASE: t('status.waitingForPurchase'),
+    IN_STOCK: t('status.inStock'),
+    DELIVERED: t('status.delivered'),
+    ORDERED: t('status.ordered'),
+    ARRIVED_IN_STOCK: t('status.arrivedInStock'),
+  };
+  const formatStatus = (status: string) => statusLabels[status] || status;
 
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('createdAt');
@@ -187,10 +198,10 @@ export default function PurchaseRequestsPage() {
     },
     onSuccess: (data, variables) => {
       notifications.show({
-        title: 'Success',
+        title: t('notifications.successTitle'),
         message: variables.approve
-          ? 'Purchase request approved successfully'
-          : 'Purchase request rejected',
+          ? t('notifications.approveSuccess')
+          : t('notifications.rejectSuccess'),
         color: variables.approve ? 'green' : 'orange',
       });
       queryClient.invalidateQueries({ queryKey: ['purchase-requests'] });
@@ -201,8 +212,8 @@ export default function PurchaseRequestsPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to process request',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.processError'),
         color: 'red',
       });
     },
@@ -225,16 +236,16 @@ export default function PurchaseRequestsPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Purchase request marked as ordered',
+        title: t('notifications.successTitle'),
+        message: t('notifications.markedOrdered'),
         color: 'cyan',
       });
       queryClient.invalidateQueries({ queryKey: ['purchase-requests'] });
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to mark as ordered',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.markOrderedError'),
         color: 'red',
       });
     },
@@ -259,16 +270,16 @@ export default function PurchaseRequestsPage() {
     },
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Purchase request marked as arrived in stock',
+        title: t('notifications.successTitle'),
+        message: t('notifications.markedArrived'),
         color: 'orange',
       });
       queryClient.invalidateQueries({ queryKey: ['purchase-requests'] });
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to mark as arrived in stock',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.markArrivedError'),
         color: 'red',
       });
     },
@@ -294,8 +305,8 @@ export default function PurchaseRequestsPage() {
     },
     onSuccess: async () => {
       notifications.show({
-        title: 'Success',
-        message: 'Purchase request delivered',
+        title: t('notifications.successTitle'),
+        message: t('notifications.delivered'),
         color: 'green',
       });
 
@@ -335,8 +346,8 @@ export default function PurchaseRequestsPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to deliver purchase',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.deliverError'),
         color: 'red',
       });
     },
@@ -370,8 +381,8 @@ export default function PurchaseRequestsPage() {
     if (!selectedRequest) return;
     if (!approve && !rejectionReason.trim()) {
       notifications.show({
-        title: 'Error',
-        message: 'Please provide a rejection reason',
+        title: t('notifications.errorTitle'),
+        message: t('notifications.requireRejectionReason'),
         color: 'red',
       });
       return;
@@ -446,8 +457,8 @@ export default function PurchaseRequestsPage() {
     },
     onSuccess: async () => {
       notifications.show({
-        title: 'Success',
-        message: 'Purchase delivered to maintenance team',
+        title: t('notifications.successTitle'),
+        message: t('notifications.deliveredToTeam'),
         color: 'green',
       });
 
@@ -487,8 +498,8 @@ export default function PurchaseRequestsPage() {
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to deliver purchase to maintenance team',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.deliverToTeamError'),
         color: 'red',
       });
     },
@@ -505,10 +516,10 @@ export default function PurchaseRequestsPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb={{ base: 'md', sm: 'xl' }} wrap="wrap">
-        <Title order={1}>Purchase Requests</Title>
+        <Title order={1}>{t('title')}</Title>
         <Select
-          placeholder="Filter by status"
-          data={STATUSES}
+          placeholder={t('filters.statusPlaceholder')}
+          data={statusOptions}
           value={statusFilter}
           onChange={setStatusFilter}
           clearable
@@ -521,10 +532,12 @@ export default function PurchaseRequestsPage() {
           <Table highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Request ID</Table.Th>
+                <Table.Th>{t('table.requestId')}</Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('materialRequest')}>Material Request</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('materialRequest')}>
+                        {t('table.materialRequest')}
+                      </Text>
                     <Popover position="bottom" withArrow shadow="md">
                       <Popover.Target>
                         <ActionIcon variant="subtle" color="gray" size="sm">
@@ -533,7 +546,7 @@ export default function PurchaseRequestsPage() {
                       </Popover.Target>
                       <Popover.Dropdown>
                         <TextInput
-                          placeholder="Filter by Material Request..."
+                          placeholder={t('filters.materialRequestPlaceholder')}
                           value={materialRequestFilter}
                           onChange={(event) => setMaterialRequestFilter(event.currentTarget.value)}
                           size="sm"
@@ -550,10 +563,12 @@ export default function PurchaseRequestsPage() {
                     </ActionIcon>
                   </Group>
                 </Table.Th>
-                <Table.Th>Maintenance Code</Table.Th>
+                <Table.Th>{t('table.maintenanceCode')}</Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('requestedBy')}>Requested By</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('requestedBy')}>
+                        {t('table.requestedBy')}
+                      </Text>
                     <Popover position="bottom" withArrow shadow="md">
                       <Popover.Target>
                         <ActionIcon variant="subtle" color="gray" size="sm">
@@ -562,7 +577,7 @@ export default function PurchaseRequestsPage() {
                       </Popover.Target>
                       <Popover.Dropdown>
                         <TextInput
-                          placeholder="Filter by Requested By..."
+                          placeholder={t('filters.requestedByPlaceholder')}
                           value={requestedByFilter}
                           onChange={(event) => setRequestedByFilter(event.currentTarget.value)}
                           size="sm"
@@ -581,7 +596,9 @@ export default function PurchaseRequestsPage() {
                 </Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('itemsCount')}>Items Count</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('itemsCount')}>
+                        {t('table.itemsCount')}
+                      </Text>
                     <Popover position="bottom" withArrow shadow="md">
                       <Popover.Target>
                         <ActionIcon variant="subtle" color="gray" size="sm">
@@ -609,7 +626,9 @@ export default function PurchaseRequestsPage() {
                 </Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('totalCost')}>Total Cost</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('totalCost')}>
+                        {t('table.totalCost')}
+                      </Text>
                     <Popover position="bottom" withArrow shadow="md">
                       <Popover.Target>
                         <ActionIcon variant="subtle" color="gray" size="sm">
@@ -637,7 +656,9 @@ export default function PurchaseRequestsPage() {
                 </Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>Status</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('status')}>
+                        {t('table.status')}
+                      </Text>
                     <ActionIcon
                       variant="subtle"
                       color="gray"
@@ -650,7 +671,9 @@ export default function PurchaseRequestsPage() {
                 </Table.Th>
                 <Table.Th>
                   <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('createdAt')}>Request Date</Text>
+                      <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => handleSort('createdAt')}>
+                        {t('table.requestDate')}
+                      </Text>
                     <ActionIcon
                       variant="subtle"
                       color="gray"
@@ -661,7 +684,7 @@ export default function PurchaseRequestsPage() {
                     </ActionIcon>
                   </Group>
                 </Table.Th>
-                <Table.Th>Actions</Table.Th>
+                <Table.Th>{t('table.actions')}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -676,7 +699,7 @@ export default function PurchaseRequestsPage() {
               ) : !requests || requests.length === 0 ? (
                 <Table.Tr>
                   <Table.Td colSpan={9}>
-                    <Text c="dimmed" ta="center">No purchase requests found</Text>
+                    <Text c="dimmed" ta="center">{t('emptyState')}</Text>
                   </Table.Td>
                 </Table.Tr>
               ) : (
@@ -690,22 +713,24 @@ export default function PurchaseRequestsPage() {
                     <Table.Td>
                       <Text size="sm">
                         {request.materialRequestId
-                          ? (request.materialRequest?.code ?? '—')
-                          : 'Direct Purchase'}
+                          ? (request.materialRequest?.code ?? t('labels.notAvailable'))
+                          : t('labels.directPurchase')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">
-                        {request.maintenanceSchedule?.maintenanceCode || 'N/A'}
+                          {request.maintenanceSchedule?.maintenanceCode || t('labels.notAvailable')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">
-                        {request.requestedBy?.fullName || 'Unknown'}
+                          {request.requestedBy?.fullName || t('labels.unknown')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      <Text size="sm">{request.items?.length || 0} items</Text>
+                      <Text size="sm">
+                        {t('labels.itemsCount', { count: request.items?.length || 0 })}
+                      </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text fw={500} size="sm">
@@ -713,9 +738,9 @@ export default function PurchaseRequestsPage() {
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      <Badge color={getStatusColor(request.status)}>
-                        {request.status}
-                      </Badge>
+                        <Badge color={getStatusColor(request.status)}>
+                          {formatStatus(request.status)}
+                        </Badge>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">
@@ -730,7 +755,7 @@ export default function PurchaseRequestsPage() {
                           leftSection={<IconEye size={14} />}
                           onClick={() => handleViewDetails(request)}
                         >
-                          View
+                          {t('actions.view')}
                         </Button>
                         {canApprove(request) && (
                           <Button
@@ -740,7 +765,7 @@ export default function PurchaseRequestsPage() {
                             leftSection={<IconCheck size={14} />}
                             onClick={() => handleApproveClick(request)}
                           >
-                            Review
+                            {t('actions.review')}
                           </Button>
                         )}
                         {canWaitingForPurchase(request) && (
@@ -752,7 +777,7 @@ export default function PurchaseRequestsPage() {
                             onClick={() => waitingForPurchaseMutation.mutate(request.id)}
                             loading={waitingForPurchaseMutation.isPending}
                           >
-                            Mark as Ordered
+                            {t('actions.markOrdered')}
                           </Button>
                         )}
                         {canInStock(request) && (
@@ -763,7 +788,7 @@ export default function PurchaseRequestsPage() {
                             leftSection={<IconBox size={14} />}
                             onClick={() => handleReceiveClick(request)}
                           >
-                            Mark as Arrived
+                            {t('actions.markArrived')}
                           </Button>
                         )}
                         {canDeliver(request) && (
@@ -774,7 +799,7 @@ export default function PurchaseRequestsPage() {
                             leftSection={<IconCheck size={14} />}
                             onClick={() => handleDeliverClick(request)}
                           >
-                            Deliver
+                            {t('actions.deliver')}
                           </Button>
                         )}
                       </Group>
@@ -794,71 +819,71 @@ export default function PurchaseRequestsPage() {
           setDetailModalOpened(false);
           setSelectedRequest(null);
         }}
-        title="Purchase Request Details"
+        title={t('detailModal.title')}
         size="lg"
         centered
       >
         {selectedRequest && (
           <Stack>
             <Group justify="space-between">
-              <Text fw={600}>Request ID:</Text>
+              <Text fw={600}>{t('detailModal.requestId')}:</Text>
               <Text size="sm">{selectedRequest.id}</Text>
             </Group>
             {selectedRequest.materialRequestId && (
               <Group justify="space-between">
-                <Text fw={600}>Material Request:</Text>
+                <Text fw={600}>{t('detailModal.materialRequest')}:</Text>
                 <Text size="sm">
-                  {selectedRequest.materialRequest?.code ?? '—'}
+                  {selectedRequest.materialRequest?.code ?? t('labels.notAvailable')}
                 </Text>
               </Group>
             )}
             <Group justify="space-between">
-              <Text fw={600}>Requested By:</Text>
+              <Text fw={600}>{t('detailModal.requestedBy')}:</Text>
               <Text size="sm">
-                {selectedRequest.requestedBy?.fullName || 'Unknown'}
+                {selectedRequest.requestedBy?.fullName || t('labels.unknown')}
               </Text>
             </Group>
             <Group justify="space-between">
-              <Text fw={600}>Total Cost:</Text>
+              <Text fw={600}>{t('detailModal.totalCost')}:</Text>
               <Text fw={700} size="lg">
                 {Number(selectedRequest.totalCost || 0).toFixed(2)}
               </Text>
             </Group>
             <Group justify="space-between">
-              <Text fw={600}>Status:</Text>
+              <Text fw={600}>{t('detailModal.status')}:</Text>
               <Badge color={getStatusColor(selectedRequest.status)}>
-                {selectedRequest.status}
+                {formatStatus(selectedRequest.status)}
               </Badge>
             </Group>
             {selectedRequest.supplierName && (
               <Group justify="space-between">
-                <Text fw={600}>Supplier:</Text>
+                  <Text fw={600}>{t('detailModal.supplier')}:</Text>
                 <Text size="sm">{selectedRequest.supplierName}</Text>
               </Group>
             )}
             {selectedRequest.supplierContact && (
               <Group justify="space-between">
-                <Text fw={600}>Supplier Contact:</Text>
+                  <Text fw={600}>{t('detailModal.supplierContact')}:</Text>
                 <Text size="sm">{selectedRequest.supplierContact}</Text>
               </Group>
             )}
             <Group justify="space-between">
-              <Text fw={600}>Request Date:</Text>
+              <Text fw={600}>{t('detailModal.requestDate')}:</Text>
               <Text size="sm">
                 {new Date(selectedRequest.createdAt).toLocaleString()}
               </Text>
             </Group>
             {selectedRequest.approvedBy && (
               <Group justify="space-between">
-                <Text fw={600}>Approved By:</Text>
-                <Text size="sm">
-                  {selectedRequest.approvedBy?.fullName || 'Unknown'}
-                </Text>
+                  <Text fw={600}>{t('detailModal.approvedBy')}:</Text>
+                  <Text size="sm">
+                    {selectedRequest.approvedBy?.fullName || t('labels.unknown')}
+                  </Text>
               </Group>
             )}
             {selectedRequest.approvedAt && (
               <Group justify="space-between">
-                <Text fw={600}>Approved At:</Text>
+                  <Text fw={600}>{t('detailModal.approvedAt')}:</Text>
                 <Text size="sm">
                   {new Date(selectedRequest.approvedAt).toLocaleString()}
                 </Text>
@@ -866,7 +891,7 @@ export default function PurchaseRequestsPage() {
             )}
             {selectedRequest.orderedAt && (
               <Group justify="space-between">
-                <Text fw={600}>Ordered At:</Text>
+                  <Text fw={600}>{t('detailModal.orderedAt')}:</Text>
                 <Text size="sm">
                   {new Date(selectedRequest.orderedAt).toLocaleString()}
                 </Text>
@@ -874,7 +899,7 @@ export default function PurchaseRequestsPage() {
             )}
             {selectedRequest.receivedAt && (
               <Group justify="space-between">
-                <Text fw={600}>Received At:</Text>
+                  <Text fw={600}>{t('detailModal.receivedAt')}:</Text>
                 <Text size="sm">
                   {new Date(selectedRequest.receivedAt).toLocaleString()}
                 </Text>
@@ -882,33 +907,33 @@ export default function PurchaseRequestsPage() {
             )}
             {selectedRequest.grnCode && (
               <Group justify="space-between">
-                <Text fw={600}>GRN Code:</Text>
+                <Text fw={600}>{t('detailModal.grnCode')}:</Text>
                 <Text size="sm">{selectedRequest.grnCode}</Text>
               </Group>
             )}
-            {selectedRequest.rejectionReason && (
-              <Alert color="red" title="Rejection Reason">
-                {selectedRequest.rejectionReason}
-              </Alert>
-            )}
-            {selectedRequest.notes && (
-              <div>
-                <Text fw={600} mb="xs">Notes:</Text>
-                <Text size="sm">{selectedRequest.notes}</Text>
-              </div>
-            )}
+              {selectedRequest.rejectionReason && (
+                <Alert color="red" title={t('detailModal.rejectionReasonTitle')}>
+                  {selectedRequest.rejectionReason}
+                </Alert>
+              )}
+              {selectedRequest.notes && (
+                <div>
+                  <Text fw={600} mb="xs">{t('detailModal.notes')}:</Text>
+                  <Text size="sm">{selectedRequest.notes}</Text>
+                </div>
+              )}
 
-            <div>
-              <Text fw={600} mb="xs">Items to Purchase:</Text>
-              <Table>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Item</Table.Th>
-                    <Table.Th>Quantity</Table.Th>
-                    <Table.Th>Unit Cost</Table.Th>
-                    <Table.Th>Total Cost</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
+              <div>
+                <Text fw={600} mb="xs">{t('detailModal.itemsTitle')}:</Text>
+                <Table>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>{t('detailModal.table.item')}</Table.Th>
+                      <Table.Th>{t('detailModal.table.quantity')}</Table.Th>
+                      <Table.Th>{t('detailModal.table.unitCost')}</Table.Th>
+                      <Table.Th>{t('detailModal.table.totalCost')}</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
                 <Table.Tbody>
                   {selectedRequest.items?.map((item: any) => (
                     <Table.Tr key={item.id}>
@@ -939,26 +964,23 @@ export default function PurchaseRequestsPage() {
           setSelectedRequest(null);
           setRejectionReason('');
         }}
-        title="Review Purchase Request"
+        title={t('reviewModal.title')}
         size="md"
         centered
       >
         {selectedRequest && (
           <Stack>
-            <Alert color="blue">
-              Review the purchase request and approve or reject it. If approved,
-              you can mark it as ordered when the order is placed with the supplier.
-            </Alert>
+            <Alert color="blue">{t('reviewModal.info')}</Alert>
 
             <div>
-              <Text fw={600} mb="xs">Items to Purchase:</Text>
+              <Text fw={600} mb="xs">{t('reviewModal.itemsTitle')}:</Text>
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Item</Table.Th>
-                    <Table.Th>Quantity</Table.Th>
-                    <Table.Th>Unit Cost</Table.Th>
-                    <Table.Th>Total</Table.Th>
+                    <Table.Th>{t('reviewModal.table.item')}</Table.Th>
+                    <Table.Th>{t('reviewModal.table.quantity')}</Table.Th>
+                    <Table.Th>{t('reviewModal.table.unitCost')}</Table.Th>
+                    <Table.Th>{t('reviewModal.table.total')}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -977,12 +999,12 @@ export default function PurchaseRequestsPage() {
             </div>
 
             <Text fw={700} size="lg" ta="right">
-              Total: {Number(selectedRequest.totalCost || 0).toFixed(2)}
+              {t('reviewModal.totalLabel')}: {Number(selectedRequest.totalCost || 0).toFixed(2)}
             </Text>
 
             <Textarea
-              label="Rejection Reason (if rejecting)"
-              placeholder="Enter reason for rejection..."
+              label={t('reviewModal.rejectionReasonLabel')}
+              placeholder={t('reviewModal.rejectionReasonPlaceholder')}
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               minRows={3}
@@ -997,7 +1019,7 @@ export default function PurchaseRequestsPage() {
                   setRejectionReason('');
                 }}
               >
-                Cancel
+                {tCommon('actions.cancel')}
               </Button>
               <Button
                 color="red"
@@ -1006,7 +1028,7 @@ export default function PurchaseRequestsPage() {
                 onClick={() => handleApprove(false)}
                 loading={approveMutation.isPending}
               >
-                Reject
+                {t('actions.reject')}
               </Button>
               <Button
                 color="green"
@@ -1014,7 +1036,7 @@ export default function PurchaseRequestsPage() {
                 onClick={() => handleApprove(true)}
                 loading={approveMutation.isPending}
               >
-                Approve
+                {t('actions.approve')}
               </Button>
             </Group>
           </Stack>
@@ -1030,24 +1052,21 @@ export default function PurchaseRequestsPage() {
           setReceiveNotes('');
           setGrnCode('');
         }}
-        title="Receive Purchase"
+        title={t('receiveModal.title')}
         size="md"
         centered
       >
         {selectedRequest && (
           <Stack>
-            <Alert color="green">
-              Mark this purchase as received. Items will be added to inventory
-              automatically.
-            </Alert>
+            <Alert color="green">{t('receiveModal.info')}</Alert>
 
             <div>
-              <Text fw={600} mb="xs">Items to be added to inventory:</Text>
+              <Text fw={600} mb="xs">{t('receiveModal.itemsTitle')}:</Text>
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Item</Table.Th>
-                    <Table.Th>Quantity</Table.Th>
+                    <Table.Th>{t('receiveModal.table.item')}</Table.Th>
+                    <Table.Th>{t('receiveModal.table.quantity')}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -1064,16 +1083,16 @@ export default function PurchaseRequestsPage() {
             </div>
 
             <Textarea
-              label="Delivery Notes (optional)"
-              placeholder="Enter any notes about the delivery..."
+              label={t('receiveModal.notesLabel')}
+              placeholder={t('receiveModal.notesPlaceholder')}
               value={receiveNotes}
               onChange={(e) => setReceiveNotes(e.target.value)}
               minRows={3}
             />
 
             <TextInput
-              label="GRN Code"
-              placeholder="Enter Goods Received Note code..."
+              label={t('receiveModal.grnLabel')}
+              placeholder={t('receiveModal.grnPlaceholder')}
               value={grnCode}
               onChange={(e) => setGrnCode(e.target.value)}
             />
@@ -1088,7 +1107,7 @@ export default function PurchaseRequestsPage() {
                   setGrnCode('');
                 }}
               >
-                Cancel
+                {tCommon('actions.cancel')}
               </Button>
               <Button
                 color="green"
@@ -1096,7 +1115,7 @@ export default function PurchaseRequestsPage() {
                 onClick={handleDeliver}
                 loading={deliverMutation.isPending}
               >
-                Receive Purchase
+                {t('actions.receive')}
               </Button>
             </Group>
           </Stack>
@@ -1111,24 +1130,21 @@ export default function PurchaseRequestsPage() {
           setSelectedRequest(null);
           setReceivingCode('');
         }}
-        title="Deliver Purchase to Maintenance Team"
+        title={t('deliverModal.title')}
         size="md"
         centered
       >
         {selectedRequest && (
           <Stack>
-            <Alert color="blue">
-              Deliver this purchase to the maintenance team. This will mark the purchase as completed
-              and ready for use in maintenance operations.
-            </Alert>
+            <Alert color="blue">{t('deliverModal.info')}</Alert>
 
             <div>
-              <Text fw={600} mb="xs">Items to be delivered:</Text>
+              <Text fw={600} mb="xs">{t('deliverModal.itemsTitle')}:</Text>
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Item</Table.Th>
-                    <Table.Th>Quantity</Table.Th>
+                    <Table.Th>{t('deliverModal.table.item')}</Table.Th>
+                    <Table.Th>{t('deliverModal.table.quantity')}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -1145,8 +1161,8 @@ export default function PurchaseRequestsPage() {
             </div>
 
             <TextInput
-              label="Receiving Code"
-              placeholder="Enter receiving code for delivery..."
+              label={t('deliverModal.receivingCodeLabel')}
+              placeholder={t('deliverModal.receivingCodePlaceholder')}
               value={receivingCode}
               onChange={(e) => setReceivingCode(e.target.value)}
             />
@@ -1160,7 +1176,7 @@ export default function PurchaseRequestsPage() {
                   setReceivingCode('');
                 }}
               >
-                Cancel
+                {tCommon('actions.cancel')}
               </Button>
               <Button
                 color="green"
@@ -1168,7 +1184,7 @@ export default function PurchaseRequestsPage() {
                 onClick={() => handleFinalDeliver()}
                 loading={finalDeliverMutation.isPending}
               >
-                Deliver to Maintenance
+                {t('actions.deliverToMaintenance')}
               </Button>
             </Group>
           </Stack>
@@ -1177,5 +1193,6 @@ export default function PurchaseRequestsPage() {
     </Container>
   );
 }
+
 
 

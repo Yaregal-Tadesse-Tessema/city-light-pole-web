@@ -22,6 +22,7 @@ import { IconEdit, IconTrash, IconPlus, IconEye } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 interface DamagedComponent {
   id: string;
@@ -37,6 +38,8 @@ interface DamagedComponent {
 }
 
 export default function DamagedComponentsPage() {
+  const { t } = useTranslation('damagedComponents');
+  const { t: tCommon } = useTranslation('common');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [opened, { open, close }] = useDisclosure(false);
@@ -62,14 +65,18 @@ export default function DamagedComponentsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['damaged-components'] });
-      notifications.show({ title: 'Success', message: 'Component created', color: 'green' });
+      notifications.show({
+        title: t('notifications.successTitle'),
+        message: t('notifications.createSuccess'),
+        color: 'green',
+      });
       close();
       setEditingComponent(null);
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to create component',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.createError'),
         color: 'red',
       });
     },
@@ -84,14 +91,18 @@ export default function DamagedComponentsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['damaged-components'] });
-      notifications.show({ title: 'Success', message: 'Component updated', color: 'green' });
+      notifications.show({
+        title: t('notifications.successTitle'),
+        message: t('notifications.updateSuccess'),
+        color: 'green',
+      });
       close();
       setEditingComponent(null);
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to update component',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.updateError'),
         color: 'red',
       });
     },
@@ -106,12 +117,16 @@ export default function DamagedComponentsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['damaged-components'] });
-      notifications.show({ title: 'Success', message: 'Component deleted', color: 'green' });
+      notifications.show({
+        title: t('notifications.successTitle'),
+        message: t('notifications.deleteSuccess'),
+        color: 'green',
+      });
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to delete component',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.deleteError'),
         color: 'red',
       });
     },
@@ -148,7 +163,7 @@ export default function DamagedComponentsPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this component?')) {
+    if (window.confirm(t('deleteModal.confirmation'))) {
       deleteMutation.mutate(id);
     }
   };
@@ -160,8 +175,8 @@ export default function DamagedComponentsPage() {
   if (!user?.role?.includes('ADMIN')) {
     return (
       <Container size="xl" py="xl">
-        <Alert color="red" title="Access Denied">
-          Only administrators can manage damaged components.
+        <Alert color="red" title={t('accessDenied.title')}>
+          {t('accessDenied.message')}
         </Alert>
       </Container>
     );
@@ -170,9 +185,9 @@ export default function DamagedComponentsPage() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" mb="lg">
-        <Title>Components Management</Title>
+        <Title>{t('title')}</Title>
         <Button leftSection={<IconPlus size={16} />} onClick={handleCreate}>
-          Add Component
+          {t('actions.addComponent')}
         </Button>
       </Group>
 
@@ -182,10 +197,10 @@ export default function DamagedComponentsPage() {
           <Table>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Cost</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Actions</Table.Th>
+                <Table.Th>{t('table.name')}</Table.Th>
+                <Table.Th>{t('table.cost')}</Table.Th>
+                <Table.Th>{t('table.status')}</Table.Th>
+                <Table.Th>{t('table.actions')}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -204,7 +219,7 @@ export default function DamagedComponentsPage() {
                   <Table.Td>${component.minorCost}</Table.Td>
                   <Table.Td>
                     <Badge color={component.isActive ? 'green' : 'red'}>
-                      {component.isActive ? 'Active' : 'Inactive'}
+                      {component.isActive ? t('status.active') : t('status.inactive')}
                     </Badge>
                   </Table.Td>
                   <Table.Td>
@@ -245,7 +260,7 @@ export default function DamagedComponentsPage() {
           close();
           setEditingComponent(null);
         }}
-        title={editingComponent ? 'Edit Component' : 'Add Component'}
+        title={editingComponent ? t('modal.editTitle') : t('modal.addTitle')}
         size="lg"
       >
         <form
@@ -268,21 +283,21 @@ export default function DamagedComponentsPage() {
           }}
         >
           <TextInput
-            label="Name"
+            label={t('form.name')}
             name="name"
             required
             defaultValue={editingComponent?.name || ''}
           />
 
           <Textarea
-            label="Description"
+            label={t('form.description')}
             name="description"
             defaultValue={editingComponent?.description || ''}
             mt="md"
           />
 
           <NumberInput
-            label="Cost"
+            label={t('form.cost')}
             name="cost"
             required
             min={0}
@@ -292,10 +307,10 @@ export default function DamagedComponentsPage() {
 
           <Group justify="flex-end" mt="xl">
             <Button variant="light" onClick={close}>
-              Cancel
+              {tCommon('actions.cancel')}
             </Button>
             <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>
-              {editingComponent ? 'Update' : 'Create'}
+              {editingComponent ? t('actions.update') : t('actions.create')}
             </Button>
           </Group>
         </form>

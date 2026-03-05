@@ -5,6 +5,7 @@ import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import './styles/fonts.css';
 import './api/axiosSetup';
 import './i18n';
 import App from './App';
@@ -29,7 +30,16 @@ const queryClient = new QueryClient({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <MantineProvider>
+    <MantineProvider
+      theme={{
+        fontFamily:
+          '"Noto Sans Ethiopic", "Noto Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+        headings: {
+          fontFamily:
+            '"Noto Sans Ethiopic", "Noto Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+        },
+      }}
+    >
       <Notifications />
       <QueryClientProvider client={queryClient}>
         <App />

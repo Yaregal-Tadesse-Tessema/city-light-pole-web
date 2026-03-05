@@ -1,7 +1,8 @@
 import { Component, ReactNode } from 'react';
 import { Container, Paper, Title, Text, Button, Stack } from '@mantine/core';
+import { withTranslation, WithTranslation } from 'react-i18next';
 
-interface Props {
+interface Props extends WithTranslation {
   children: ReactNode;
 }
 
@@ -10,7 +11,7 @@ interface State {
   error?: Error;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
@@ -26,24 +27,26 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const { t } = this.props;
       return (
         <Container size="md" py="xl">
           <Paper withBorder p="xl">
             <Stack>
-              <Title order={2} c="red">Something went wrong</Title>
-              <Text>{this.state.error?.message || 'An unexpected error occurred'}</Text>
+              <Title order={2} c="red">{t('errorBoundary.title')}</Title>
+              <Text>{this.state.error?.message || t('errorBoundary.message')}</Text>
               <Button onClick={() => window.location.reload()}>
-                Reload Page
+                {t('errorBoundary.reload')}
               </Button>
             </Stack>
           </Paper>
         </Container>
       );
     }
-
     return this.props.children;
   }
 }
+
+export default withTranslation('errorBoundary')(ErrorBoundary);
 
 
 

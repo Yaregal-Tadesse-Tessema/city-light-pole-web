@@ -47,22 +47,21 @@ const SUBCITIES = [
   'Lemi Kura',
 ];
 
-const ASSET_TYPES = [
-  { value: 'pole', label: 'Light Pole' },
-  { value: 'park', label: 'Public Park', disabled: true },
-  { value: 'parking', label: 'Parking Lot', disabled: true },
-  { value: 'museum', label: 'Museum', disabled: true },
-  { value: 'toilet', label: 'Public Toilet', disabled: true },
-  { value: 'football', label: 'Football Field', disabled: true },
-  { value: 'river', label: 'River Side Project', disabled: true },
-];
+const SUBCITY_KEYS: Record<string, string> = {
+  'Addis Ketema': 'addisKetema',
+  'Akaky Kaliti': 'akakyKaliti',
+  'Arada': 'arada',
+  'Bole': 'bole',
+  'Gullele': 'gullele',
+  'Kirkos': 'kirkos',
+  'Kolfe Keranio': 'kolfeKeranio',
+  'Lideta': 'lideta',
+  'Nifas Silk-Lafto': 'nifasSilkLafto',
+  'Yeka': 'yeka',
+  'Lemi Kura': 'lemiKura',
+};
 
 const POLE_TYPE_ORDER = ['STANDARD', 'DECORATIVE', 'HIGH_MAST'];
-const POLE_TYPE_LABELS: Record<string, string> = {
-  STANDARD: 'Standard',
-  DECORATIVE: 'Decorative',
-  HIGH_MAST: 'High Mast',
-};
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -71,13 +70,75 @@ export default function DashboardPage() {
   const [selectedSubcity, setSelectedSubcity] = useState<string | null>(null);
   const [selectedPoleTypeSubcity, setSelectedPoleTypeSubcity] = useState<string | null>(null);
   const [selectedAssetType, setSelectedAssetType] = useState<string>('pole');
-  const [selectedStatus, setSelectedStatus] = useState<string>('Faulty');
+  const [selectedStatus, setSelectedStatus] = useState<'faulty' | 'working' | 'inProgress'>('faulty');
 
   // Pagination states for the three bottom tables
   const [operationalPage, setOperationalPage] = useState(1);
   const [maintenancePage, setMaintenancePage] = useState(1);
   const [failedPage, setFailedPage] = useState(1);
   const pageSize = 10;
+
+  const getSubcityLabel = (subcity: string) =>
+    t(`subcities.${SUBCITY_KEYS[subcity]}`, { defaultValue: subcity });
+
+  const subcityOptions = useMemo(
+    () =>
+      SUBCITIES.map((subcity) => ({
+        value: subcity,
+        label: getSubcityLabel(subcity),
+      })),
+    [t],
+  );
+
+  const assetTypeLabels = useMemo(
+    () => ({
+      pole: t('assetTypes.pole'),
+      park: t('assetTypes.park'),
+      parking: t('assetTypes.parking'),
+      museum: t('assetTypes.museum'),
+      toilet: t('assetTypes.toilet'),
+      football: t('assetTypes.football'),
+      river: t('assetTypes.river'),
+      assets: t('assetTypes.assets'),
+    }),
+    [t],
+  );
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'faulty', label: t('statusOptions.faulty') },
+      { value: 'working', label: t('statusOptions.working') },
+      { value: 'inProgress', label: t('statusOptions.inProgress') },
+    ],
+    [t],
+  );
+
+  const poleTypeLabels = useMemo(
+    () => ({
+      STANDARD: t('poleTypes.types.standard'),
+      DECORATIVE: t('poleTypes.types.decorative'),
+      HIGH_MAST: t('poleTypes.types.highMast'),
+    }),
+    [t],
+  );
+
+  const assetStatusLabels = useMemo(
+    () => ({
+      OPERATIONAL: t('status.working'),
+      FAULT_DAMAGED: t('status.faulty'),
+      UNDER_MAINTENANCE: t('status.maintenance'),
+      REPLACED: t('status.replaced'),
+    }),
+    [t],
+  );
+
+  const maintenanceStatusLabels = useMemo(
+    () => ({
+      STARTED: t('maintenanceStatuses.started'),
+      COMPLETED: t('maintenanceStatuses.completed'),
+    }),
+    [t],
+  );
 
   const { data: summary } = useQuery({
     queryKey: ['reports', 'summary'],
@@ -177,7 +238,7 @@ export default function DashboardPage() {
         total: allAssets.length,
       };
     },
-    enabled: !!selectedSubcity && selectedStatus === 'Faulty',
+    enabled: !!selectedSubcity && selectedStatus === 'faulty',
   });
 
   const { data: operationalAssets } = useQuery({
@@ -208,7 +269,7 @@ export default function DashboardPage() {
         total: (res.data.items || []).length,
       };
     },
-    enabled: !!selectedSubcity && selectedStatus === 'Working',
+    enabled: !!selectedSubcity && selectedStatus === 'working',
   });
 
 
@@ -311,7 +372,7 @@ export default function DashboardPage() {
       return maintenanceSchedules.filter(schedule => schedule.status !== 'COMPLETED').length;
     }
     return 0;
-  }, [maintenanceSchedules]);
+  }, [maintenanceSchedules, t]);
 
   // Auto-seed maintenance schedules on component mount
   useEffect(() => {
@@ -477,7 +538,7 @@ export default function DashboardPage() {
     const inProgressSchedules = maintenanceSchedules.filter(schedule => schedule.status !== 'COMPLETED');
 
     const grouped = inProgressSchedules.reduce((acc, schedule) => {
-      const subcity = schedule.pole?.subcity || 'Unknown';
+      const subcity = schedule.pole?.subcity || t('labels.unknown');
       acc[subcity] = (acc[subcity] || 0) + 1;
       return acc;
     }, {});
@@ -495,23 +556,41 @@ export default function DashboardPage() {
 
     return POLE_TYPE_ORDER.map((type) => ({
       type,
-      label: POLE_TYPE_LABELS[type] || type,
+      label: poleTypeLabels[type] || type,
       count: counts.get(type) ?? 0,
     }));
-  }, [polesByType]);
+  }, [polesByType, poleTypeLabels]);
   const hasPoleTypeData = poleTypeChartData.some((entry) => entry.count > 0);
 
-  const chartData = selectedStatus === 'Faulty'
+  const chartData = selectedStatus === 'faulty'
     ? faultyByDistrict?.map((item: any) => ({
         district: item.district,
         count: item.count,
       })) || []
-    : selectedStatus === 'Working'
+    : selectedStatus === 'working'
     ? operationalBySubcity?.map((item: any) => ({
-        subcity: item.subcity,
+        subcity: getSubcityLabel(item.subcity),
         count: item.count,
       })) || []
-    : inProgressBySubcity;
+    : inProgressBySubcity.map((item) => ({
+        subcity: getSubcityLabel(item.subcity),
+        count: item.count,
+      }));
+
+  const assetTypeLabel = assetTypeLabels[selectedAssetType as keyof typeof assetTypeLabels] || assetTypeLabels.assets;
+  const statusTitle = selectedStatus === 'faulty'
+    ? t('charts.subcityTitles.faulty')
+    : selectedStatus === 'working'
+    ? t('charts.subcityTitles.working')
+    : t('charts.subcityTitles.inProgress');
+  const statusNoData = selectedStatus === 'faulty'
+    ? t('charts.noData.faulty')
+    : selectedStatus === 'working'
+    ? t('charts.noData.working')
+    : t('charts.noData.inProgress');
+  const statusDataKey = selectedStatus === 'faulty' ? 'district' : 'subcity';
+  const statusBarColor = selectedStatus === 'faulty' ? '#dc3545' : selectedStatus === 'working' ? '#28a745' : '#ffa500';
+  const secondaryHeaderLabel = selectedAssetType === 'park' ? t('tableHeaders.name') : t('tableHeaders.street');
 
   // Animated “indicator” numbers (top summary cards)
   const totalPolesAnimated = useCountUp(summary?.poles?.total || 0);
@@ -601,7 +680,7 @@ export default function DashboardPage() {
                 <Group justify="space-between">
                   <div>
                     <Text size="sm" c="dimmed">
-                      Total Accidents
+                      {t('accidents.totalLabel')}
                     </Text>
                     <Text size="xl" fw={700} c="red">
                       {accidentStats?.totalAccidents || 0}
@@ -619,21 +698,21 @@ export default function DashboardPage() {
       {user?.role === 'ADMIN' && lowStockItems && lowStockItems.length > 0 && (
         <Alert
           icon={<IconAlertTriangle size={16} />}
-          title="Low Stock Alert"
+          title={t('alerts.lowStock.title')}
           color="red"
           mt="xl"
           mb="md"
           withCloseButton
         >
           <Text size="sm" mb="xs">
-            {lowStockItems.length} item(s) are below minimum threshold.
+            {t('alerts.lowStock.message', { count: lowStockItems.length })}
             <Button
               variant="subtle"
               size="xs"
               onClick={() => navigate('/inventory?lowStock=true')}
               ml="xs"
             >
-              View Items
+              {t('alerts.lowStock.viewItems')}
             </Button>
           </Text>
         </Alert>
@@ -643,39 +722,37 @@ export default function DashboardPage() {
         <Grid.Col span={{ base: 12, md: 12 }}>
           <Paper p="md" withBorder>
             <Stack gap="md">
-              <Group justify="space-between" wrap="wrap">
-                <Title order={3}>
-                  {selectedStatus === 'Faulty' ? 'Light Pole Assessment By Subcity' :
-                   selectedStatus === 'Working' ? 'Working Light Poles by Subcity' :
-                   'In Progress Maintenances by Subcity'}
-                </Title>
-                <Group gap="xs" wrap="wrap">
-                  <Select
-                    placeholder="All Subcities"
-                    data={[
-                      { value: '', label: 'All Subcities' },
-                      ...SUBCITIES.map((subcity) => ({ value: subcity, label: subcity })),
-                    ]}
-                    value={selectedSubcity ?? ''}
-                    onChange={(value) => setSelectedSubcity(value && value.trim() ? value : null)}
-                    style={{ minWidth: 220 }}
-                  />
-                  <Select
-                    placeholder="Select Status"
-                    data={['Faulty', 'Working', 'In Progress Maintenances']}
-                    value={selectedStatus}
-                    onChange={(value) => setSelectedStatus(value || 'Faulty')}
-                    clearable={false}
-                    style={{ minWidth: 220 }}
-                  />
+                <Group justify="space-between" wrap="wrap">
+                  <Title order={3}>
+                    {statusTitle}
+                  </Title>
+                  <Group gap="xs" wrap="wrap">
+                    <Select
+                      placeholder={t('filters.allSubcities')}
+                      data={[
+                        { value: '', label: t('filters.allSubcities') },
+                        ...subcityOptions,
+                      ]}
+                      value={selectedSubcity ?? ''}
+                      onChange={(value) => setSelectedSubcity(value && value.trim() ? value : null)}
+                      style={{ minWidth: 220 }}
+                    />
+                    <Select
+                      placeholder={t('filters.selectStatus')}
+                      data={statusOptions}
+                      value={selectedStatus}
+                      onChange={(value) => setSelectedStatus((value as 'faulty' | 'working' | 'inProgress') || 'faulty')}
+                      clearable={false}
+                      style={{ minWidth: 220 }}
+                    />
+                  </Group>
                 </Group>
-              </Group>
               {chartData && chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
-                      dataKey={selectedStatus === 'Faulty' ? 'district' : 'subcity'}
+                      dataKey={statusDataKey}
                       angle={-45}
                       textAnchor="end"
                       height={80}
@@ -685,7 +762,7 @@ export default function DashboardPage() {
                     <Tooltip />
                     <Bar
                       dataKey="count"
-                      fill={selectedStatus === 'Faulty' ? '#dc3545' : selectedStatus === 'Working' ? '#28a745' : '#ffa500'}
+                      fill={statusBarColor}
                       isAnimationActive
                       animationDuration={900}
                       animationEasing="ease-out"
@@ -694,23 +771,25 @@ export default function DashboardPage() {
                 </ResponsiveContainer>
               ) : (
                 <Text c="dimmed" ta="center" py="xl">
-                  No {selectedStatus === 'Faulty' ? 'faulty assets' :
-                    selectedStatus === 'Working' ? 'working light poles' :
-                    'in progress maintenances'} found
+                  {statusNoData}
                 </Text>
               )}
-              {selectedSubcity && selectedStatus === 'Faulty' && faultyAssets && faultyAssets.items && faultyAssets.items.length > 0 && (
+              {selectedSubcity && selectedStatus === 'faulty' && faultyAssets && faultyAssets.items && faultyAssets.items.length > 0 && (
                 <Stack gap="xs" mt="md">
                   <Text fw={600} size="sm">
-                    Faulty {ASSET_TYPES.find(t => t.value === selectedAssetType)?.label || 'Assets'} in {selectedSubcity} ({faultyAssets.items.length})
+                    {t('assets.faultyHeading', {
+                      assetType: assetTypeLabel,
+                      subcity: getSubcityLabel(selectedSubcity),
+                      count: faultyAssets.items.length,
+                    })}
                   </Text>
                   <Table.ScrollContainer minWidth={400}>
                     <Table highlightOnHover>
                       <Table.Thead>
                         <Table.Tr>
-                          <Table.Th>Code</Table.Th>
-                          <Table.Th>{selectedAssetType === 'pole' ? 'Street' : selectedAssetType === 'park' ? 'Name' : 'Street'}</Table.Th>
-                          <Table.Th>Status</Table.Th>
+                          <Table.Th>{t('tableHeaders.code')}</Table.Th>
+                          <Table.Th>{secondaryHeaderLabel}</Table.Th>
+                          <Table.Th>{t('tableHeaders.status')}</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -736,7 +815,7 @@ export default function DashboardPage() {
                               <Table.Td>{asset.code}</Table.Td>
                               <Table.Td>{displayField}</Table.Td>
                               <Table.Td>
-                                <Badge color="red">{asset.status}</Badge>
+                                <Badge color="red">{assetStatusLabels[asset.status] ?? asset.status}</Badge>
                               </Table.Td>
                             </Table.Tr>
                           );
@@ -746,7 +825,11 @@ export default function DashboardPage() {
                   </Table.ScrollContainer>
                   {faultyAssets.items.length > 10 && (
                     <Text size="xs" c="dimmed" ta="center">
-                      Showing 10 of {faultyAssets.items.length} faulty assets. 
+                      {t('assets.showing', {
+                        shown: 10,
+                        total: faultyAssets.items.length,
+                        label: t('assets.labels.faulty'),
+                      })}
                       <Text 
                         component="span" 
                         c="blue" 
@@ -766,24 +849,28 @@ export default function DashboardPage() {
                           navigate(`${route}?${paramName}=${encodeURIComponent(selectedSubcity)}&status=FAULT_DAMAGED`);
                         }}
                       >
-                        View all
+                        {t('actions.viewAll')}
                       </Text>
                     </Text>
                   )}
                 </Stack>
               )}
-              {selectedSubcity && selectedStatus === 'Working' && operationalAssets && operationalAssets.items && operationalAssets.items.length > 0 && (
+              {selectedSubcity && selectedStatus === 'working' && operationalAssets && operationalAssets.items && operationalAssets.items.length > 0 && (
                 <Stack gap="xs" mt="md">
                   <Text fw={600} size="sm">
-                    Working {ASSET_TYPES.find(t => t.value === selectedAssetType)?.label || 'Assets'} in {selectedSubcity} ({operationalAssets.items.length})
+                    {t('assets.workingHeading', {
+                      assetType: assetTypeLabel,
+                      subcity: getSubcityLabel(selectedSubcity),
+                      count: operationalAssets.items.length,
+                    })}
                   </Text>
                   <Table.ScrollContainer minWidth={400}>
                     <Table highlightOnHover>
                       <Table.Thead>
                         <Table.Tr>
-                          <Table.Th>Code</Table.Th>
-                          <Table.Th>{selectedAssetType === 'pole' ? 'Street' : selectedAssetType === 'park' ? 'Name' : 'Street'}</Table.Th>
-                          <Table.Th>Status</Table.Th>
+                          <Table.Th>{t('tableHeaders.code')}</Table.Th>
+                          <Table.Th>{secondaryHeaderLabel}</Table.Th>
+                          <Table.Th>{t('tableHeaders.status')}</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -809,7 +896,7 @@ export default function DashboardPage() {
                               <Table.Td>{asset.code}</Table.Td>
                               <Table.Td>{displayField}</Table.Td>
                               <Table.Td>
-                                <Badge color="green">{asset.status}</Badge>
+                                <Badge color="green">{assetStatusLabels[asset.status] ?? asset.status}</Badge>
                               </Table.Td>
                             </Table.Tr>
                           );
@@ -819,7 +906,11 @@ export default function DashboardPage() {
                   </Table.ScrollContainer>
                   {operationalAssets.items.length > 10 && (
                     <Text size="xs" c="dimmed" ta="center">
-                      Showing 10 of {operationalAssets.items.length} working assets.
+                      {t('assets.showing', {
+                        shown: 10,
+                        total: operationalAssets.items.length,
+                        label: t('assets.labels.working'),
+                      })}
                       <Text
                         component="span"
                         c="blue"
@@ -839,25 +930,28 @@ export default function DashboardPage() {
                           navigate(`${route}?${paramName}=${encodeURIComponent(selectedSubcity)}&status=OPERATIONAL`);
                         }}
                       >
-                        View all
+                        {t('actions.viewAll')}
                       </Text>
                     </Text>
                   )}
                 </Stack>
               )}
-              {selectedSubcity && selectedStatus === 'In Progress Maintenances' && inProgressBySubcity && inProgressBySubcity.length > 0 && (
+              {selectedSubcity && selectedStatus === 'inProgress' && inProgressBySubcity && inProgressBySubcity.length > 0 && (
                 <Stack gap="xs" mt="md">
                   <Text fw={600} size="sm">
-                    In Progress Maintenances in {selectedSubcity} ({inProgressBySubcity.find(item => item.subcity === selectedSubcity)?.count || 0})
+                    {t('maintenance.inProgressHeading', {
+                      subcity: getSubcityLabel(selectedSubcity),
+                      count: inProgressBySubcity.find(item => item.subcity === selectedSubcity)?.count || 0,
+                    })}
                   </Text>
                   <Table.ScrollContainer minWidth={400}>
                     <Table highlightOnHover>
                       <Table.Thead>
                         <Table.Tr>
-                          <Table.Th>Pole Code</Table.Th>
-                          <Table.Th>Description</Table.Th>
-                          <Table.Th>Start Date</Table.Th>
-                          <Table.Th>Status</Table.Th>
+                          <Table.Th>{t('tableHeaders.poleCode')}</Table.Th>
+                          <Table.Th>{t('tableHeaders.description')}</Table.Th>
+                          <Table.Th>{t('tableHeaders.startDate')}</Table.Th>
+                          <Table.Th>{t('tableHeaders.status')}</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -874,7 +968,9 @@ export default function DashboardPage() {
                               <Table.Td>{schedule.description}</Table.Td>
                               <Table.Td>{new Date(schedule.startDate).toLocaleDateString()}</Table.Td>
                               <Table.Td>
-                                <Badge color={schedule.status === 'STARTED' ? 'orange' : 'blue'}>{schedule.status}</Badge>
+                                <Badge color={schedule.status === 'STARTED' ? 'orange' : 'blue'}>
+                                  {maintenanceStatusLabels[schedule.status] ?? schedule.status}
+                                </Badge>
                               </Table.Td>
                             </Table.Tr>
                           ))}
@@ -883,14 +979,17 @@ export default function DashboardPage() {
                   </Table.ScrollContainer>
                   {inProgressBySubcity.find(item => item.subcity === selectedSubcity)?.count > 10 && (
                     <Text size="xs" c="dimmed" ta="center">
-                      Showing 10 of {inProgressBySubcity.find(item => item.subcity === selectedSubcity)?.count} in progress maintenances.
+                      {t('maintenance.showing', {
+                        shown: 10,
+                        total: inProgressBySubcity.find(item => item.subcity === selectedSubcity)?.count || 0,
+                      })}
                       <Text
                         component="span"
                         c="blue"
                         style={{ cursor: 'pointer', textDecoration: 'underline' }}
                         onClick={() => navigate(`/maintenance?subcity=${encodeURIComponent(selectedSubcity)}&status=inprogress`)}
                       >
-                        View all
+                        {t('actions.viewAll')}
                       </Text>
                     </Text>
                   )}
@@ -902,7 +1001,7 @@ export default function DashboardPage() {
         <Grid.Col span={{ base: 12, md: 12 }} mt="xl">
           <Paper p="md" withBorder>
             <Title order={3} mb="md">
-              Light Pole Assessment By Street
+              {t('charts.streetTitle')}
             </Title>
             {failedByStreet && failedByStreet.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -928,7 +1027,7 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             ) : (
               <Text c="dimmed" ta="center" py="xl">
-                No faulty assets by street found
+                {t('charts.noStreetData')}
               </Text>
             )}
           </Paper>
@@ -940,31 +1039,33 @@ export default function DashboardPage() {
           <Paper p="md" withBorder>
             <Group justify="space-between" align="center" mb="md">
               <Group align="center">
-                <Title order={3}>Pole Type Distribution</Title>
+                <Title order={3}>{t('poleTypes.title')}</Title>
               </Group>
               <Group gap="xs" align="center">
                 <Select
-                  placeholder="All Subcities"
+                  placeholder={t('filters.allSubcities')}
                   data={[
-                    { value: '', label: 'All Subcities' },
-                    ...SUBCITIES.map((subcity) => ({ value: subcity, label: subcity })),
+                    { value: '', label: t('filters.allSubcities') },
+                    ...subcityOptions,
                   ]}
                   value={selectedPoleTypeSubcity ?? ''}
                   onChange={(value) => setSelectedPoleTypeSubcity(value && value.trim() ? value : null)}
                   style={{ minWidth: 220 }}
                 />
                 <Text size="sm" c="dimmed">
-                  {selectedPoleTypeSubcity ? `Filtered to ${selectedPoleTypeSubcity}` : 'Citywide'}
+                  {selectedPoleTypeSubcity
+                    ? t('filters.filteredTo', { subcity: getSubcityLabel(selectedPoleTypeSubcity) })
+                    : t('filters.citywide')}
                 </Text>
               </Group>
             </Group>
             {isPoleTypeLoading ? (
               <Center py="xl">
-                <Text>Loading pole type data...</Text>
+                <Text>{t('poleTypes.loading')}</Text>
               </Center>
             ) : !hasPoleTypeData ? (
               <Text c="dimmed" ta="center" py="xl">
-                No pole type data available yet.
+                {t('poleTypes.noData')}
               </Text>
             ) : (
               <ResponsiveContainer width="100%" height={260}>
@@ -1035,7 +1136,7 @@ export default function DashboardPage() {
                     >
                       <Stack gap="xs" align="center">
                         <Text fw={600} size="md" ta="center">
-                          {subcity}
+                          {getSubcityLabel(subcity)}
                         </Text>
                         <Group gap="xs" wrap="wrap" justify="center">
                           <Badge color="green" size="sm">
@@ -1096,7 +1197,7 @@ export default function DashboardPage() {
                               style={{ cursor: 'pointer' }}
                               onClick={() => navigate(`/poles?subcity=${encodeURIComponent(item.subcity)}&status=OPERATIONAL`)}
                             >
-                              <Table.Td>{item.subcity}</Table.Td>
+                              <Table.Td>{getSubcityLabel(item.subcity)}</Table.Td>
                               <Table.Td>
                                 <Badge color="green">{item.count}</Badge>
                               </Table.Td>
@@ -1105,7 +1206,7 @@ export default function DashboardPage() {
                       ) : (
                         <Table.Tr>
                           <Table.Td colSpan={2}>
-                            <Text c="dimmed" ta="center">No operational poles found</Text>
+                            <Text c="dimmed" ta="center">{t('tables.noData.operational')}</Text>
                           </Table.Td>
                         </Table.Tr>
                       )}
@@ -1152,7 +1253,7 @@ export default function DashboardPage() {
                       ) : (
                         <Table.Tr>
                           <Table.Td colSpan={2}>
-                            <Text c="dimmed" ta="center">No operational poles found</Text>
+                            <Text c="dimmed" ta="center">{t('tables.noData.operational')}</Text>
                           </Table.Td>
                         </Table.Tr>
                       )}
@@ -1204,7 +1305,7 @@ export default function DashboardPage() {
                               style={{ cursor: 'pointer' }}
                               onClick={() => navigate(`/poles?subcity=${encodeURIComponent(item.subcity)}&status=UNDER_MAINTENANCE`)}
                             >
-                              <Table.Td>{item.subcity}</Table.Td>
+                              <Table.Td>{getSubcityLabel(item.subcity)}</Table.Td>
                               <Table.Td>
                                 <Badge color="yellow">{item.count}</Badge>
                               </Table.Td>
@@ -1213,7 +1314,7 @@ export default function DashboardPage() {
                       ) : (
                         <Table.Tr>
                           <Table.Td colSpan={2}>
-                            <Text c="dimmed" ta="center">No maintenance poles found</Text>
+                            <Text c="dimmed" ta="center">{t('tables.noData.maintenance')}</Text>
                           </Table.Td>
                         </Table.Tr>
                       )}
@@ -1260,7 +1361,7 @@ export default function DashboardPage() {
                       ) : (
                         <Table.Tr>
                           <Table.Td colSpan={2}>
-                            <Text c="dimmed" ta="center">No maintenance poles found</Text>
+                            <Text c="dimmed" ta="center">{t('tables.noData.maintenance')}</Text>
                           </Table.Td>
                         </Table.Tr>
                       )}
@@ -1312,7 +1413,7 @@ export default function DashboardPage() {
                               style={{ cursor: 'pointer' }}
                               onClick={() => navigate(`/poles?subcity=${encodeURIComponent(item.subcity)}&status=FAULT_DAMAGED`)}
                             >
-                              <Table.Td>{item.subcity}</Table.Td>
+                              <Table.Td>{getSubcityLabel(item.subcity)}</Table.Td>
                               <Table.Td>
                                 <Badge color="red">{item.count}</Badge>
                               </Table.Td>
@@ -1321,7 +1422,7 @@ export default function DashboardPage() {
                       ) : (
                         <Table.Tr>
                           <Table.Td colSpan={2}>
-                            <Text c="dimmed" ta="center">No failed poles found</Text>
+                            <Text c="dimmed" ta="center">{t('tables.noData.failed')}</Text>
                           </Table.Td>
                         </Table.Tr>
                       )}
@@ -1368,7 +1469,7 @@ export default function DashboardPage() {
                       ) : (
                         <Table.Tr>
                           <Table.Td colSpan={2}>
-                            <Text c="dimmed" ta="center">No failed poles found</Text>
+                            <Text c="dimmed" ta="center">{t('tables.noData.failed')}</Text>
                           </Table.Td>
                         </Table.Tr>
                       )}

@@ -25,8 +25,11 @@ import { notifications } from '@mantine/notifications';
 import { IconEdit, IconTrash, IconEye, IconPlus, IconRefresh } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth';
 import { componentsApi, COMPONENT_TYPES } from '../api/components';
+import { useTranslation } from 'react-i18next';
 
 export default function ComponentsListPage() {
+  const { t } = useTranslation('componentsList');
+  const { t: tCommon } = useTranslation('common');
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -59,15 +62,19 @@ export default function ComponentsListPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => componentsApi.delete(id),
     onSuccess: () => {
-      notifications.show({ title: 'Success', message: 'Component deleted', color: 'green' });
+      notifications.show({
+        title: t('notifications.deleteSuccessTitle'),
+        message: t('notifications.deleteSuccessMessage'),
+        color: 'green',
+      });
       queryClient.invalidateQueries({ queryKey: ['components'] });
       closeDeleteModal();
       setComponentToDelete(null);
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to delete component',
+        title: t('notifications.deleteErrorTitle'),
+        message: error.response?.data?.message || t('notifications.deleteErrorMessage'),
         color: 'red',
       });
     },
@@ -76,13 +83,17 @@ export default function ComponentsListPage() {
   const reactivateMutation = useMutation({
     mutationFn: (id: string) => componentsApi.update(id, { isActive: true }),
     onSuccess: () => {
-      notifications.show({ title: 'Success', message: 'Component reactivated', color: 'green' });
+      notifications.show({
+        title: t('notifications.reactivateSuccessTitle'),
+        message: t('notifications.reactivateSuccessMessage'),
+        color: 'green',
+      });
       queryClient.invalidateQueries({ queryKey: ['components'] });
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to reactivate component',
+        title: t('notifications.reactivateErrorTitle'),
+        message: error.response?.data?.message || t('notifications.reactivateErrorMessage'),
         color: 'red',
       });
     },
@@ -111,10 +122,10 @@ export default function ComponentsListPage() {
   return (
     <Container size="xl" py={{ base: 'md', sm: 'xl' }} px={{ base: 'xs', sm: 'md' }}>
       <Group justify="space-between" mb="xl">
-        <Title order={1}>Components</Title>
+        <Title order={1}>{t('title')}</Title>
         {isAdmin && (
           <Button leftSection={<IconPlus size={16} />} onClick={() => navigate('/components/new')}>
-            Add Component
+            {t('actions.addComponent')}
           </Button>
         )}
       </Group>
@@ -122,13 +133,13 @@ export default function ComponentsListPage() {
       <Paper withBorder p="md" mb="md">
         <Group gap="md" wrap="wrap">
           <TextInput
-            placeholder="Search..."
+            placeholder={t('filters.searchPlaceholder')}
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.currentTarget.value)}
             style={{ width: 200 }}
           />
           <Select
-            placeholder="Type"
+            placeholder={t('filters.typePlaceholder')}
             data={typeOptions}
             value={typeFilter}
             onChange={setTypeFilter}
@@ -136,19 +147,19 @@ export default function ComponentsListPage() {
             style={{ width: 180 }}
           />
           <TextInput
-            placeholder="Manufacturer"
+            placeholder={t('filters.manufacturerPlaceholder')}
             value={manufacturerFilter}
             onChange={(e) => setManufacturerFilter(e.currentTarget.value)}
             style={{ width: 180 }}
           />
           <TextInput
-            placeholder="Country"
+            placeholder={t('filters.countryPlaceholder')}
             value={countryFilter}
             onChange={(e) => setCountryFilter(e.currentTarget.value)}
             style={{ width: 140 }}
           />
           <Checkbox
-            label="Include inactive"
+            label={t('filters.includeInactive')}
             checked={includeInactive}
             onChange={(e) => {
               setIncludeInactive(e.currentTarget.checked);
@@ -167,7 +178,7 @@ export default function ComponentsListPage() {
               setPage(1);
             }}
           >
-            Clear
+            {t('actions.clear')}
           </Button>
         </Group>
       </Paper>
@@ -177,12 +188,12 @@ export default function ComponentsListPage() {
           <Table highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Type</Table.Th>
-                <Table.Th>Model</Table.Th>
-                <Table.Th>Manufacturer</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Actions</Table.Th>
+                <Table.Th>{t('table.name')}</Table.Th>
+                <Table.Th>{t('table.type')}</Table.Th>
+                <Table.Th>{t('table.model')}</Table.Th>
+                <Table.Th>{t('table.manufacturer')}</Table.Th>
+                <Table.Th>{t('table.status')}</Table.Th>
+                <Table.Th>{t('table.actions')}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -198,7 +209,7 @@ export default function ComponentsListPage() {
                 <Table.Tr>
                   <Table.Td colSpan={6}>
                     <Text c="dimmed" ta="center" py="xl">
-                      No components found
+                      {t('emptyState')}
                     </Text>
                   </Table.Td>
                 </Table.Tr>
@@ -215,11 +226,11 @@ export default function ComponentsListPage() {
                     <Table.Td>
                       <Badge variant="light">{c.type?.replace(/_/g, ' ')}</Badge>
                     </Table.Td>
-                    <Table.Td>{c.model || '—'}</Table.Td>
-                    <Table.Td>{c.manufacturerName || '—'}</Table.Td>
+                    <Table.Td>{c.model || t('labels.notAvailable')}</Table.Td>
+                    <Table.Td>{c.manufacturerName || t('labels.notAvailable')}</Table.Td>
                     <Table.Td>
                       <Badge color={c.isActive ? 'green' : 'gray'} variant="light">
-                        {c.isActive ? 'Active' : 'Inactive'}
+                        {c.isActive ? t('status.active') : t('status.inactive')}
                       </Badge>
                     </Table.Td>
                     <Table.Td onClick={(e) => e.stopPropagation()}>
@@ -228,7 +239,7 @@ export default function ComponentsListPage() {
                           variant="light"
                           color="blue"
                           onClick={() => navigate(`/components/${c.id}`)}
-                          title="View"
+                          title={t('actions.view')}
                         >
                           <IconEye size={16} />
                         </ActionIcon>
@@ -238,7 +249,7 @@ export default function ComponentsListPage() {
                               variant="light"
                               color="gray"
                               onClick={() => navigate(`/components/${c.id}/edit`)}
-                              title="Edit"
+                              title={t('actions.edit')}
                             >
                               <IconEdit size={16} />
                             </ActionIcon>
@@ -248,7 +259,7 @@ export default function ComponentsListPage() {
                                 color="green"
                                 onClick={() => reactivateMutation.mutate(c.id)}
                                 loading={reactivateMutation.isPending}
-                                title="Reactivate"
+                                title={t('actions.reactivate')}
                               >
                                 <IconRefresh size={16} />
                               </ActionIcon>
@@ -260,7 +271,7 @@ export default function ComponentsListPage() {
                                 setComponentToDelete({ id: c.id, name: c.name });
                                 openDeleteModal();
                               }}
-                              title="Delete"
+                              title={t('actions.delete')}
                             >
                               <IconTrash size={16} />
                             </ActionIcon>
@@ -275,13 +286,17 @@ export default function ComponentsListPage() {
             <Table.Caption>
               <Group justify="flex-end" align="center" gap="md" wrap="wrap" p="md">
                 <Text size="sm" c="dimmed">
-                  Showing {startRecord}-{endRecord} of {total} components
+                  {t('pagination.showing', {
+                    start: startRecord,
+                    end: endRecord,
+                    total,
+                  })}
                 </Text>
                 <Text size="sm" c="dimmed">
-                  Page {page} of {totalPages}
+                  {t('pagination.page', { page, totalPages })}
                 </Text>
                 <Select
-                  label="Per page"
+                  label={t('pagination.perPage')}
                   value={limit.toString()}
                   onChange={(value) => {
                     setLimit(Number(value) || 10);
@@ -310,22 +325,22 @@ export default function ComponentsListPage() {
           closeDeleteModal();
           setComponentToDelete(null);
         }}
-        title="Delete Component"
+        title={t('deleteModal.title')}
         centered
       >
         <Text>
-          Are you sure you want to delete "{componentToDelete?.name}"? This will soft-delete the component.
+          {t('deleteModal.confirmation', { name: componentToDelete?.name })}
         </Text>
         <Group justify="flex-end" mt="xl">
           <Button variant="outline" onClick={closeDeleteModal}>
-            Cancel
+            {tCommon('actions.cancel')}
           </Button>
           <Button
             color="red"
             loading={deleteMutation.isPending}
             onClick={() => componentToDelete && deleteMutation.mutate(componentToDelete.id)}
           >
-            Delete
+            {t('actions.delete')}
           </Button>
         </Group>
       </Modal>

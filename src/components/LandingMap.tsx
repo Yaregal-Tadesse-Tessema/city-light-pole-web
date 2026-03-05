@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { Paper, Loader, Center, Stack, Text, Group, Select, Button } from '@mantine/core';
 import { IconFilter, IconX } from '@tabler/icons-react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 // Pole status types
 type PoleStatus = 'OPERATIONAL' | 'FAULT_DAMAGED' | 'UNDER_MAINTENANCE' | 'REPLACED';
@@ -23,26 +24,21 @@ const DEFAULT_CENTER: [number, number] = [9.0108, 38.7613]; // Addis Ababa
 const DEFAULT_ZOOM = 12;
 
 // Create custom colored icons for different pole statuses
-const createStatusIcon = (status: PoleStatus) => {
+const createStatusIcon = (status: PoleStatus, translatedLabel: string) => {
   let color: string;
-  let statusLabel: string;
 
   switch (status) {
     case 'OPERATIONAL':
       color = '#4CAF50'; // Green
-      statusLabel = 'Operational';
       break;
     case 'FAULT_DAMAGED':
       color = '#F44336'; // Red
-      statusLabel = 'Fault/Damaged';
       break;
     case 'UNDER_MAINTENANCE':
       color = '#FF9800'; // Orange
-      statusLabel = 'Under Maintenance';
       break;
     default:
       color = '#9E9E9E'; // Gray
-      statusLabel = 'Unknown';
   }
 
   return L.divIcon({
@@ -69,23 +65,23 @@ const createStatusIcon = (status: PoleStatus) => {
         border-radius: 50%;
       "></div>
     </div>
-    <div style="
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0,0,0,0.8);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      white-space: nowrap;
-      margin-bottom: 8px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s;
-    " class="status-tooltip">
-      ${statusLabel}
+        <div style="
+          position: absolute;
+          bottom: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          background-color: rgba(0,0,0,0.8);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          white-space: nowrap;
+          margin-bottom: 8px;
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.2s;
+        " class="status-tooltip">
+          ${translatedLabel}
     </div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 24],
@@ -104,6 +100,22 @@ const LandingMap = () => {
   const [streets, setStreets] = useState<string[]>([]);
   const [selectedSubcity, setSelectedSubcity] = useState<string | null>(null);
   const [selectedStreet, setSelectedStreet] = useState<string | null>(null);
+  const { t } = useTranslation('landingMap');
+  const statusTranslationMap: Record<PoleStatus, string> = {
+    OPERATIONAL: t('statusLabels.OPERATIONAL'),
+    FAULT_DAMAGED: t('statusLabels.FAULT_DAMAGED'),
+    UNDER_MAINTENANCE: t('statusLabels.UNDER_MAINTENANCE'),
+    REPLACED: t('statusLabels.REPLACED'),
+  };
+  const getTranslatedStatus = (status: PoleStatus) =>
+    statusTranslationMap[status] || t('statusLabels.UNKNOWN');
+  const statusColorMap: Record<PoleStatus, string> = {
+    OPERATIONAL: '#4CAF50',
+    FAULT_DAMAGED: '#F44336',
+    UNDER_MAINTENANCE: '#FF9800',
+    REPLACED: '#9E9E9E',
+  };
+  const getStatusHexColor = (status: PoleStatus) => statusColorMap[status] || '#9E9E9E';
 
   // Fetch poles data
   useEffect(() => {
@@ -194,6 +206,15 @@ const LandingMap = () => {
     setSelectedStreet(null);
   };
 
+  const activeFilterParts: string[] = [];
+  if (selectedSubcity) {
+    activeFilterParts.push(`${t('activeFiltersLabels.subcity')}: ${selectedSubcity}`);
+  }
+  if (selectedStreet) {
+    activeFilterParts.push(`${t('activeFiltersLabels.street')}: ${selectedStreet}`);
+  }
+  const filteredSummary = poles.length !== filteredPoles.length ? t('filteredFrom', { total: poles.length }) : '';
+
   // Initialize map
   useEffect(() => {
     if (!mapRef.current || loading) return;
@@ -222,29 +243,23 @@ const LandingMap = () => {
     console.log('Adding markers for', filteredPoles.length, 'filtered poles');
     filteredPoles.forEach((pole: Pole, index) => {
       console.log(`Adding marker ${index + 1}:`, pole.code, [pole.gpsLat, pole.gpsLng]);
-      const icon = createStatusIcon(pole.status);
+      const icon = createStatusIcon(pole.status, getTranslatedStatus(pole.status));
 
       const marker = L.marker([pole.gpsLat, pole.gpsLng], { icon })
-        .addTo(map)
-        .bindPopup(`
-          <div style="font-family: Arial, sans-serif; max-width: 200px;">
-            <h4 style="margin: 0 0 8px 0; color: #333;">Pole ${pole.code}</h4>
-            <p style="margin: 4px 0; font-size: 14px;">
-              <strong>Status:</strong>
-              <span style="color: ${
-                pole.status === 'OPERATIONAL' ? '#4CAF50' :
-                pole.status === 'FAULT_DAMAGED' ? '#F44336' :
-                pole.status === 'UNDER_MAINTENANCE' ? '#FF9800' : '#9E9E9E'
-              };">
-                ${pole.status === 'OPERATIONAL' ? 'Operational' :
-                  pole.status === 'FAULT_DAMAGED' ? 'Fault/Damaged' :
-                  pole.status === 'UNDER_MAINTENANCE' ? 'Under Maintenance' : 'Unknown'}
-              </span>
-            </p>
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Subcity:</strong> ${pole.subcity}</p>
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Street:</strong> ${pole.street}</p>
-          </div>
-        `);
+      .addTo(map)
+      .bindPopup(`
+        <div style="font-family: Arial, sans-serif; max-width: 200px;">
+          <h4 style="margin: 0 0 8px 0; color: #333;">${t('popup.title', { code: pole.code })}</h4>
+          <p style="margin: 4px 0; font-size: 14px;">
+            <strong>${t('popup.statusLabel')}</strong>
+            <span style="color: ${getStatusHexColor(pole.status)};">
+              ${getTranslatedStatus(pole.status)}
+            </span>
+          </p>
+          <p style="margin: 4px 0; font-size: 14px;"><strong>${t('popup.subcity')}</strong> ${pole.subcity}</p>
+          <p style="margin: 4px 0; font-size: 14px;"><strong>${t('popup.street')}</strong> ${pole.street}</p>
+        </div>
+      `);
 
       console.log('Marker added for pole:', pole.code);
 
@@ -287,7 +302,7 @@ const LandingMap = () => {
         <Center>
           <Stack align="center" gap="sm">
             <Loader size="lg" />
-            <Text c="dimmed">Loading pole locations...</Text>
+            <Text c="dimmed">{t('loading')}</Text>
           </Stack>
         </Center>
       </Paper>
@@ -299,7 +314,7 @@ const LandingMap = () => {
       <Paper withBorder style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Center>
           <Stack align="center" gap="sm">
-            <Text c="red" fw={500}>Error loading map</Text>
+            <Text c="red" fw={500}>{t('error')}</Text>
             <Text c="dimmed" size="sm">{error}</Text>
           </Stack>
         </Center>
@@ -321,7 +336,9 @@ const LandingMap = () => {
             border: '1px solid white',
             boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
           }} />
-          <Text size="sm">Operational ({filteredPoles.filter(p => p.status === 'OPERATIONAL').length})</Text>
+          <Text size="sm">
+            {t('legend.operational', { count: filteredPoles.filter((p) => p.status === 'OPERATIONAL').length })}
+          </Text>
         </Group>
 
         <Group gap="xs">
@@ -334,7 +351,9 @@ const LandingMap = () => {
             border: '1px solid white',
             boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
           }} />
-          <Text size="sm">Fault/Damaged ({filteredPoles.filter(p => p.status === 'FAULT_DAMAGED').length})</Text>
+          <Text size="sm">
+            {t('legend.faulty', { count: filteredPoles.filter((p) => p.status === 'FAULT_DAMAGED').length })}
+          </Text>
         </Group>
 
         <Group gap="xs">
@@ -347,7 +366,9 @@ const LandingMap = () => {
             border: '1px solid white',
             boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
           }} />
-          <Text size="sm">Under Maintenance ({filteredPoles.filter(p => p.status === 'UNDER_MAINTENANCE').length})</Text>
+          <Text size="sm">
+            {t('legend.maintenance', { count: filteredPoles.filter((p) => p.status === 'UNDER_MAINTENANCE').length })}
+          </Text>
         </Group>
       </Group>
 
@@ -357,7 +378,7 @@ const LandingMap = () => {
           <Group justify="space-between" align="center">
             <Text fw={500} size="sm">
               <IconFilter size={16} style={{ marginRight: '8px', display: 'inline' }} />
-              Filter Poles
+              {t('filtersTitle')}
             </Text>
             {(selectedSubcity || selectedStreet) && (
               <Button
@@ -367,16 +388,16 @@ const LandingMap = () => {
                 leftSection={<IconX size={14} />}
                 onClick={clearFilters}
               >
-                Clear Filters
+                {t('clearFilters')}
               </Button>
             )}
           </Group>
 
           <Group grow>
             <Select
-              placeholder="Filter by Subcity"
+              placeholder={t('filterBySubcity')}
               data={[
-                { value: '', label: 'All Subcities' },
+                { value: '', label: t('allSubcities') },
                 ...subcities.map(subcity => ({ value: subcity, label: subcity }))
               ]}
               value={selectedSubcity || ''}
@@ -392,9 +413,9 @@ const LandingMap = () => {
             />
 
             <Select
-              placeholder="Filter by Street"
+              placeholder={t('filterByStreet')}
               data={[
-                { value: '', label: 'All Streets' },
+                { value: '', label: t('allStreets') },
                 ...streets.map(street => ({ value: street, label: street }))
               ]}
               value={selectedStreet || ''}
@@ -412,9 +433,7 @@ const LandingMap = () => {
 
           {(selectedSubcity || selectedStreet) && (
             <Text size="xs" c="dimmed">
-              Active filters: {selectedSubcity && `Subcity: ${selectedSubcity}`}
-              {selectedSubcity && selectedStreet && ' | '}
-              {selectedStreet && `Street: ${selectedStreet}`}
+              {t('activeFilters', { filters: activeFilterParts.join(' | ') })}
             </Text>
           )}
         </Stack>
@@ -437,7 +456,10 @@ const LandingMap = () => {
       {/* Summary */}
       <Group justify="center">
         <Text size="sm" c="dimmed">
-          Total poles displayed: {filteredPoles.length}{poles.length !== filteredPoles.length ? ` (filtered from ${poles.length})` : ''}
+          {t('summary', {
+            displayed: filteredPoles.length,
+            filtered: filteredSummary,
+          })}
         </Text>
       </Group>
     </Stack>

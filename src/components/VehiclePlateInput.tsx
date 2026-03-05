@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Group, Input, Select, TextInput } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 
 interface VehiclePlateInputProps {
   label: string;
@@ -78,15 +79,17 @@ export default function VehiclePlateInput({
   value,
   onChange,
   error,
-  placeholder = 'Enter vehicle plate number',
+  placeholder,
 }: VehiclePlateInputProps) {
+  const { t } = useTranslation('vehiclePlateInput');
   const { code, region, plate } = parseVehiclePlate(value || '');
+  const resolvedPlaceholder = placeholder ?? t('placeholders.plate');
 
   return (
     <Input.Wrapper label={label} error={error}>
       <Group gap={0} wrap="nowrap">
         <Select
-          placeholder="Code"
+          placeholder={t('placeholders.code')}
           data={CODE_OPTIONS}
           value={code}
           onChange={(nextCode) =>
@@ -106,7 +109,7 @@ export default function VehiclePlateInput({
           }}
         />
         <Select
-          placeholder="Region"
+          placeholder={t('placeholders.region')}
           data={REGION_OPTIONS}
           searchable
           value={region}
@@ -128,7 +131,7 @@ export default function VehiclePlateInput({
           onChange={(event) =>
             onChange(composeVehiclePlate(code, region, event.currentTarget.value))
           }
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           style={{ flex: 1 }}
           styles={{
             input: {

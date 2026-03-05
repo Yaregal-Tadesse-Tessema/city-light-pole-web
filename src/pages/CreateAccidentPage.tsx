@@ -30,15 +30,7 @@ import {
   toEthiopianInternationalPhone,
 } from '../utils/ethiopianPhone';
 import { ETHIOPIAN_INSURANCE_COMPANY_OPTIONS } from '../utils/ethiopianInsuranceCompanies';
-
-const ACCIDENT_TYPES = [
-  { value: 'VEHICLE_COLLISION', label: 'Vehicle Collision' },
-  { value: 'FALLING_POLE', label: 'Falling Pole' },
-  { value: 'VANDALISM', label: 'Vandalism' },
-  { value: 'NATURAL_DISASTER', label: 'Natural Disaster' },
-  { value: 'ELECTRICAL_FAULT', label: 'Electrical Fault' },
-  { value: 'OTHER', label: 'Other' },
-];
+import { useTranslation } from 'react-i18next';
 
 interface AccidentFormData {
   accidentType: string;
@@ -58,6 +50,7 @@ interface AccidentFormData {
 }
 
 export default function CreateAccidentPage() {
+  const { t } = useTranslation('createAccident');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [photos, setPhotos] = useState<File[]>([]);
@@ -82,14 +75,14 @@ export default function CreateAccidentPage() {
       claimReferenceNumber: '',
     },
     validate: {
-      accidentType: (value) => !value && 'Accident type is required',
-      accidentDate: (value) => !value && 'Accident date is required',
-      accidentTime: (value) => !value && 'Accident time is required',
-      locationDescription: (value) => !value && 'Location description is required',
+      accidentType: (value) => !value && t('validation.accidentTypeRequired'),
+      accidentDate: (value) => !value && t('validation.accidentDateRequired'),
+      accidentTime: (value) => !value && t('validation.accidentTimeRequired'),
+      locationDescription: (value) => !value && t('validation.locationDescriptionRequired'),
       driverPhoneNumber: (value) =>
         isValidEthiopianLocalPhone(value)
           ? null
-          : 'Phone must be 9 digits and cannot start with 0',
+          : t('validation.phoneInvalid'),
     },
   });
 
@@ -110,8 +103,21 @@ export default function CreateAccidentPage() {
   // Format poles for Select component
   const poleOptions = polesData?.items?.map((pole: any) => ({
     value: pole.code,
-    label: `${pole.code} - ${pole.subcity}, ${pole.street}`,
+    label: t('labels.poleOption', {
+      code: pole.code,
+      subcity: pole.subcity,
+      street: pole.street,
+    }),
   })) || [];
+
+  const accidentTypeOptions = [
+    { value: 'VEHICLE_COLLISION', label: t('accidentTypes.VEHICLE_COLLISION') },
+    { value: 'FALLING_POLE', label: t('accidentTypes.FALLING_POLE') },
+    { value: 'VANDALISM', label: t('accidentTypes.VANDALISM') },
+    { value: 'NATURAL_DISASTER', label: t('accidentTypes.NATURAL_DISASTER') },
+    { value: 'ELECTRICAL_FAULT', label: t('accidentTypes.ELECTRICAL_FAULT') },
+    { value: 'OTHER', label: t('accidentTypes.OTHER') },
+  ];
 
   // Get current location
   const getCurrentLocation = () => {
@@ -125,16 +131,16 @@ export default function CreateAccidentPage() {
         },
         (error) => {
           notifications.show({
-            title: 'Location Error',
-            message: 'Unable to get current location. Please enter coordinates manually.',
+            title: t('notifications.locationErrorTitle'),
+            message: t('notifications.locationErrorMessage'),
             color: 'orange',
           });
         }
       );
     } else {
       notifications.show({
-        title: 'Location Error',
-        message: 'Geolocation is not supported by this browser.',
+        title: t('notifications.locationErrorTitle'),
+        message: t('notifications.geolocationUnsupported'),
         color: 'red',
       });
     }
@@ -212,8 +218,8 @@ export default function CreateAccidentPage() {
         } catch (error) {
           console.error('Failed to upload driver license file:', error);
           notifications.show({
-            title: 'Driver License Upload Failed',
-            message: 'Accident was saved, but driver license file upload failed.',
+            title: t('notifications.driverLicenseUploadFailedTitle'),
+            message: t('notifications.driverLicenseUploadFailedMessage'),
             color: 'orange',
           });
         }
@@ -221,16 +227,16 @@ export default function CreateAccidentPage() {
 
       queryClient.invalidateQueries({ queryKey: ['accidents'] });
       notifications.show({
-        title: 'Success',
-        message: 'Accident report created successfully',
+        title: t('notifications.successTitle'),
+        message: t('notifications.createSuccess'),
         color: 'green',
       });
       navigate('/accidents');
     },
     onError: (error: any) => {
       notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Failed to create accident report',
+        title: t('notifications.errorTitle'),
+        message: error.response?.data?.message || t('notifications.createError'),
         color: 'red',
       });
     },
@@ -240,8 +246,8 @@ export default function CreateAccidentPage() {
     // Validate mandatory photos
     if (photos.length < 1) {
       notifications.show({
-        title: 'Validation Error',
-        message: 'Please upload at least 1 photo of the incident',
+        title: t('notifications.validationErrorTitle'),
+        message: t('notifications.photosRequired'),
         color: 'red',
       });
       return;
@@ -257,12 +263,12 @@ export default function CreateAccidentPage() {
     <Container size="xl" py="xl">
       <Paper p="xl" withBorder>
         <Title order={2} mb="lg">
-          Report Street Light Pole Accident
+          {t('title')}
         </Title>
 
         <Alert color="blue" mb="lg">
-          <Text fw={500}>Important:</Text>
-          <Text>Please provide accurate information and upload 1 to 3 clear photos of the incident.</Text>
+          <Text fw={500}>{t('alerts.importantTitle')}:</Text>
+          <Text>{t('alerts.importantBody')}</Text>
         </Alert>
 
         <form onSubmit={form.onSubmit(handleSubmit)}>
@@ -270,14 +276,14 @@ export default function CreateAccidentPage() {
             {/* Incident Details */}
             <Card withBorder>
               <Card.Section withBorder inheritPadding py="sm">
-                <Title order={4}>Incident Details</Title>
+                <Title order={4}>{t('sections.incidentDetails')}</Title>
               </Card.Section>
 
               <Stack p="md" gap="md">
                 <Select
-                  label="Accident Type"
-                  placeholder="Select accident type"
-                  data={ACCIDENT_TYPES}
+                  label={t('fields.accidentType')}
+                  placeholder={t('placeholders.selectAccidentType')}
+                  data={accidentTypeOptions}
                   required
                   {...form.getInputProps('accidentType')}
                 />
@@ -285,7 +291,7 @@ export default function CreateAccidentPage() {
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
                     <TextInput
-                      label="Accident Date"
+                      label={t('fields.accidentDate')}
                       type="date"
                       required
                       {...form.getInputProps('accidentDate')}
@@ -293,7 +299,7 @@ export default function CreateAccidentPage() {
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
                     <TextInput
-                      label="Accident Time"
+                      label={t('fields.accidentTime')}
                       type="time"
                       required
                       {...form.getInputProps('accidentTime')}
@@ -302,8 +308,8 @@ export default function CreateAccidentPage() {
                 </Grid>
 
                 <Select
-                  label="Pole ID (if known)"
-                  placeholder="Select pole or leave blank"
+                  label={t('fields.poleIdOptional')}
+                  placeholder={t('placeholders.selectPoleOptional')}
                   data={poleOptions}
                   searchable
                   clearable
@@ -311,8 +317,8 @@ export default function CreateAccidentPage() {
                 />
 
                 <Textarea
-                  label="Location Description"
-                  placeholder="Describe the exact location of the accident"
+                  label={t('fields.locationDescription')}
+                  placeholder={t('placeholders.locationDescription')}
                   required
                   minRows={3}
                   {...form.getInputProps('locationDescription')}
@@ -322,14 +328,14 @@ export default function CreateAccidentPage() {
                 <Card withBorder>
                   <Card.Section withBorder inheritPadding py="sm">
                     <Group justify="space-between">
-                      <Title order={5}>GPS Coordinates (Optional)</Title>
+                      <Title order={5}>{t('sections.gpsOptional')}</Title>
                       <Button
                         variant="light"
                         size="xs"
                         leftSection={<IconMapPin size={14} />}
                         onClick={getCurrentLocation}
                       >
-                        Get Current Location
+                        {t('actions.getCurrentLocation')}
                       </Button>
                     </Group>
                   </Card.Section>
@@ -338,8 +344,8 @@ export default function CreateAccidentPage() {
                     <Grid>
                       <Grid.Col span={{ base: 12, md: 6 }}>
                         <NumberInput
-                          label="Latitude"
-                          placeholder="-9.1450 to 38.8942"
+                          label={t('fields.latitude')}
+                          placeholder={t('placeholders.latitude')}
                           decimalScale={8}
                           fixedDecimalScale
                           {...form.getInputProps('latitude')}
@@ -347,8 +353,8 @@ export default function CreateAccidentPage() {
                       </Grid.Col>
                       <Grid.Col span={{ base: 12, md: 6 }}>
                         <NumberInput
-                          label="Longitude"
-                          placeholder="-176.6597 to 179.4500"
+                          label={t('fields.longitude')}
+                          placeholder={t('placeholders.longitude')}
                           decimalScale={8}
                           fixedDecimalScale
                           {...form.getInputProps('longitude')}
@@ -365,7 +371,7 @@ export default function CreateAccidentPage() {
               <Card.Section withBorder inheritPadding py="sm">
                 <Title order={4}>
                   <IconCar size={16} style={{ marginRight: 8 }} />
-                  Vehicle & Insurance Information
+                  {t('sections.vehicleInsurance')}
                 </Title>
               </Card.Section>
 
@@ -373,17 +379,17 @@ export default function CreateAccidentPage() {
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
                     <VehiclePlateInput
-                      label="Vehicle Plate Number"
+                      label={t('fields.vehiclePlateNumber')}
                       value={form.values.vehiclePlateNumber}
                       onChange={(value) => form.setFieldValue('vehiclePlateNumber', value)}
                       error={form.errors.vehiclePlateNumber}
-                      placeholder="Enter vehicle plate number"
+                      placeholder={t('placeholders.vehiclePlateNumber')}
                     />
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
                     <TextInput
-                      label="Driver Name"
-                      placeholder="Enter driver name"
+                      label={t('fields.driverName')}
+                      placeholder={t('placeholders.driverName')}
                       {...form.getInputProps('driverName')}
                     />
                   </Grid.Col>
@@ -392,8 +398,8 @@ export default function CreateAccidentPage() {
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
                     <Select
-                      label="Insurance Company"
-                      placeholder="Select insurance company"
+                      label={t('fields.insuranceCompany')}
+                      placeholder={t('placeholders.insuranceCompany')}
                       data={ETHIOPIAN_INSURANCE_COMPANY_OPTIONS}
                       searchable
                       clearable
@@ -402,8 +408,8 @@ export default function CreateAccidentPage() {
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
                     <TextInput
-                      label="Claim Reference Number"
-                      placeholder="Enter claim reference number"
+                      label={t('fields.claimReferenceNumber')}
+                      placeholder={t('placeholders.claimReferenceNumber')}
                       {...form.getInputProps('claimReferenceNumber')}
                     />
                   </Grid.Col>
@@ -412,7 +418,7 @@ export default function CreateAccidentPage() {
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
                     <EthiopianPhoneInput
-                      label="Driver Phone Number"
+                      label={t('fields.driverPhoneNumber')}
                       value={form.values.driverPhoneNumber}
                       onChange={(value) => form.setFieldValue('driverPhoneNumber', value)}
                       error={form.errors.driverPhoneNumber}
@@ -420,8 +426,8 @@ export default function CreateAccidentPage() {
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, md: 6 }}>
                     <TextInput
-                      label="Driver License Number"
-                      placeholder="Enter driver license number"
+                      label={t('fields.driverLicenseNumber')}
+                      placeholder={t('placeholders.driverLicenseNumber')}
                       {...form.getInputProps('driverLicenseNumber')}
                     />
                   </Grid.Col>
@@ -430,8 +436,8 @@ export default function CreateAccidentPage() {
                 <Grid align="end">
                   <Grid.Col span={{ base: 12, md: 8 }}>
                     <TextInput
-                      label="Driver National ID Number"
-                      placeholder="Enter driver national ID number"
+                      label={t('fields.driverNationalIdNumber')}
+                      placeholder={t('placeholders.driverNationalIdNumber')}
                       {...form.getInputProps('driverNationalIdNumber')}
                     />
                   </Grid.Col>
@@ -442,20 +448,20 @@ export default function CreateAccidentPage() {
                       fullWidth
                       onClick={() =>
                         notifications.show({
-                          title: 'Coming Soon',
-                          message: 'National ID verification will be added in a future update.',
+                          title: t('notifications.comingSoonTitle'),
+                          message: t('notifications.nationalIdComingSoon'),
                           color: 'blue',
                         })
                       }
                     >
-                      Verify National ID
+                      {t('actions.verifyNationalId')}
                     </Button>
                   </Grid.Col>
                 </Grid>
 
                 <FileInput
-                  label="Driver License File"
-                  placeholder="Upload driver license file (PDF or image)"
+                  label={t('fields.driverLicenseFile')}
+                  placeholder={t('placeholders.driverLicenseFile')}
                   accept=".pdf,.jpg,.jpeg,.png"
                   leftSection={<IconUpload size={14} />}
                   value={driverLicenseFile}
@@ -469,15 +475,15 @@ export default function CreateAccidentPage() {
               <Card.Section withBorder inheritPadding py="sm">
                 <Title order={4}>
                   <IconUpload size={16} style={{ marginRight: 8 }} />
-                  Incident Photos (Mandatory - 1 to 3)
+                  {t('sections.photos')}
                 </Title>
               </Card.Section>
 
               <Stack p="md" gap="md">
                 <FileInput
-                  label="Upload Photos (Required)"
+                  label={t('fields.uploadPhotosRequired')}
                   required
-                  placeholder="Select photos of the incident"
+                  placeholder={t('placeholders.uploadPhotos')}
                   multiple
                   accept="image/*"
                   leftSection={<IconUpload size={14} />}
@@ -485,8 +491,8 @@ export default function CreateAccidentPage() {
                     const selected = files || [];
                     if (selected.length > 3) {
                       notifications.show({
-                        title: 'Photo Limit',
-                        message: 'You can upload a maximum of 3 photos',
+                        title: t('notifications.photoLimitTitle'),
+                        message: t('notifications.photoLimitMessage'),
                         color: 'orange',
                       });
                     }
@@ -496,13 +502,13 @@ export default function CreateAccidentPage() {
 
                 {photos.length > 0 && (
                   <Text size="sm" c="dimmed">
-                    {photos.length} file(s) selected
+                    {t('labels.filesSelected', { count: photos.length })}
                   </Text>
                 )}
 
                 <Alert color="blue">
                   <Text size="sm">
-                    Please upload 1 to 3 clear photos showing the damage, surrounding area, and any relevant details.
+                    {t('alerts.photosHelp')}
                   </Text>
                 </Alert>
               </Stack>
@@ -513,14 +519,14 @@ export default function CreateAccidentPage() {
               <Card.Section withBorder inheritPadding py="sm">
                 <Title order={4}>
                   <IconFileText size={16} style={{ marginRight: 8 }} />
-                  Police Report & Other Documents (Optional)
+                  {t('sections.attachments')}
                 </Title>
               </Card.Section>
 
               <Stack p="md" gap="md">
                 <FileInput
-                  label="Upload Documents"
-                  placeholder="Select police report or other relevant documents"
+                  label={t('fields.uploadDocuments')}
+                  placeholder={t('placeholders.uploadDocuments')}
                   multiple
                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                   leftSection={<IconUpload size={14} />}
@@ -529,7 +535,7 @@ export default function CreateAccidentPage() {
 
                 {attachments.length > 0 && (
                   <Text size="sm" c="dimmed">
-                    {attachments.length} file(s) selected
+                    {t('labels.filesSelected', { count: attachments.length })}
                   </Text>
                 )}
               </Stack>
@@ -538,14 +544,14 @@ export default function CreateAccidentPage() {
             {/* Submit */}
             <Group justify="flex-end" mt="xl">
               <Button variant="light" onClick={() => navigate('/accidents')}>
-                Cancel
+                {t('actions.cancel')}
               </Button>
               <Button
                 type="submit"
                 loading={createMutation.isPending}
                 disabled={photos.length < 1}
               >
-                Submit Accident Report
+                {t('actions.submit')}
               </Button>
             </Group>
           </Stack>
